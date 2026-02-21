@@ -1,0 +1,251 @@
+﻿
+> student_marketplace_frontend@0.1.0 build
+> next build
+
+   Γû▓ Next.js 14.0.0
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe : 
+At line:1 char:1
++ & "C:\Program Files\
+nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo 
+...
++ ~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo    
+          : NotSpeci  
+  fied: (:String) [   
+ ], RemoteExceptio    
+n
+    + FullyQualifiedE 
+   rrorId : NativeCo  
+  mmandError
+ 
+Failed to compile.
+
+./src/app/components/G
+lobalSearch.tsx
+199:11  Warning: The 
+attribute 
+aria-expanded is not 
+supported by the role 
+textbox. This role is 
+implicit on the 
+element input.  jsx-a1
+1y/role-supports-aria-
+props
+227:36  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  r
+eact/no-unescaped-enti
+ties
+227:44  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  r
+eact/no-unescaped-enti
+ties
+
+./src/app/components/s
+ervices/forms/OfferDec
+isionForm.tsx
+280:55  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+343:51  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+412:29  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+
+./src/app/components/S
+tudentDetail.tsx
+857:72  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+902:70  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+
+./src/app/components/s
+tudents/ArchiveStudent
+Modal.tsx
+135:20  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  r
+eact/no-unescaped-enti
+ties
+135:28  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  r
+eact/no-unescaped-enti
+ties
+
+./src/app/components/u
+i/DateInputShowcase.ts
+x
+517:61  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+522:47  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  r
+eact/no-unescaped-enti
+ties
+522:52  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  r
+eact/no-unescaped-enti
+ties
+522:57  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  r
+eact/no-unescaped-enti
+ties
+522:64  Error: `"` 
+can be escaped with 
+`&quot;`, `&ldquo;`, 
+`&#34;`, `&rdquo;`.  r
+eact/no-unescaped-enti
+ties
+673:61  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+673:64  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+673:68  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+673:71  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+673:75  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+673:78  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+674:61  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+674:64  Error: `'` 
+can be escaped with 
+`&apos;`, `&lsquo;`, 
+`&#39;`, `&rsquo;`.  r
+eact/no-unescaped-enti
+ties
+
+./src/app/components/u
+i/form/FileUpload.tsx
+196:6  Warning: React 
+Hook useCallback has 
+a missing dependency: 
+'uploadFiles'. Either 
+include it or remove 
+the dependency array. 
+ react-hooks/exhaustiv
+e-deps
+
+./src/app/components/u
+i/form/NumberInput.tsx
+62:6  Warning: React 
+Hook useEffect has a 
+missing dependency: 
+'formatValue'. Either 
+include it or remove 
+the dependency array. 
+ react-hooks/exhaustiv
+e-deps
+
+./src/app/components/u
+i/modals/ConfirmDialog
+.tsx
+139:6  Warning: React 
+Hook useEffect has 
+missing dependencies: 
+'handleCancel' and 
+'handleConfirm'. 
+Either include them 
+or remove the 
+dependency array.  rea
+ct-hooks/exhaustive-de
+ps
+
+./src/services/invoice
+Service.ts
+330:1  Warning: 
+Assign object to a 
+variable before 
+exporting as module 
+default  import/no-ano
+nymous-default-export
+
+./src/services/rbacSer
+vice.ts
+292:1  Warning: 
+Assign object to a 
+variable before 
+exporting as module 
+default  import/no-ano
+nymous-default-export
+
+info  - Need to 
+disable some ESLint 
+rules? Learn more 
+here: https://nextjs.o
+rg/docs/basic-features
+/eslint#disabling-rule
+s
