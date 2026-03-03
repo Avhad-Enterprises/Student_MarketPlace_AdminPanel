@@ -620,16 +620,6 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
-          <div className="flex items-center gap-2"><span className="text-gray-500 text-sm font-medium">Rows per page:</span>
-            <button className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700">{rowsPerPage}<ChevronDown size={14} className="text-gray-400" /></button>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center"><ChevronLeft size={18} strokeWidth={2} className="text-gray-500" /></button>
-            <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center"><ChevronRight size={18} strokeWidth={2} className="text-gray-500" /></button>
-          </div>
-        </div>
 
         {/* Mobile Cards */}
         <div className="md:hidden flex flex-col gap-3 p-4">

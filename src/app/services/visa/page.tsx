@@ -8,8 +8,8 @@ export default function VisaRoute() {
     const router = useRouter();
 
     return (
-        <AdminLayout activePage="services-visa" onNavigate={(page) => router.push(`/${page.replace('-', '/')}`)}>
-            <VisaOverviewPage />
+        <AdminLayout activePage="services-visa">
+            <VisaOverviewPage onNavigate={(page) => router.push(page)} />
         </AdminLayout>
     );
 }

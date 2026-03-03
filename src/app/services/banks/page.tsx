@@ -8,8 +8,8 @@ export default function BanksRoute() {
     const router = useRouter();
 
     return (
-        <AdminLayout activePage="services-banks" onNavigate={(page) => router.push(`/${page.replace('-', '/')}`)}>
-            <BanksOverviewPage />
+        <AdminLayout activePage="services-banks">
+            <BanksOverviewPage onNavigate={(page) => router.push(page)} />
         </AdminLayout>
     );
 }

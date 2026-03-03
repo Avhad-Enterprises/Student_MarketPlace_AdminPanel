@@ -11,7 +11,7 @@ export default function LoanDetailPage() {
     const id = params.id as string;
 
     return (
-        <AdminLayout>
+        <AdminLayout activePage="services-loans">
             <LoanProviderDetail
                 providerId={id}
                 onBack={() => router.push('/services/loans')}

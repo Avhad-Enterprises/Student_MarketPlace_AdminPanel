@@ -8,7 +8,7 @@ export default function DashboardRoute() {
     const router = useRouter();
 
     const handleLogout = () => {
-        localStorage.removeItem("authToken");
+        localStorage.removeItem("auth_token");
         router.push("/login");
     };
 

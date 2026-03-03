@@ -335,7 +335,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   const metricsCards = [
     {
       title: 'Total Countries',
-      value: metrics.totalCountries.toString(),
+      value: (metrics?.totalCountries || 0).toString(),
       icon: Globe,
       bgClass: 'bg-purple-50',
       colorClass: 'text-purple-600',
@@ -343,7 +343,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
     },
     {
       title: 'Active Countries',
-      value: metrics.activeCountries.toString(),
+      value: (metrics?.activeCountries || 0).toString(),
       icon: MapPin,
       bgClass: 'bg-green-50',
       colorClass: 'text-green-600',
@@ -351,7 +351,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
     },
     {
       title: 'Visa-Friendly',
-      value: metrics.visaFriendly.toString(),
+      value: (metrics?.visaFriendly || 0).toString(),
       icon: FileText,
       bgClass: 'bg-blue-50',
       colorClass: 'text-blue-600',
@@ -359,7 +359,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
     },
     {
       title: 'High-Demand',
-      value: metrics.highDemand.toString(),
+      value: (metrics?.highDemand || 0).toString(),
       icon: TrendingUp,
       bgClass: 'bg-amber-50',
       colorClass: 'text-amber-600',
@@ -367,7 +367,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
     },
     {
       title: 'With Universities',
-      value: metrics.withUniversities.toString(),
+      value: (metrics?.withUniversities || 0).toString(),
       icon: Building2,
       bgClass: 'bg-pink-50',
       colorClass: 'text-pink-600',
@@ -1377,40 +1377,26 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#253154]">{country.popularity}%</td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <button
-                            className="text-gray-400 hover:text-[#0e042f] transition-colors p-1 rounded-md hover:bg-gray-50"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-32 p-0" align="end">
-                          <div className="flex flex-col">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditCountry(country.id);
-                              }}
-                              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 text-left flex items-center gap-2"
-                            >
-                              <Edit size={14} />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteConfirmCountry(country);
-                              }}
-                              className="px-4 py-2 text-sm text-red-600 hover:bg-red-50 text-left flex items-center gap-2"
-                            >
-                              <Trash2 size={14} />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditCountry(country.id);
+                          }}
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmCountry(country);
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

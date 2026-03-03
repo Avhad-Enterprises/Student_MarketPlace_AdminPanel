@@ -10,7 +10,7 @@ export default function HousingProviderDetailRoute() {
     const id = params.id as string;
 
     return (
-        <AdminLayout activePage="services-housing" onNavigate={(page) => router.push(`/${page.replace('-', '/')}`)}>
+        <AdminLayout activePage="services-housing">
             <HousingProviderDetail providerId={id} />
         </AdminLayout>
     );

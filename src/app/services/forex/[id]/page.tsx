@@ -10,7 +10,7 @@ export default function ForexProviderDetailRoute() {
     const id = params.id as string;
 
     return (
-        <AdminLayout activePage="services-forex" onNavigate={(page) => router.push(`/${page.replace('-', '/')}`)}>
+        <AdminLayout activePage="services-forex">
             <ForexProviderDetail providerId={id} />
         </AdminLayout>
     );

@@ -1,12 +1,12 @@
+"use client";
 import React, { useState } from 'react';
 import {
-  MoreHorizontal, Plus, Search, Filter, ArrowUpDown, ArrowDown,
-  Columns, Download, Upload, Eye, Edit, Calendar as CalendarIcon,
-  ToggleLeft, Users, FileText, Calendar as CalendarAltIcon,
-  ChevronDown, ChevronLeft, ChevronRight, Check, Printer, X, RefreshCw,
-  Building2, GraduationCap, DollarSign, TrendingUp, Settings, Archive, Copy,
-  ArrowUp, Loader2, ToggleRight, Trash2
+  MoreHorizontal, Plus, Search, Filter, ArrowUpDown, ArrowDown, Columns, Download, Upload, Eye, Edit,
+  Calendar as CalendarIcon, ToggleLeft, Users, FileText, Calendar as CalendarAltIcon, ChevronDown,
+  ChevronLeft, ChevronRight, Check, Printer, X, RefreshCw, Building2, GraduationCap, DollarSign,
+  TrendingUp, Settings, Archive, Copy, ArrowUp, Loader2, ToggleRight, Trash2
 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { AddUniversityDialog } from './common/AddUniversityDialog';
 import { Calendar as CalendarComponent } from "./ui/calendar";
@@ -47,9 +47,10 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ checked, partial = fals
 // --- StatusBadge Component ---
 interface StatusBadgeProps {
   status: 'active' | 'disabled' | 'open' | 'closed';
+  onClick?: (e: React.MouseEvent) => void;
 }
 
-const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
+const StatusBadge: React.FC<StatusBadgeProps> = ({ status, onClick }) => {
   const statusConfig = {
     active: {
       bg: 'bg-green-100',
@@ -80,7 +81,10 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const config = statusConfig[status] || statusConfig['disabled'];
 
   return (
-    <span className={`px-3 py-1 rounded-lg text-[12px] font-medium border border-opacity-20 inline-flex w-[100px] items-center justify-center ${config.bg} ${config.text} ${config.border}`}>
+    <span
+      onClick={onClick}
+      className={`px-3 py-1 rounded-lg text-[12px] font-medium border border-opacity-20 inline-flex w-[100px] items-center justify-center cursor-pointer transition-all ${config.bg} ${config.text} ${config.border} ${onClick ? 'hover:brightness-95 active:scale-95' : ''}`}
+    >
       {config.label}
     </span>
   );
@@ -221,6 +225,7 @@ interface UniversitiesOverviewPageProps {
 }
 
 export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> = ({ onNavigate, onEditUniversity }) => {
+  const router = useRouter();
   // State management
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
@@ -248,7 +253,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   const [showImportDialog, setShowImportDialog] = useState(false);
 
   // Get countryId from URL query params
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const searchParams = useSearchParams();
   const urlCountryId = searchParams?.get('countryId');
 
   // Filter & Sort State
@@ -292,10 +297,17 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
         order: sortConfig.direction
       });
       // Handle both array response or paginated response structure
-      const list = Array.isArray(data) ? data : (data.data || []);
-      setUniversities(list);
+      const rawList = Array.isArray(data) ? data : (data?.data || []);
+      const mappedList = rawList.map((item: any) => ({
+        ...item,
+        country: item.country_name || item.country || '',
+        acceptanceRate: item.acceptance_rate || item.acceptanceRate || '',
+        applicationStatus: item.application_status || item.applicationStatus || 'open',
+      }));
+      setUniversities(mappedList);
+      console.log("[UniversitiesOverviewPage] Successfully fetched universities:", mappedList.length);
     } catch (error) {
-      console.error("Failed to fetch universities:", error);
+      console.error("[UniversitiesOverviewPage] Failed to fetch universities:", error);
       toast.error("Failed to load universities");
     } finally {
       setIsLoading(false);
@@ -327,7 +339,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   const metrics = [
     {
       title: 'Total Universities',
-      value: stats.totalUniversities.toLocaleString(),
+      value: (stats?.totalUniversities || 0).toLocaleString(),
       icon: Building2,
       bgClass: 'bg-purple-50',
       colorClass: 'text-purple-600',
@@ -335,7 +347,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
     },
     {
       title: 'Active Universities',
-      value: stats.activeUniversities.toLocaleString(),
+      value: (stats?.activeUniversities || 0).toLocaleString(),
       icon: GraduationCap,
       bgClass: 'bg-green-50',
       colorClass: 'text-green-600',
@@ -343,7 +355,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
     },
     {
       title: 'Accepting Apps',
-      value: stats.acceptingApps.toLocaleString(),
+      value: (stats?.acceptingApps || 0).toLocaleString(),
       icon: FileText,
       bgClass: 'bg-blue-50',
       colorClass: 'text-blue-600',
@@ -351,7 +363,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
     },
     {
       title: 'Open Intakes',
-      value: stats.openIntakes.toLocaleString(),
+      value: (stats?.openIntakes || 0).toLocaleString(),
       icon: CalendarAltIcon,
       bgClass: 'bg-amber-50',
       colorClass: 'text-amber-600',
@@ -359,7 +371,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
     },
     {
       title: 'High-Offer Rate',
-      value: stats.highOfferRate.toLocaleString(),
+      value: (stats?.highOfferRate || 0).toLocaleString(),
       icon: TrendingUp,
       bgClass: 'bg-pink-50',
       colorClass: 'text-pink-600',
@@ -589,6 +601,14 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
 
   const handleClearSelection = () => {
     setSelectedUniversities([]);
+  };
+
+  const handleAddApplication = (universityId: string) => {
+    if (onNavigate) {
+      onNavigate('students-applications');
+    } else {
+      router.push(`/students/applications?universityId=${universityId}`);
+    }
   };
 
   return (
@@ -1180,7 +1200,13 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
                     )}
                     {visibleColumns.includes('applicationStatus') && (
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge status={university.applicationStatus} />
+                        <StatusBadge
+                          status={university.applicationStatus}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddApplication(university.id);
+                          }}
+                        />
                       </td>
                     )}
                     {visibleColumns.includes('status') && (

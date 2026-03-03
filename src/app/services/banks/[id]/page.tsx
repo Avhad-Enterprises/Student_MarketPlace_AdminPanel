@@ -10,7 +10,7 @@ export default function BankProviderDetailRoute() {
     const id = params.id as string;
 
     return (
-        <AdminLayout activePage="services-banks" onNavigate={(page) => router.push(`/${page.replace('-', '/')}`)}>
+        <AdminLayout activePage="services-banks">
             <BankProviderDetail providerId={id} />
         </AdminLayout>
     );

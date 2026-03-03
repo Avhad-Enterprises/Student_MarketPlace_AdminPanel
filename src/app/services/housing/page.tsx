@@ -8,8 +8,8 @@ export default function HousingRoute() {
     const router = useRouter();
 
     return (
-        <AdminLayout activePage="services-housing" onNavigate={(page) => router.push(`/${page.replace('-', '/')}`)}>
-            <HousingOverviewPage />
+        <AdminLayout activePage="services-housing">
+            <HousingOverviewPage onNavigate={(page) => router.push(page)} />
         </AdminLayout>
     );
 }

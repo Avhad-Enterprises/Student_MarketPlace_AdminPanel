@@ -8,8 +8,8 @@ export default function ForexRoute() {
     const router = useRouter();
 
     return (
-        <AdminLayout activePage="services-forex" onNavigate={(page) => router.push(`/${page.replace('-', '/')}`)}>
-            <ForexOverviewPage />
+        <AdminLayout activePage="services-forex">
+            <ForexOverviewPage onNavigate={(page) => router.push(page)} />
         </AdminLayout>
     );
 }

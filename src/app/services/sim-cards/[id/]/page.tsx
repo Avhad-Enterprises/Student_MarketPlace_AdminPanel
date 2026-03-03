@@ -11,7 +11,7 @@ export default function SIMCardDetailPage() {
     const id = params.id as string;
 
     return (
-        <AdminLayout>
+        <AdminLayout activePage="services-sim-cards">
             <SIMCardProviderDetail
                 providerId={id}
                 onBack={() => router.push('/services/sim-cards')}

@@ -10,7 +10,7 @@ export default function VisaProviderDetailRoute() {
     const id = params.id as string;
 
     return (
-        <AdminLayout activePage="services-visa" onNavigate={(page) => router.push(`/${page.replace('-', '/')}`)}>
+        <AdminLayout activePage="services-visa">
             <VisaProviderDetail providerId={id} />
         </AdminLayout>
     );

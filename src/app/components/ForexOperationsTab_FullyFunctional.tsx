@@ -177,8 +177,8 @@ export const ForexOperationsTab: React.FC<TabProps> = ({
 
   // State - API Credentials
   const [credentials, setCredentials] = useState<ApiCredentials>({
-    apiKey: 'sk_live_4xKz9pL2mN8qR5tY7wE3vH6jK9rS4uW8mP2nQ5xR8Qm',
-    clientId: 'client_wise_prod_2024_78945',
+    apiKey: '',
+    clientId: '',
     webhookEndpoint: 'https://platform.example.com/webhooks/forex/wise',
     credentialStatus: 'Active',
     lastRotated: '2024-01-15',

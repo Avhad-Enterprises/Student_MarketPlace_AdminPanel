@@ -5,7 +5,7 @@ import {
   House, Users, Grid3x3, Globe, Sparkles, Calendar, Mail, Wallet,
   BarChart3, FileEdit, Store, Settings, Bell, Menu, ChevronDown, ChevronRight, User, LogOut
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationPanel } from './common/NotificationPanel';
 import { useNotifications } from './common/useNotifications';
@@ -29,147 +29,200 @@ interface NavSection {
   items?: { id: string; label: string }[];
 }
 
+const NAV_SECTIONS: NavSection[] = [
+  {
+    id: 'dashboard',
+    icon: <House size={20} />,
+    label: 'Dashboard',
+    pages: ['dashboard']
+  },
+  {
+    id: 'students',
+    icon: <Users size={20} />,
+    label: 'Students',
+    items: [
+      { id: 'students-all', label: 'All Students' },
+      { id: 'students-profiles', label: 'Student Profiles' },
+      { id: 'students-applications', label: 'Applications' },
+      { id: 'students-status', label: 'Status Tracking' }
+    ]
+  },
+  {
+    id: 'services',
+    icon: <Grid3x3 size={20} />,
+    label: 'Services & Marketplace',
+    items: [
+      { id: 'services-sim-cards', label: 'SIM Cards' },
+      { id: 'services-banks', label: 'Banks' },
+      { id: 'services-insurance', label: 'Insurance' },
+      { id: 'services-visa', label: 'Visa' },
+      { id: 'services-taxes', label: 'Taxes' },
+      { id: 'services-loans', label: 'Loans' },
+      { id: 'services-credit', label: 'Build Credit' },
+      { id: 'services-housing', label: 'Housing' },
+      { id: 'services-forex', label: 'Forex' },
+      { id: 'services-employment', label: 'Employment' },
+      { id: 'services-food', label: 'Food' },
+      { id: 'services-courses', label: 'Courses' }
+    ]
+  },
+  {
+    id: 'countries',
+    icon: <Globe size={20} />,
+    label: 'Countries & Universities',
+    items: [
+      { id: 'countries-list', label: 'Countries' },
+      { id: 'universities-list', label: 'Universities' }
+    ]
+  },
+  {
+    id: 'ai',
+    icon: <Sparkles size={20} />,
+    label: 'AI Visa Assistant',
+    items: [
+      { id: 'ai-overview', label: 'Overview' },
+      { id: 'ai-setup', label: 'Assistant Setup' },
+      { id: 'ai-features', label: 'Features Manager' },
+      { id: 'ai-knowledge', label: 'Content & Knowledge Base' },
+      { id: 'ai-flows', label: 'Flows & Forms' },
+      { id: 'ai-conversations', label: 'Conversations & Quality' }
+    ]
+  },
+  {
+    id: 'bookings',
+    icon: <Calendar size={20} />,
+    label: 'Bookings & Leads',
+    items: [
+      { id: 'bookings-list', label: 'Bookings' },
+      { id: 'bookings-enquiries', label: 'Enquiries' },
+      { id: 'bookings-status', label: 'Lead Status' },
+      { id: 'bookings-experts', label: 'Assigned Experts' }
+    ]
+  },
+  {
+    id: 'communications',
+    icon: <Mail size={20} />,
+    label: 'Communications',
+    pages: ['communications']
+  },
+  {
+    id: 'finance',
+    icon: <Wallet size={20} />,
+    label: 'Finance',
+    pages: ['finance']
+  },
+  {
+    id: 'reports',
+    icon: <BarChart3 size={20} />,
+    label: 'Reports & Analytics',
+    pages: ['reports']
+  },
+  {
+    id: 'blogs',
+    icon: <FileEdit size={20} />,
+    label: 'Blogs',
+    pages: ['blogs']
+  },
+  {
+    id: 'online-store',
+    icon: <Store size={20} />,
+    label: 'Online Store',
+    items: [
+      { id: 'store-themes', label: 'Themes' },
+      { id: 'store-pages', label: 'Pages' },
+      { id: 'store-navigation', label: 'Navigation' },
+      { id: 'store-preferences', label: 'Preferences' }
+    ]
+  }
+];
+
+const checkPageInSection = (section: NavSection, pageId: string) => {
+  if (section.pages?.includes(pageId)) return true;
+  if (section.items?.some(item => item.id === pageId)) return true;
+  return false;
+};
+
 export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, onLogout }: AdminLayoutProps) => {
   const router = useRouter();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<string[]>([]);
+
+  // Initialize expandedSections to include the section containing activePage
+  const [expandedSections, setExpandedSections] = useState<string[]>(() => {
+    const activeSection = NAV_SECTIONS.find(section => checkPageInSection(section, activePage));
+    return activeSection ? [activeSection.id] : [];
+  });
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const profileButtonRef = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotifications();
+  const pathname = usePathname();
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const navSections: NavSection[] = [
-    {
-      id: 'dashboard',
-      icon: <House size={20} />,
-      label: 'Dashboard',
-      pages: ['dashboard']
-    },
-    {
-      id: 'students',
-      icon: <Users size={20} />,
-      label: 'Students',
-      items: [
-        { id: 'students-all', label: 'All Students' },
-        { id: 'students-profiles', label: 'Student Profiles' },
-        { id: 'students-applications', label: 'Applications' },
-        { id: 'students-status', label: 'Status Tracking' }
-      ]
-    },
-    {
-      id: 'services',
-      icon: <Grid3x3 size={20} />,
-      label: 'Services & Marketplace',
-      items: [
-        { id: 'services-sim-cards', label: 'SIM Cards' },
-        { id: 'services-banks', label: 'Banks' },
-        { id: 'services-insurance', label: 'Insurance' },
-        { id: 'services-visa', label: 'Visa' },
-        { id: 'services-taxes', label: 'Taxes' },
-        { id: 'services-loans', label: 'Loans' },
-        { id: 'services-credit', label: 'Build Credit' },
-        { id: 'services-housing', label: 'Housing' },
-        { id: 'services-forex', label: 'Forex' },
-        { id: 'services-employment', label: 'Employment' },
-        { id: 'services-food', label: 'Food' },
-        { id: 'services-courses', label: 'Courses' }
-      ]
-    },
-    {
-      id: 'countries',
-      icon: <Globe size={20} />,
-      label: 'Countries & Universities',
-      items: [
-        { id: 'countries-list', label: 'Countries' },
-        { id: 'universities-list', label: 'Universities' }
-      ]
-    },
-    {
-      id: 'ai',
-      icon: <Sparkles size={20} />,
-      label: 'AI Visa Assistant',
-      items: [
-        { id: 'ai-overview', label: 'Overview' },
-        { id: 'ai-setup', label: 'Assistant Setup' },
-        { id: 'ai-features', label: 'Features Manager' },
-        { id: 'ai-knowledge', label: 'Content & Knowledge Base' },
-        { id: 'ai-flows', label: 'Flows & Forms' },
-        { id: 'ai-conversations', label: 'Conversations & Quality' }
-      ]
-    },
-    {
-      id: 'bookings',
-      icon: <Calendar size={20} />,
-      label: 'Bookings & Leads',
-      items: [
-        { id: 'bookings-list', label: 'Bookings' },
-        { id: 'bookings-enquiries', label: 'Enquiries' },
-        { id: 'bookings-status', label: 'Lead Status' },
-        { id: 'bookings-experts', label: 'Assigned Experts' }
-      ]
-    },
-    {
-      id: 'communications',
-      icon: <Mail size={20} />,
-      label: 'Communications',
-      pages: ['communications']
-    },
-    {
-      id: 'finance',
-      icon: <Wallet size={20} />,
-      label: 'Finance',
-      pages: ['finance']
-    },
-    {
-      id: 'reports',
-      icon: <BarChart3 size={20} />,
-      label: 'Reports & Analytics',
-      pages: ['reports']
-    },
-    {
-      id: 'blogs',
-      icon: <FileEdit size={20} />,
-      label: 'Blogs',
-      pages: ['blogs']
-    },
-    {
-      id: 'online-store',
-      icon: <Store size={20} />,
-      label: 'Online Store',
-      items: [
-        { id: 'store-themes', label: 'Themes' },
-        { id: 'store-pages', label: 'Pages' },
-        { id: 'store-navigation', label: 'Navigation' },
-        { id: 'store-preferences', label: 'Preferences' }
-      ]
-    }
-  ];
+  // Placeholder for navigation sections if needed locally, but currently using global NAV_SECTIONS
 
   const handleNav = (page: string) => {
-    if (onNavigate) {
-      onNavigate(page);
-    } else {
-      // Default internal navigation logic
-      const routeMap: Record<string, string> = {
-        'dashboard': '/dashboard',
-        'students-all': '/students',
-        'students-profiles': '/students/profiles',
-        'students-applications': '/students/applications',
-        'students-status': '/students/status-tracking',
-        'countries-list': '/countries',
-        'universities-list': '/universities',
-        'add-country': '/countries/add',
-      };
+    console.log('[AdminLayout] Requested navigation to:', page);
+    try {
+      if (onNavigate) {
+        console.log('[AdminLayout] Using onNavigate prop');
+        onNavigate(page);
+      } else {
+        // Default internal navigation logic
+        const routeMap: Record<string, string> = {
+          'dashboard': '/dashboard',
+          'students-all': '/students',
+          'students-profiles': '/students/profiles',
+          'students-applications': '/students/applications',
+          'students-status': '/students/status-tracking',
+          'countries-list': '/countries',
+          'universities-list': '/universities',
+          'add-country': '/countries/add',
+          'communications': '/communications',
+          'finance': '/finance',
+        };
 
-      if (routeMap[page]) {
-        router.push(routeMap[page]);
-      } else if (page.startsWith('services-')) {
-        const service = page.replace('services-', '');
-        router.push(`/services/${service}`);
+        const targetRoute = routeMap[page];
+        if (targetRoute) {
+          console.log('[AdminLayout] Navigating to mapped route:', targetRoute);
+          if (pathname !== targetRoute) {
+            setIsNavigating(true);
+          }
+          router.push(targetRoute);
+        } else if (page.startsWith('services-')) {
+          const service = page.replace('services-', '');
+          const target = `/services/${service}`;
+          console.log('[AdminLayout] Navigating to service:', target);
+          if (pathname !== target) {
+            setIsNavigating(true);
+          }
+          router.push(target);
+        } else if (page.startsWith('ai-')) {
+          const subPage = page.replace('ai-', '');
+          const target = `/ai-visa-assistant/${subPage}`;
+          console.log('[AdminLayout] Navigating to AI section:', target);
+          if (pathname !== target) {
+            setIsNavigating(true);
+          }
+          router.push(target);
+        } else if (page.startsWith('bookings-')) {
+          const subPage = page.replace('bookings-', '');
+          const target = `/bookings/${subPage}`;
+          console.log('[AdminLayout] Navigating to booking:', target);
+          if (pathname !== target) {
+            setIsNavigating(true);
+          }
+          router.push(target);
+        } else {
+          console.warn('[AdminLayout] No route found for page:', page);
+        }
       }
+    } catch (error) {
+      console.error('[AdminLayout] Navigation failed:', error);
+    } finally {
+      setSidebarOpen(false);
     }
-    setSidebarOpen(false);
   };
 
   const toggleSection = (sectionId: string) => {
@@ -203,8 +256,23 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
     };
   }, []);
 
+  // Reset loading state on route change with a small delay to ensure visibility
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsNavigating(false);
+    }, 400); // Minimum 400ms visibility
+    return () => clearTimeout(timer);
+  }, [pathname]);
+
   return (
-    <div className="bg-app-bg min-h-screen w-full font-sans text-app-heading flex relative overflow-hidden">
+    <div suppressHydrationWarning className="bg-app-bg min-h-screen w-full font-sans text-app-heading flex relative overflow-hidden">
+      {/* Top Loading Bar */}
+      {isNavigating && (
+        <div className="fixed top-0 left-0 right-0 h-1 z-[9999] overflow-hidden">
+          <div className="h-full bg-indigo-600 animate-progress-bar shadow-[0_0_10px_rgba(79,70,229,0.5)]" />
+        </div>
+      )}
+
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
@@ -217,6 +285,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
 
       {/* Sidebar */}
       <aside
+        suppressHydrationWarning
         className={classNames(
           "fixed lg:static top-4 left-4 h-[calc(100vh-32px)] w-[287px] bg-app-sidebar-bg text-[#99a1af] flex flex-col z-50 rounded-[40px] shadow-[0px_25px_50px_-12px_rgba(89,22,139,0.4)] border border-white/5 transition-transform duration-300 ease-in-out shrink-0 ml-4 my-4",
           isSidebarOpen ? "translate-x-0" : "-translate-x-[120%] lg:translate-x-0 lg:ml-4"
@@ -242,19 +311,19 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
 
         {/* Scrollable Middle Section */}
         <div className="flex-1 overflow-y-auto px-6 py-2 space-y-1 custom-scrollbar-dark">
-          {navSections.slice(1).map((section) => (
-            <div key={section.id}>
+          {NAV_SECTIONS.slice(1).map((section) => (
+            <div suppressHydrationWarning key={section.id}>
               {section.items ? (
                 <>
                   <NavItemExpandable
                     icon={section.icon}
                     label={section.label}
-                    active={isPageInSection(section)}
+                    active={checkPageInSection(section, activePage)}
                     expanded={expandedSections.includes(section.id)}
                     onClick={() => toggleSection(section.id)}
                   />
                   {expandedSections.includes(section.id) && (
-                    <div className="ml-4 mt-1 space-y-1">
+                    <div suppressHydrationWarning className="ml-4 mt-1 space-y-1">
                       {section.items.map((item) => (
                         <NavSubItem
                           key={item.id}
@@ -297,6 +366,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
             {/* Left: Menu Button */}
             <div className="flex items-center">
               <button
+                suppressHydrationWarning
                 className="lg:hidden p-2 text-[#90a1b9] hover:text-white transition-colors"
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Open navigation menu"
@@ -316,6 +386,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
               {/* Notification */}
               <div className="relative">
                 <button
+                  suppressHydrationWarning
                   className="relative p-2 text-[#99a1af] hover:text-white transition-colors"
                   aria-label="View notifications"
                   ref={notificationButtonRef}
@@ -342,11 +413,12 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
               {/* Profile */}
               <div className="relative" ref={profileButtonRef}>
                 <button
+                  suppressHydrationWarning
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
                   className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <div className="hidden sm:block text-right">
-                    <div className="text-sm font-normal text-[#d1d5dc]\">Admin User</div>
+                    <div className="text-sm font-normal text-[#d1d5dc]">Admin User</div>
                   </div>
                   <div className="relative">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#c27aff] to-[#fb64b6] p-[2px]">
@@ -363,6 +435,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
                   <div className="absolute right-0 top-full mt-2 w-52 bg-white rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-gray-100 overflow-hidden z-[100]">
                     <div className="py-1">
                       <button
+                        suppressHydrationWarning
                         className="w-full px-4 py-3 text-left text-sm text-[#0f172b] hover:bg-gray-50 transition-colors flex items-center gap-3"
                         onClick={() => {
                           setShowProfileMenu(false);
@@ -373,6 +446,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
                         Profile
                       </button>
                       <button
+                        suppressHydrationWarning
                         className="w-full px-4 py-3 text-left text-sm text-[#0f172b] hover:bg-gray-50 transition-colors flex items-center gap-3"
                         onClick={() => {
                           setShowProfileMenu(false);
@@ -384,6 +458,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
                       </button>
                       <div className="my-1 h-px bg-gray-100"></div>
                       <button
+                        suppressHydrationWarning
                         className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
                         onClick={() => {
                           setShowProfileMenu(false);
@@ -421,6 +496,7 @@ interface NavItemProps {
 function NavItem({ icon, label, active, onClick }: NavItemProps) {
   return (
     <button
+      suppressHydrationWarning
       onClick={onClick}
       className={classNames(
         "relative flex items-center gap-4 px-4 py-3 rounded-[16px] cursor-pointer transition-all duration-200 group overflow-hidden border border-transparent w-full text-left focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-2 focus:ring-offset-app-sidebar-bg",
@@ -451,6 +527,7 @@ interface NavItemExpandableProps {
 function NavItemExpandable({ icon, label, active, expanded, onClick }: NavItemExpandableProps) {
   return (
     <button
+      suppressHydrationWarning
       onClick={onClick}
       className={classNames(
         "relative flex items-center gap-4 px-4 py-3 rounded-[16px] cursor-pointer transition-all duration-200 group overflow-hidden border border-transparent w-full text-left focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-2 focus:ring-offset-app-sidebar-bg",
@@ -485,6 +562,7 @@ interface NavSubItemProps {
 function NavSubItem({ label, active, onClick }: NavSubItemProps) {
   return (
     <button
+      suppressHydrationWarning
       onClick={onClick}
       className={classNames(
         "relative flex items-center gap-3 px-4 py-2 rounded-[12px] cursor-pointer transition-all duration-200 group overflow-hidden w-full text-left focus:outline-none focus:ring-2 focus:ring-white/30 focus:ring-offset-2 focus:ring-offset-app-sidebar-bg",

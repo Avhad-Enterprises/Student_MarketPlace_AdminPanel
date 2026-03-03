@@ -11,7 +11,7 @@ export default function InsuranceDetailPage() {
     const id = params.id as string;
 
     return (
-        <AdminLayout>
+        <AdminLayout activePage="services-insurance">
             <InsuranceProviderDetail
                 providerId={id}
                 onBack={() => router.push('/services/insurance')}
