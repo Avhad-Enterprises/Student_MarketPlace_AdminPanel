@@ -1,4 +1,4 @@
-/**
+﻿/**
  * BANK PROVIDER HEADER ACTIONS COMPONENT
  * Comprehensive action management for Bank Provider Detail page
  * Includes: Active/Inactive, Sync, Edit, Settings, 3-Dot Menu

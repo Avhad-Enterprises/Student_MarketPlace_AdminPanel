@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal,
   Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Search, Check,
   Columns, Target, TrendingUp, Clock, CheckCircle, XCircle, LayoutGrid, List,
-  UserCircle, Percent, Timer, X
+  UserCircle, Percent, Timer, X, AlertOctagon, Ban
 } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -20,6 +20,8 @@ import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, us
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { leadStatusService, LeadStatus, LeadMetrics } from '../../services/leadStatusService';
+import LeadModal from './LeadModal';
 
 interface CustomCheckboxProps {
   checked: boolean;
@@ -29,7 +31,10 @@ interface CustomCheckboxProps {
 
 const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ checked, partial = false, onChange }) => (
   <div
-    onClick={onChange}
+    onClick={(e) => {
+      e.stopPropagation();
+      onChange();
+    }}
     className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'
       }`}
   >
@@ -39,18 +44,22 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ checked, partial = fals
 );
 
 interface StatusBadgeProps {
-  status: 'new' | 'contacted' | 'qualified' | 'proposal-sent' | 'converted' | 'lost';
+  status: string;
 }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  const config = {
+  const s = status?.toLowerCase() || 'new';
+  const config: any = {
     'new': { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300', label: 'New' },
-    contacted: { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', label: 'Contacted' },
-    qualified: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', label: 'Qualified' },
+    'contacted': { bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300', label: 'Contacted' },
+    'qualified': { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300', label: 'Qualified' },
     'proposal-sent': { bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-300', label: 'Proposal Sent' },
-    converted: { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', label: 'Converted' },
-    lost: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', label: 'Lost' }
-  }[status];
+    'converted': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', label: 'Converted' },
+    'lost': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', label: 'Lost' },
+    'application': { bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-300', label: 'Application' },
+    'visa': { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', label: 'Visa' },
+    'completed': { bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300', label: 'Completed' },
+  }[s] || { bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300', label: status };
 
   return (
     <span className={`px-3 py-1 rounded-lg text-[12px] font-medium border border-opacity-20 inline-flex w-[120px] items-center justify-center ${config.bg} ${config.text} ${config.border}`}>
@@ -59,41 +68,29 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   );
 };
 
-interface ScoreBadgeProps {
-  score: number;
+interface RiskBadgeProps {
+  level: string;
 }
 
-const ScoreBadge: React.FC<ScoreBadgeProps> = ({ score }) => {
-  const config = score >= 80
-    ? { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', label: 'Hot', icon: '🔥' }
-    : score >= 50
-      ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', label: 'Warm', icon: '☀️' }
-      : { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300', label: 'Cold', icon: '❄️' };
+const RiskBadge: React.FC<RiskBadgeProps> = ({ level }) => {
+  const l = level?.toLowerCase() || 'low';
+  const config: any = {
+    'high': { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300', label: 'High Risk', icon: <AlertOctagon size={12} /> },
+    'medium': { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300', label: 'Med Risk', icon: <TrendingUp size={12} /> },
+    'low': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', label: 'Low Risk', icon: <CheckCircle size={12} /> },
+  }[l];
 
   return (
-    <TooltipProvider delayDuration={200}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-2 cursor-help">
-            <span className={`px-3 py-1 rounded-lg text-[12px] font-bold border ${config.bg} ${config.text} ${config.border}`}>
-              {config.icon} {score}
-            </span>
-            <span className={`px-2 py-1 rounded text-[10px] font-semibold ${config.bg} ${config.text}`}>
-              {config.label}
-            </span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent className="bg-[#0e042f] text-white rounded-xl text-xs px-3 py-2">
-          <p>System calculated score</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${config.bg} ${config.text} ${config.border}`}>
+      {config.icon}
+      {config.label}
+    </div>
   );
 };
 
 interface MetricCardProps {
   title: string;
-  value: string;
+  value: string | number;
   icon: React.ElementType;
   bgClass: string;
   colorClass: string;
@@ -123,25 +120,12 @@ const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon: Icon, bgCla
   </div>
 );
 
-interface Lead {
-  id: string;
-  leadId: string;
-  dateCreated: string;
-  studentName: string;
-  email: string;
-  phone: string;
-  source: string;
-  status: 'new' | 'contacted' | 'qualified' | 'proposal-sent' | 'converted' | 'lost';
-  score: number;
-  assignedCounselor?: string;
-}
-
 interface KanbanCardProps {
-  lead: Lead;
+  lead: LeadStatus;
 }
 
 const KanbanCard: React.FC<KanbanCardProps> = ({ lead }) => {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lead.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: lead.db_id.toString() });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -158,26 +142,28 @@ const KanbanCard: React.FC<KanbanCardProps> = ({ lead }) => {
       className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-all cursor-move mb-3"
     >
       <div className="flex items-start justify-between mb-3">
-        <h4 className="font-semibold text-[#0f172b] text-sm">{lead.studentName}</h4>
-        <ScoreBadge score={lead.score} />
+        <h4 className="font-semibold text-[#0f172b] text-sm">{lead.first_name} {lead.last_name}</h4>
+        <RiskBadge level={lead.risk_level} />
       </div>
 
       <div className="space-y-2 text-xs text-gray-600">
         <div className="flex items-center gap-2">
-          <span className="font-medium">Source:</span>
-          <span className="px-2 py-1 bg-gray-100 rounded">{lead.source}</span>
+          <span className="font-medium">Country:</span>
+          <span className="px-2 py-1 bg-gray-100 rounded">{lead.country}</span>
         </div>
 
-        {lead.assignedCounselor && (
+        {lead.counselor && (
           <div className="flex items-center gap-2">
             <UserCircle size={14} />
-            <span>{lead.assignedCounselor}</span>
+            <span>{lead.counselor}</span>
           </div>
         )}
 
-        <div className="text-gray-500 text-[11px] mt-2">
-          {format(new Date(lead.dateCreated), 'MMM d, yyyy')}
-        </div>
+        {lead.last_update && (
+          <div className="text-gray-500 text-[11px] mt-2">
+            Last update: {format(new Date(lead.last_update), 'MMM d, yyyy')}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -188,46 +174,66 @@ interface LeadStatusOverviewPageProps {
 }
 
 const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavigate }) => {
-  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(2025, 0, 1), to: new Date(2025, 0, 31) });
+  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(2025, 0, 1), to: new Date(2026, 11, 31) });
   const [selectedLeads, setSelectedLeads] = useState<string[]>([]);
-  const [selectAllStore, setSelectAllStore] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['leadId', 'dateCreated', 'studentName', 'email', 'phone', 'source', 'assignedCounselor', 'score', 'status']);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['leadId', 'studentName', 'riskLevel', 'stage', 'country', 'counselor', 'lastUpdate', 'subStatus']);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [filterCounselor, setFilterCounselor] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterScoreMin, setFilterScoreMin] = useState('');
-  const [filterScoreMax, setFilterScoreMax] = useState('');
-  const [filterSource, setFilterSource] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [riskFilter, setRiskFilter] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'lastUpdate', direction: 'desc' });
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const [leads, setLeads] = useState<Lead[]>([
-    { id: 'LEAD-001', leadId: 'LEAD-001', dateCreated: '2025-01-15T10:30:00', studentName: 'Alex Johnson', email: 'alex.j@email.com', phone: '+1-555-0101', source: 'Website', status: 'new', score: 85, assignedCounselor: 'Sarah Johnson' },
-    { id: 'LEAD-002', leadId: 'LEAD-002', dateCreated: '2025-01-16T11:45:00', studentName: 'Maria Garcia', email: 'maria.g@email.com', phone: '+1-555-0102', source: 'Referral', status: 'contacted', score: 92, assignedCounselor: 'Mike Davis' },
-    { id: 'LEAD-003', leadId: 'LEAD-003', dateCreated: '2025-01-17T09:20:00', studentName: 'David Lee', email: 'david.l@email.com', phone: '+1-555-0103', source: 'Social Media', status: 'qualified', score: 78, assignedCounselor: 'Sarah Johnson' },
-    { id: 'LEAD-004', leadId: 'LEAD-004', dateCreated: '2025-01-18T14:15:00', studentName: 'Sophie Turner', email: 'sophie.t@email.com', phone: '+1-555-0104', source: 'Email Campaign', status: 'proposal-sent', score: 95, assignedCounselor: 'Emma Wilson' },
-    { id: 'LEAD-005', leadId: 'LEAD-005', dateCreated: '2025-01-19T16:00:00', studentName: 'James Wilson', email: 'james.w@email.com', phone: '+1-555-0105', source: 'Website', status: 'converted', score: 88, assignedCounselor: 'David Chen' },
-    { id: 'LEAD-006', leadId: 'LEAD-006', dateCreated: '2025-01-20T13:30:00', studentName: 'Emma Brown', email: 'emma.b@email.com', phone: '+1-555-0106', source: 'Referral', status: 'lost', score: 45, assignedCounselor: 'Sarah Johnson' },
-  ]);
+  const [leadModalOpen, setLeadModalOpen] = useState(false);
+  const [selectedLeadForEdit, setSelectedLeadForEdit] = useState<LeadStatus | null>(null);
+
+  const [leads, setLeads] = useState<LeadStatus[]>([]);
+  const [leadMetrics, setLeadMetrics] = useState<LeadMetrics | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [leadsData, metricsData] = await Promise.all([
+        leadStatusService.getAllLeads(),
+        leadStatusService.getMetrics()
+      ]);
+      setLeads(leadsData || []);
+      setLeadMetrics(metricsData);
+    } catch (error) {
+      console.error('Error fetching lead data:', error);
+      toast.error('Failed to load lead status data');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const metrics = [
-    { title: 'Total Leads', value: '324', icon: Target, bgClass: 'bg-purple-50', colorClass: 'text-purple-600', tooltip: 'Total leads generated in selected period' },
-    { title: 'New Leads', value: '87', icon: TrendingUp, bgClass: 'bg-blue-50', colorClass: 'text-blue-600', tooltip: 'New leads not yet contacted' },
-    { title: 'Qualified', value: '142', icon: Clock, bgClass: 'bg-amber-50', colorClass: 'text-amber-600', tooltip: 'Leads qualified and in progress' },
-    { title: 'Converted', value: '68', icon: CheckCircle, bgClass: 'bg-green-50', colorClass: 'text-green-600', tooltip: 'Leads successfully converted to customers' },
-    { title: 'Conversion Rate', value: '21%', icon: Percent, bgClass: 'bg-emerald-50', colorClass: 'text-emerald-600', tooltip: 'Percentage of leads converted to customers' }
+    { title: 'Applications', value: leadMetrics?.applicationCount || 0, icon: Target, bgClass: 'bg-purple-50', colorClass: 'text-purple-600', tooltip: 'Total applications currently being processed' },
+    { title: 'Visa Process', value: leadMetrics?.visaCount || 0, icon: TrendingUp, bgClass: 'bg-blue-50', colorClass: 'text-blue-600', tooltip: 'Students in visa processing stage' },
+    { title: 'Awaiting Decision', value: leadMetrics?.awaitingDecisionCount || 0, icon: Clock, bgClass: 'bg-amber-50', colorClass: 'text-amber-600', tooltip: 'Applications awaiting embassy or university decision' },
+    { title: 'Completed', value: leadMetrics?.completedCount || 0, icon: CheckCircle, bgClass: 'bg-green-50', colorClass: 'text-green-600', tooltip: 'Successfully completed enrollments' },
+    { title: 'Blocked/Rejected', value: leadMetrics?.blockedCount || 0, icon: Ban, bgClass: 'bg-red-50', colorClass: 'text-red-600', tooltip: 'Blocked or rejected applications' }
   ];
 
-  const handleRefresh = () => toast.success("Refreshing data...");
+  const handleRefresh = () => {
+    fetchData();
+    toast.success("Refreshing data...");
+  };
 
   const handleSelectAll = () => {
     if (selectedLeads.length === leads.length) {
       setSelectedLeads([]);
-      setSelectAllStore(false);
     } else {
-      setSelectedLeads(leads.map(l => l.id));
-      setSelectAllStore(false);
+      setSelectedLeads(leads.map(l => l.db_id.toString()));
     }
   };
 
@@ -235,8 +241,21 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
     setSelectedLeads(prev => prev.includes(leadId) ? prev.filter(id => id !== leadId) : [...prev, leadId]);
   };
 
-  const handleReassignLead = (leadId: string) => {
-    toast.success(`Reassigning lead ${leadId}...`);
+  const handleEditLead = (lead: LeadStatus) => {
+    setSelectedLeadForEdit(lead);
+    setLeadModalOpen(true);
+  };
+
+  const handleDeleteLead = async (leadId: number) => {
+    if (window.confirm('Are you sure you want to delete this lead?')) {
+      try {
+        await leadStatusService.deleteLead(leadId);
+        toast.success('Lead deleted successfully');
+        fetchData();
+      } catch (error) {
+        toast.error('Failed to delete lead');
+      }
+    }
   };
 
   const sensors = useSensors(
@@ -246,58 +265,103 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
     })
   );
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = leads.findIndex((lead) => lead.id === active.id);
-      const newStatus = over.id as Lead['status'];
+      const leadId = active.id.toString();
+      const newStage = over.id.toString();
+      const lead = leads.find(l => l.db_id.toString() === leadId);
 
-      setLeads((items) => {
-        const newItems = [...items];
-        newItems[oldIndex] = { ...newItems[oldIndex], status: newStatus };
-        return newItems;
-      });
+      if (lead) {
+        try {
+          await leadStatusService.updateStatus({
+            studentDbId: lead.db_id,
+            stage: newStage,
+            subStatus: lead.sub_status || 'Updated via Board',
+            notes: `Status changed to ${newStage} via Kanban board`,
+            changedBy: 'Admin'
+          });
 
-      toast.success(`Lead status updated to ${newStatus}`);
+          setLeads(items => items.map(l =>
+            l.db_id.toString() === leadId ? { ...l, stage: newStage } : l
+          ));
+
+          toast.success(`Lead status updated to ${newStage}`);
+          fetchData(); // Refresh metrics
+        } catch (error) {
+          toast.error('Failed to update lead status');
+        }
+      }
     }
   };
 
-  const getLeadsByStatus = (status: Lead['status']) => {
-    return leads.filter(lead => lead.status === status);
+  const filteredLeads = useMemo(() => {
+    let result = [...leads];
+
+    if (searchTerm) {
+      const lowSearch = searchTerm.toLowerCase();
+      result = result.filter(l =>
+        l.first_name.toLowerCase().includes(lowSearch) ||
+        l.last_name.toLowerCase().includes(lowSearch) ||
+        l.student_id.toLowerCase().includes(lowSearch) ||
+        l.country.toLowerCase().includes(lowSearch)
+      );
+    }
+
+    if (statusFilter.length > 0) {
+      result = result.filter((l: LeadStatus) => statusFilter.includes((l.stage || 'new').toLowerCase()));
+    }
+
+    if (riskFilter.length > 0) {
+      result = result.filter((l: LeadStatus) => riskFilter.includes((l.risk_level || 'low').toLowerCase()));
+    }
+
+    return result.sort((a, b) => {
+      const aValue = a[sortConfig.key as keyof LeadStatus];
+      const bValue = b[sortConfig.key as keyof LeadStatus];
+
+      if (aValue === bValue) return 0;
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      const comparison = aValue < bValue ? -1 : 1;
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [leads, searchTerm, statusFilter, riskFilter, sortConfig]);
+
+  const totalPages = Math.ceil(filteredLeads.length / rowsPerPage);
+  const paginatedLeads = filteredLeads.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  const getLeadsByStatus = (status: string) => {
+    return filteredLeads.filter(lead => (lead.stage || 'new').toLowerCase() === status.toLowerCase());
   };
 
-  const kanbanColumns: Array<{ id: Lead['status']; title: string; color: string }> = [
-    { id: 'new', title: 'New', color: 'bg-blue-50' },
-    { id: 'contacted', title: 'Contacted', color: 'bg-purple-50' },
-    { id: 'qualified', title: 'Qualified', color: 'bg-amber-50' },
-    { id: 'proposal-sent', title: 'Proposal Sent', color: 'bg-indigo-50' },
-    { id: 'converted', title: 'Converted', color: 'bg-green-50' },
-    { id: 'lost', title: 'Lost', color: 'bg-red-50' },
+  const kanbanColumns = [
+    { id: 'new', title: 'New/Inquiry', color: 'bg-blue-50' },
+    { id: 'lead', title: 'Qualified Lead', color: 'bg-amber-50' },
+    { id: 'application', title: 'Application', color: 'bg-indigo-50' },
+    { id: 'visa', title: 'Visa Process', color: 'bg-orange-50' },
+    { id: 'completed', title: 'Completed', color: 'bg-green-50' },
   ];
 
   const exportColumns: ExportColumn[] = [
     { id: 'leadId', label: 'Lead ID', defaultSelected: true },
-    { id: 'dateCreated', label: 'Date Created', defaultSelected: true },
     { id: 'studentName', label: 'Student Name', defaultSelected: true },
-    { id: 'email', label: 'Email', defaultSelected: true },
-    { id: 'phone', label: 'Phone', defaultSelected: true },
-    { id: 'source', label: 'Source', defaultSelected: true },
-    { id: 'assignedCounselor', label: 'Assigned Counselor', defaultSelected: true },
-    { id: 'score', label: 'Lead Score', defaultSelected: true },
-    { id: 'status', label: 'Status', defaultSelected: true }
+    { id: 'country', label: 'Country', defaultSelected: true },
+    { id: 'counselor', label: 'Counselor', defaultSelected: true },
+    { id: 'riskLevel', label: 'Risk Level', defaultSelected: true },
+    { id: 'stage', label: 'Stage', defaultSelected: true },
+    { id: 'lastUpdate', label: 'Last Update', defaultSelected: true }
   ];
 
   const importFields: ImportField[] = [
     { id: 'leadId', label: 'Lead ID', required: true, type: 'text' },
-    { id: 'dateCreated', label: 'Date Created', required: true, type: 'date' },
-    { id: 'studentName', label: 'Student Name', required: true, type: 'text' },
-    { id: 'email', label: 'Email', required: true, type: 'email' },
-    { id: 'phone', label: 'Phone', required: true, type: 'text' },
-    { id: 'source', label: 'Source', required: true, type: 'select', options: ['Website', 'Referral', 'Social Media', 'Email Campaign'] },
-    { id: 'score', label: 'Lead Score', required: true, type: 'number' },
-    { id: 'assignedCounselor', label: 'Assigned Counselor', required: false, type: 'text' },
-    { id: 'status', label: 'Status', required: true, type: 'select', options: ['new', 'contacted', 'qualified', 'proposal-sent', 'converted', 'lost'] }
+    { id: 'firstName', label: 'First Name', required: true, type: 'text' },
+    { id: 'lastName', label: 'Last Name', required: true, type: 'text' },
+    { id: 'country', label: 'Country', required: true, type: 'text' },
+    { id: 'counselor', label: 'Counselor', required: false, type: 'text' },
+    { id: 'stage', label: 'Stage', required: true, type: 'select', options: ['new', 'lead', 'application', 'visa', 'completed'] }
   ];
 
   const handleExport = async (options: any) => {
@@ -319,10 +383,7 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
 
   return (
     <div className="w-full px-4 sm:px-8 lg:px-10 py-6 md:py-10 bg-gray-50 min-h-screen" >
-
       <div className="max-w-[1600px] mx-auto">
-
-        {/* Desktop Action Bar */}
         <div className="hidden md:flex justify-between items-center gap-4 mb-8">
           <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
             <Popover>
@@ -350,29 +411,11 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
             <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
               <Upload size={20} strokeWidth={1.5} />Import
             </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+            <button onClick={() => {
+              setSelectedLeadForEdit(null);
+              setLeadModalOpen(true);
+            }} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
               <Plus size={20} strokeWidth={1.5} />Add Lead
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Action Bar */}
-        <div className="flex md:hidden flex-col gap-4 mb-6">
-          <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-            <div className="flex items-center gap-3">
-              <CalendarIcon size={18} className="text-[#253154]" />
-              <span className="text-sm font-medium text-[#253154]">{date?.from && date?.to ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}` : 'Select range'}</span>
-            </div>
-            <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500">
-              <RefreshCw size={18} className="text-[#253154]" />
-            </button>
-          </div>
-          <div className="flex gap-3">
-            <button className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium">
-              <Plus size={20} />Add Lead
-            </button>
-            <button className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center">
-              <MoreHorizontal size={22} className="text-[#253154]" />
             </button>
           </div>
         </div>
@@ -389,120 +432,155 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
           </Slider>
         </div>
 
-        {/* Search & Filters Toolbar */}
         <div className="flex items-center gap-4 mb-6">
           <div className="relative flex-1">
             <Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" />
-            <input type="text" placeholder="Search leads..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" />
+            <input
+              type="text"
+              placeholder="Search leads by name or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none"
+            />
           </div>
-          <button
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center"
-          >
-            <Filter size={20} strokeWidth={1.5} />
-          </button>
-          <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-            <ArrowUpDown size={20} strokeWidth={1.5} />
-          </button>
-          <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-            <Columns size={20} strokeWidth={1.5} />
-          </button>
+
+          <div className="flex items-center gap-3 shrink-0">
+            {/* Filter Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className={`h-[50px] min-w-[50px] bg-white border ${statusFilter.length > 0 || riskFilter.length > 0 ? 'border-purple-600 ring-2 ring-purple-100' : 'border-gray-200'} rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center relative`}>
+                  <Filter size={20} strokeWidth={1.5} />
+                  {(statusFilter.length > 0 || riskFilter.length > 0) && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+                      {statusFilter.length + riskFilter.length}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-4 rounded-2xl shadow-xl border-gray-100" align="end">
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      <span>Stage</span>
+                      {(statusFilter.length > 0 || riskFilter.length > 0) && (
+                        <button onClick={() => { setStatusFilter([]); setRiskFilter([]); }} className="text-purple-600 hover:text-purple-700 capitalize text-[10px] font-bold">Clear All</button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {['new', 'lead', 'application', 'visa', 'completed'].map(stage => (
+                        <div key={stage} className="flex items-center justify-between">
+                          <label className="text-[14px] text-[#253154] capitalize">{stage.replace('-', ' ')}</label>
+                          <CustomCheckbox
+                            checked={statusFilter.includes(stage)}
+                            onChange={() => setStatusFilter(prev => prev.includes(stage) ? prev.filter(s => s !== stage) : [...prev, stage])}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Risk Level</h4>
+                    <div className="space-y-2">
+                      {['low', 'medium', 'high'].map(level => (
+                        <div key={level} className="flex items-center justify-between">
+                          <label className="text-[14px] text-[#253154] capitalize">{level} risk</label>
+                          <CustomCheckbox
+                            checked={riskFilter.includes(level)}
+                            onChange={() => setRiskFilter(prev => prev.includes(level) ? prev.filter(r => r !== level) : [...prev, level])}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Sort Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <ArrowUpDown size={20} strokeWidth={1.5} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2 rounded-2xl shadow-xl border-gray-100" align="end">
+                <div className="space-y-1">
+                  {[
+                    { id: 'student_id', label: 'Lead ID' },
+                    { id: 'first_name', label: 'First Name' },
+                    { id: 'lastUpdate', label: 'Last Update' },
+                    { id: 'stage', label: 'Stage' },
+                    { id: 'risk_level', label: 'Risk' }
+                  ].map((field) => (
+                    <button
+                      key={field.id}
+                      onClick={() => {
+                        if (sortConfig.key === field.id) {
+                          setSortConfig({ key: field.id, direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
+                        } else {
+                          setSortConfig({ key: field.id, direction: 'desc' });
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all ${sortConfig.key === field.id ? 'bg-purple-50 text-purple-600 font-bold' : 'text-[#253154] hover:bg-gray-50'}`}
+                    >
+                      {field.label}
+                      {sortConfig.key === field.id && (
+                        sortConfig.direction === 'asc' ? <ArrowUpDown size={14} className="rotate-180" /> : <ArrowUpDown size={14} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <Columns size={20} strokeWidth={1.5} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-3 rounded-2xl shadow-xl border-gray-100" align="end">
+                <h4 className="font-bold text-[#0e042f] mb-3 text-sm px-1 text-xs font-bold text-gray-400 uppercase tracking-wider">Visible Columns</h4>
+                <div className="space-y-2">
+                  {[
+                    { id: 'leadId', label: 'Lead ID' },
+                    { id: 'studentName', label: 'Student Name' },
+                    { id: 'riskLevel', label: 'Risk Level' },
+                    { id: 'stage', label: 'Stage' },
+                    { id: 'country', label: 'Country' },
+                    { id: 'counselor', label: 'Counselor' },
+                    { id: 'lastUpdate', label: 'Last Update' },
+                    { id: 'subStatus', label: 'Sub Status' }
+                  ].map(col => (
+                    <div key={col.id} className="flex items-center justify-between">
+                      <span className="text-[14px] text-[#253154]">{col.label}</span>
+                      <CustomCheckbox
+                        checked={visibleColumns.includes(col.id)}
+                        onChange={() => setVisibleColumns(prev => prev.includes(col.id) ? prev.filter(c => c !== col.id) : [...prev, col.id])}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <div className="bg-white p-1 rounded-xl shadow-sm border border-gray-100 flex items-center">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-[#0e042f] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                <List size={20} />
+              </button>
+              <button
+                onClick={() => setViewMode('kanban')}
+                className={`p-2 rounded-lg transition-all ${viewMode === 'kanban' ? 'bg-[#0e042f] text-white shadow-md' : 'text-gray-400 hover:text-gray-600'}`}
+              >
+                <LayoutGrid size={20} />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Advanced Filters Drawer */}
-        {showAdvancedFilters && (
-          <div className="bg-white rounded-2xl shadow-md border border-gray-100 p-6 mb-6">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-[#0f172b]">Advanced Filters</h3>
-              <button onClick={() => setShowAdvancedFilters(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[#0f172b] mb-2">Status</label>
-                <CustomSelect
-                  value={filterStatus}
-                  onChange={setFilterStatus}
-                  options={[
-                    { value: '', label: 'All Statuses' },
-                    { value: 'new', label: 'New' },
-                    { value: 'contacted', label: 'Contacted' },
-                    { value: 'qualified', label: 'Qualified' },
-                    { value: 'proposal-sent', label: 'Proposal Sent' },
-                    { value: 'converted', label: 'Converted' },
-                    { value: 'lost', label: 'Lost' },
-                  ]}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0f172b] mb-2">Source</label>
-                <CustomSelect
-                  value={filterSource}
-                  onChange={setFilterSource}
-                  options={[
-                    { value: '', label: 'All Sources' },
-                    { value: 'website', label: 'Website' },
-                    { value: 'referral', label: 'Referral' },
-                    { value: 'social-media', label: 'Social Media' },
-                    { value: 'email-campaign', label: 'Email Campaign' },
-                  ]}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0f172b] mb-2">Score Range (Min)</label>
-                <input
-                  type="number"
-                  value={filterScoreMin}
-                  onChange={(e) => setFilterScoreMin(e.target.value)}
-                  placeholder="0"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-[#0f172b] mb-2">Score Range (Max)</label>
-                <input
-                  type="number"
-                  value={filterScoreMax}
-                  onChange={(e) => setFilterScoreMax(e.target.value)}
-                  placeholder="100"
-                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 mt-5">
-              <button
-                onClick={() => {
-                  setFilterStatus('');
-                  setFilterSource('');
-                  setFilterScoreMin('');
-                  setFilterScoreMax('');
-                  setFilterCounselor('');
-                  toast.success('Filters cleared');
-                }}
-                className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-medium"
-              >
-                Clear Filters
-              </button>
-              <button
-                onClick={() => {
-                  toast.success('Filters applied');
-                  setShowAdvancedFilters(false);
-                }}
-                className="px-5 py-2.5 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium"
-              >
-                Apply Filters
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Table View */}
         {viewMode === 'table' && (
           <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
             <div className="hidden md:block overflow-x-auto">
@@ -510,55 +588,63 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
                 <thead className="bg-gray-50/50 border-b border-gray-100">
                   <tr>
                     <th className="w-12 px-6 py-4 text-left">
-                      <CustomCheckbox checked={selectedLeads.length === leads.length} partial={selectedLeads.length > 0 && selectedLeads.length < leads.length} onChange={handleSelectAll} />
+                      <CustomCheckbox checked={selectedLeads.length === paginatedLeads.length && paginatedLeads.length > 0} partial={selectedLeads.length > 0 && selectedLeads.length < paginatedLeads.length} onChange={handleSelectAll} />
                     </th>
                     {visibleColumns.includes('leadId') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Lead ID</th>}
-                    {visibleColumns.includes('dateCreated') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Date Created</th>}
                     {visibleColumns.includes('studentName') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Student</th>}
-                    {visibleColumns.includes('email') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Email</th>}
-                    {visibleColumns.includes('phone') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Phone</th>}
-                    {visibleColumns.includes('source') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Source</th>}
-                    {visibleColumns.includes('assignedCounselor') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Assigned Counselor</th>}
-                    {visibleColumns.includes('score') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Score</th>}
-                    {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>}
+                    {visibleColumns.includes('country') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Country</th>}
+                    {visibleColumns.includes('assignedCounselor') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Counselor</th>}
+                    {visibleColumns.includes('riskLevel') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Risk</th>}
+                    {visibleColumns.includes('stage') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Stage</th>}
+                    {visibleColumns.includes('subStatus') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sub Status</th>}
+                    {visibleColumns.includes('lastUpdate') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Last Update</th>}
                     <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {leads.map((lead) => (
+                  {paginatedLeads.map((lead: LeadStatus) => (
                     <tr
-                      key={lead.id}
-                      onClick={() => onNavigate?.('lead-detail', lead.id)}
+                      key={lead.db_id}
+                      onClick={() => onNavigate?.('lead-detail', lead.student_id)}
                       className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                     >
-                      <td
-                        className="px-6 py-4"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <CustomCheckbox checked={selectedLeads.includes(lead.id)} onChange={() => handleToggleLead(lead.id)} />
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                        <CustomCheckbox checked={selectedLeads.includes(lead.db_id.toString())} onChange={() => handleToggleLead(lead.db_id.toString())} />
                       </td>
-                      {visibleColumns.includes('leadId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#253154]">{lead.leadId}</span></td>}
-                      {visibleColumns.includes('dateCreated') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{format(new Date(lead.dateCreated), 'MMM d, yyyy')}</span></td>}
-                      {visibleColumns.includes('studentName') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{lead.studentName}</span></td>}
-                      {visibleColumns.includes('email') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{lead.email}</span></td>}
-                      {visibleColumns.includes('phone') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{lead.phone}</span></td>}
-                      {visibleColumns.includes('source') && <td className="px-6 py-4"><span className="text-[12px] font-medium text-gray-600">{lead.source}</span></td>}
-                      {visibleColumns.includes('assignedCounselor') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{lead.assignedCounselor || 'Unassigned'}</span></td>}
-                      {visibleColumns.includes('score') && <td className="px-6 py-4"><ScoreBadge score={lead.score} /></td>}
-                      {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={lead.status} /></td>}
-                      <td
-                        className="px-6 py-4"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <button
-                          onClick={() => handleReassignLead(lead.id)}
-                          className="p-2 hover:bg-purple-50 rounded-lg transition-colors text-purple-600"
-                        >
+                      {visibleColumns.includes('leadId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#253154]">{lead.student_id}</span></td>}
+                      {visibleColumns.includes('studentName') && <td className="px-6 py-4">
+                        <span className="text-[14px] font-bold text-[#253154]">{lead.first_name} {lead.last_name}</span>
+                      </td>}
+                      {visibleColumns.includes('country') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{lead.country}</span></td>}
+                      {visibleColumns.includes('assignedCounselor') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{lead.counselor || 'Unassigned'}</span></td>}
+                      {visibleColumns.includes('riskLevel') && <td className="px-6 py-4"><RiskBadge level={lead.risk_level} /></td>}
+                      {visibleColumns.includes('stage') && <td className="px-6 py-4"><StatusBadge status={lead.stage} /></td>}
+                      {visibleColumns.includes('subStatus') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{lead.sub_status || '-'}</span></td>}
+                      {visibleColumns.includes('lastUpdate') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{lead.last_update ? format(new Date(lead.last_update), 'MMM d, yyyy') : '-'}</span></td>}
+                      <td className="px-6 py-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => handleEditLead(lead)} className="p-2 hover:bg-blue-50 rounded-lg transition-colors text-blue-600" title="Edit Lead">
                           <UserCircle size={18} />
+                        </button>
+                        <button onClick={() => handleDeleteLead(lead.db_id)} className="p-2 hover:bg-red-50 rounded-lg transition-colors text-red-600" title="Delete Lead">
+                          <Ban size={18} />
                         </button>
                       </td>
                     </tr>
                   ))}
+                  {leads.length === 0 && !isLoading && (
+                    <tr>
+                      <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
+                        No leads found matching your criteria.
+                      </td>
+                    </tr>
+                  )}
+                  {isLoading && (
+                    <tr>
+                      <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
+                        Loading lead data...
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -566,24 +652,44 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
             <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-600">Rows per page:</span>
-                <button className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 flex items-center gap-2">
-                  10<ChevronDown size={14} />
-                </button>
-                <span className="text-sm text-gray-600 ml-4">1-{Math.min(10, leads.length)} of {leads.length}</span>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 outline-none"
+                >
+                  {[5, 10, 20, 50].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                <span className="text-sm text-gray-600 ml-4">
+                  {filteredLeads.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0}-
+                  {Math.min(currentPage * rowsPerPage, filteredLeads.length)} of {filteredLeads.length}
+                </span>
               </div>
               <div className="flex items-center gap-2">
-                <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"><ChevronLeft size={18} /></button>
-                <span className="text-sm text-gray-600">Page 1 of 1</span>
-                <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"><ChevronRight size={18} /></button>
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <span className="text-sm text-gray-600">Page {currentPage} of {Math.max(1, totalPages)}</span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <ChevronRight size={18} />
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Kanban View */}
         {viewMode === 'kanban' && (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
               {kanbanColumns.map((column) => (
                 <div key={column.id} className="bg-gray-100 rounded-2xl p-4 min-h-[500px]">
                   <div className={`${column.color} rounded-xl p-3 mb-4`}>
@@ -591,11 +697,21 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
                     <p className="text-xs text-gray-600 mt-1">{getLeadsByStatus(column.id).length} leads</p>
                   </div>
 
-                  <SortableContext items={getLeadsByStatus(column.id).map(l => l.id)} strategy={verticalListSortingStrategy}>
+                  <SortableContext items={getLeadsByStatus(column.id).map((l: LeadStatus) => l.db_id.toString())} strategy={verticalListSortingStrategy}>
                     <div className="space-y-3">
-                      {getLeadsByStatus(column.id).map((lead) => (
-                        <div key={lead.id} onClick={() => onNavigate?.('lead-detail', lead.id)}>
-                          <KanbanCard lead={lead} />
+                      {getLeadsByStatus(column.id).map((lead: LeadStatus) => (
+                        <div key={lead.db_id}>
+                          <div className="relative group">
+                            <KanbanCard lead={lead} />
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                              <button onClick={(e) => { e.stopPropagation(); handleEditLead(lead); }} className="p-1 bg-white shadow-sm rounded border border-gray-100 text-blue-600 hover:bg-blue-50">
+                                <UserCircle size={14} />
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteLead(lead.db_id); }} className="p-1 bg-white shadow-sm rounded border border-gray-100 text-red-600 hover:bg-red-50">
+                                <Ban size={14} />
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -625,7 +741,14 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
         onImport={handleImport}
         allowUpdate={true}
       />
-    </div >
+
+      <LeadModal
+        open={leadModalOpen}
+        onOpenChange={setLeadModalOpen}
+        lead={selectedLeadForEdit}
+        onSuccess={fetchData}
+      />
+    </div>
   );
 };
 

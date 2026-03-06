@@ -286,7 +286,7 @@ const OverviewTab = () => (
           <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
             <div className="flex items-center gap-3">
               <div className={`w-2 h-2 rounded-full ${claim.status === 'Approved' ? 'bg-emerald-500' :
-                  claim.status === 'Processing' ? 'bg-amber-500' : 'bg-gray-400'
+                claim.status === 'Processing' ? 'bg-amber-500' : 'bg-gray-400'
                 }`} />
               <div>
                 <div className="font-medium text-gray-900">{claim.student}</div>
@@ -295,8 +295,8 @@ const OverviewTab = () => (
             </div>
             <div className="text-right">
               <div className={`text-xs font-medium px-2 py-1 rounded-md ${claim.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
-                  claim.status === 'Processing' ? 'bg-amber-100 text-amber-700' :
-                    'bg-gray-100 text-gray-700'
+                claim.status === 'Processing' ? 'bg-amber-100 text-amber-700' :
+                  'bg-gray-100 text-gray-700'
                 }`}>
                 {claim.status}
               </div>
@@ -432,8 +432,8 @@ const ClaimsTab = () => (
                 <td className="py-3 px-4 text-sm text-gray-600">{claim.date}</td>
                 <td className="py-3 px-4">
                   <span className={`px-2 py-1 rounded-md text-xs font-medium ${claim.status === 'Approved' ? 'bg-emerald-100 text-emerald-700' :
-                      claim.status === 'Processing' ? 'bg-amber-100 text-amber-700' :
-                        'bg-red-100 text-red-700'
+                    claim.status === 'Processing' ? 'bg-amber-100 text-amber-700' :
+                      'bg-red-100 text-red-700'
                     }`}>
                     {claim.status}
                   </span>
@@ -654,8 +654,8 @@ export const InsuranceProviderDetail: React.FC<{ providerId?: string; onBack?: (
 
       {/* Edit Provider Modal */}
       <EditProviderModal
-        isOpen={providerActions.isEditModalOpen}
-        onClose={() => providerActions.setIsEditModalOpen(false)}
+        open={providerActions.isEditModalOpen}
+        onOpenChange={(open) => providerActions.setIsEditModalOpen(open)}
         onSave={providerActions.handleSaveProvider}
         serviceType="Insurance"
         initialData={providerActions.providerData}

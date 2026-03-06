@@ -1,19 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal,
   Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Search, Check,
-  Columns, Clock, CheckCircle, XCircle, Users
+  Columns, Clock, CheckCircle, XCircle, Users, Edit2, Trash2
 } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "./ui/dropdown-menu";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
+import { bookingService, Booking as ApiBooking } from '../../services/bookingService';
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
+import { AddBookingModal } from './AddBookingModal';
+import { EditBookingModal } from './EditBookingModal';
 
 interface CustomCheckboxProps {
   checked: boolean;
@@ -96,10 +110,12 @@ interface Booking {
 }
 
 interface MobileBookingCardProps {
-  booking: Booking;
+  booking: ApiBooking;
   isSelected: boolean;
   onToggleSelect: () => void;
   onNavigateToDetail?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelected, onToggleSelect, onNavigateToDetail }) => {
@@ -108,7 +124,7 @@ const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelect
   return (
     <div className={`bg-white rounded-[16px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 w-full transition-all active:scale-[0.99] cursor-pointer flex flex-col gap-2 ${isSelected ? 'bg-purple-50/30' : ''}`}>
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-bold text-[#253154] text-[15px]">{booking.bookingId}</span>
+        <span className="font-bold text-[#253154] text-[15px]">{booking.booking_id}</span>
         <span className="bg-[#F4F4F4] text-gray-500 text-[10px] px-2 py-1 rounded-lg">Tap to view</span>
         <StatusBadge status={booking.status} />
         <button onClick={() => setIsExpanded(!isExpanded)} className="p-1 hover:bg-gray-100 rounded-full transition-colors ml-auto">
@@ -120,7 +136,7 @@ const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelect
           <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
         </div>
         <div className="flex-1">
-          <p className="text-[14px] text-gray-700 font-medium">{booking.studentName}</p>
+          <p className="text-[14px] text-gray-700 font-medium">{booking.student_name}</p>
           <p className="text-[12px] text-gray-500">{booking.service}</p>
         </div>
       </div>
@@ -129,7 +145,7 @@ const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelect
           <div className="grid grid-cols-2 gap-y-3 gap-x-4 mb-4">
             <div>
               <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Date & Time</div>
-              <div className="text-sm text-gray-700 font-medium">{format(new Date(booking.dateTime), 'MMM d, h:mm a')}</div>
+              <div className="text-sm text-gray-700 font-medium">{format(new Date(booking.date_time), 'MMM d, h:mm a')}</div>
             </div>
             <div>
               <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Expert</div>
@@ -145,10 +161,24 @@ const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelect
               e.stopPropagation();
               onNavigateToDetail?.();
             }}
-            className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm"
+            className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm mb-2"
           >
             View Details
           </button>
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+              className="flex-1 h-10 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+            >
+              <Edit2 size={16} /> Edit
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+              className="flex-1 h-10 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+            >
+              <Trash2 size={16} /> Delete
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -160,11 +190,11 @@ interface BookingsOverviewPageProps {
 }
 
 const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate }) => {
-  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(2025, 0, 1), to: new Date(2025, 0, 31) });
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
   const [activeMobileMenu, setActiveMobileMenu] = useState<'none' | 'import' | 'search'>('none');
   const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
   const [selectAllStore, setSelectAllStore] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['bookingId', 'dateTime', 'studentName', 'service', 'expert', 'mode', 'status']);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['bookingId', 'dateTime', 'studentName', 'service', 'expert', 'mode', 'status', 'actions']);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
@@ -173,24 +203,42 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
   const [showRowsMenu, setShowRowsMenu] = useState(false);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<ApiBooking | null>(null);
 
-  const bookings: Booking[] = [
-    { id: 'BKG-001', bookingId: 'BKG-001', dateTime: '2025-01-15T10:00:00', studentName: 'Emma Wilson', service: 'Initial Consultation', expert: 'Sarah Johnson', status: 'upcoming', mode: 'Online', source: 'regular' },
-    { id: 'BKG-002', bookingId: 'BKG-002', dateTime: '2025-01-16T14:30:00', studentName: 'James Chen', service: 'Concierge Request', expert: 'Mike Davis', status: 'completed', mode: 'Online', source: 'concierge' },
-    { id: 'BKG-003', bookingId: 'BKG-003', dateTime: '2025-01-17T09:00:00', studentName: 'Sofia Rodriguez', service: 'Document Review', expert: 'Emma Wilson', status: 'upcoming', mode: 'Online', source: 'regular' },
-    { id: 'BKG-004', bookingId: 'BKG-004', dateTime: '2025-01-18T11:00:00', studentName: 'Liam Patel', service: 'Concierge Request', expert: 'David Chen', status: 'upcoming', mode: 'Online', source: 'concierge' },
-    { id: 'BKG-005', bookingId: 'BKG-005', dateTime: '2025-01-19T15:00:00', studentName: 'Olivia Johnson', service: 'SOP Review', expert: 'Lisa Anderson', status: 'no-show', mode: 'In-Person', source: 'regular' },
-    { id: 'BKG-006', bookingId: 'BKG-006', dateTime: '2025-01-20T10:30:00', studentName: 'Noah Kim', service: 'University Selection', expert: 'Sarah Johnson', status: 'completed', mode: 'Online', source: 'regular' },
-    { id: 'BKG-007', bookingId: 'BKG-007', dateTime: '2025-01-21T13:00:00', studentName: 'Ava Martinez', service: 'Concierge Request', expert: 'Mike Davis', status: 'upcoming', mode: 'Online', source: 'concierge' },
-    { id: 'BKG-008', bookingId: 'BKG-008', dateTime: '2025-01-22T16:00:00', studentName: 'Ethan Singh', service: 'Document Review', expert: 'Emma Wilson', status: 'completed', mode: 'Online', source: 'regular' },
-  ];
+  // Dynamic Features State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [filterConfig, setFilterConfig] = useState<{ status: string[]; mode: string[] }>({ status: [], mode: [] });
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const [bookings, setBookings] = useState<ApiBooking[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchBookings = async () => {
+    try {
+      setIsLoading(true);
+      const data = await bookingService.getAllBookings();
+      setBookings(data);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      toast.error('Failed to load bookings');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
   const metrics = [
-    { title: 'Total Bookings', value: '248', icon: CalendarIcon, bgClass: 'bg-purple-50', colorClass: 'text-purple-600', tooltip: 'Total number of bookings in selected period' },
-    { title: 'Upcoming', value: '84', icon: Clock, bgClass: 'bg-blue-50', colorClass: 'text-blue-600', tooltip: 'Scheduled bookings yet to occur' },
-    { title: 'Completed', value: '142', icon: CheckCircle, bgClass: 'bg-green-50', colorClass: 'text-green-600', tooltip: 'Successfully completed bookings' },
-    { title: 'Cancelled', value: '22', icon: XCircle, bgClass: 'bg-red-50', colorClass: 'text-red-600', tooltip: 'Cancelled or no-show bookings' },
-    { title: 'Active Experts', value: '12', icon: Users, bgClass: 'bg-cyan-50', colorClass: 'text-cyan-600', tooltip: 'Number of experts with active bookings' }
+    { title: 'Total Bookings', value: bookings.length.toString(), icon: CalendarIcon, bgClass: 'bg-purple-50', colorClass: 'text-purple-600', tooltip: 'Total number of bookings in selected period' },
+    { title: 'Upcoming', value: bookings.filter(b => b.status === 'upcoming').length.toString(), icon: Clock, bgClass: 'bg-blue-50', colorClass: 'text-blue-600', tooltip: 'Scheduled bookings yet to occur' },
+    { title: 'Completed', value: bookings.filter(b => b.status === 'completed').length.toString(), icon: CheckCircle, bgClass: 'bg-green-50', colorClass: 'text-green-600', tooltip: 'Successfully completed bookings' },
+    { title: 'Cancelled', value: bookings.filter(b => b.status === 'cancelled').length.toString(), icon: XCircle, bgClass: 'bg-red-50', colorClass: 'text-red-600', tooltip: 'Cancelled or no-show bookings' },
+    { title: 'Active Experts', value: new Set(bookings.map(b => b.expert)).size.toString(), icon: Users, bgClass: 'bg-cyan-50', colorClass: 'text-cyan-600', tooltip: 'Number of experts with active bookings' }
   ];
 
   const allColumns = [
@@ -200,17 +248,79 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
     { key: 'service', label: 'Service' },
     { key: 'expert', label: 'Expert' },
     { key: 'mode', label: 'Mode' },
-    { key: 'status', label: 'Status' }
+    { key: 'status', label: 'Status' },
+    { key: 'actions', label: 'Actions' }
   ];
 
-  const handleRefresh = () => toast.success("Refreshing data...");
+  // Derived Data Logic
+  const filteredAndSortedBookings = React.useMemo(() => {
+    let result = [...bookings];
+
+    // Search
+    if (searchTerm) {
+      const lowerSearch = searchTerm.toLowerCase();
+      result = result.filter(b =>
+        b.student_name.toLowerCase().includes(lowerSearch) ||
+        b.booking_id.toLowerCase().includes(lowerSearch) ||
+        b.service.toLowerCase().includes(lowerSearch) ||
+        b.expert.toLowerCase().includes(lowerSearch)
+      );
+    }
+
+    // Filters
+    if (filterConfig.status.length > 0) {
+      result = result.filter(b => filterConfig.status.includes(b.status));
+    }
+    if (filterConfig.mode.length > 0) {
+      result = result.filter(b => filterConfig.mode.includes(b.mode));
+    }
+
+    // Date Range Filter
+    if (date?.from && date?.to) {
+      const from = new Date(date.from);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(date.to);
+      to.setHours(23, 59, 59, 999);
+
+      result = result.filter(b => {
+        const bDate = new Date(b.date_time);
+        return bDate >= from && bDate <= to;
+      });
+    }
+
+    // Sorting
+    if (sortConfig) {
+      result.sort((a, b) => {
+        const valA = a[sortConfig.key as keyof ApiBooking] ?? '';
+        const valB = b[sortConfig.key as keyof ApiBooking] ?? '';
+
+        if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return result;
+  }, [bookings, searchTerm, sortConfig, filterConfig]);
+
+  const paginatedBookings = filteredAndSortedBookings.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
+
+  const totalPages = Math.ceil(filteredAndSortedBookings.length / rowsPerPage);
+
+  const handleRefresh = () => {
+    fetchBookings();
+    toast.success("Refreshing data...");
+  };
 
   const handleSelectAll = () => {
     if (selectedBookings.length === bookings.length) {
       setSelectedBookings([]);
       setSelectAllStore(false);
     } else {
-      setSelectedBookings(bookings.map(b => b.id));
+      setSelectedBookings(bookings.map(b => b.booking_id));
       setSelectAllStore(false);
     }
   };
@@ -221,7 +331,7 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
 
   const handleSelectAllStore = () => {
     setSelectAllStore(true);
-    setSelectedBookings(bookings.map(b => b.id));
+    setSelectedBookings(bookings.map(b => b.booking_id));
   };
 
   const handleClearSelection = () => {
@@ -250,8 +360,84 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
     { id: 'mode', label: 'Mode', required: true, type: 'select', options: ['Online', 'In-Person'] }
   ];
 
+  const handleToggleFilter = (type: 'status' | 'mode', value: string) => {
+    setFilterConfig(prev => {
+      const current = prev[type];
+      const next = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+      return { ...prev, [type]: next };
+    });
+    setCurrentPage(1);
+  };
+
+  const handleSort = (key: string) => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        if (prev.direction === 'asc') return { key, direction: 'desc' };
+        return null;
+      }
+      return { key, direction: 'asc' };
+    });
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setVisibleColumns(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this booking?")) {
+      try {
+        await bookingService.deleteBooking(id);
+        toast.success("Booking deleted successfully");
+        fetchBookings();
+      } catch (error) {
+        console.error("Error deleting booking:", error);
+        toast.error("Failed to delete booking");
+      }
+    }
+  };
+
+  const handleEdit = (booking: ApiBooking) => {
+    setEditingBooking(booking);
+    setIsEditModalOpen(true);
+  };
+
   const handleExport = async (options: any) => {
-    toast.success(`Exporting ${options.scope} bookings as ${options.format}...`);
+    const dataToExport = options.scope === 'selected'
+      ? bookings.filter(b => selectedBookings.includes(b.booking_id))
+      : filteredAndSortedBookings;
+
+    const headers = exportColumns
+      .filter(col => options.columns.includes(col.id))
+      .map(col => col.label);
+
+    const rows = dataToExport.map(booking => {
+      const row: string[] = [];
+      if (options.columns.includes('bookingId')) row.push(booking.booking_id);
+      if (options.columns.includes('dateTime')) row.push(format(new Date(booking.date_time), 'yyyy-MM-dd HH:mm'));
+      if (options.columns.includes('studentName')) row.push(booking.student_name);
+      if (options.columns.includes('service')) row.push(booking.service);
+      if (options.columns.includes('expert')) row.push(booking.expert);
+      if (options.columns.includes('status')) row.push(booking.status);
+      if (options.columns.includes('mode')) row.push(booking.mode);
+      return row.join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `bookings_export_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast.success(`Exported ${dataToExport.length} bookings as ${options.format}`);
   };
 
   const handleImport = async (data: any) => {
@@ -301,7 +487,10 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
             <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
               <Upload size={20} strokeWidth={1.5} />Import
             </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+            >
               <Plus size={20} strokeWidth={1.5} />Add Booking
             </button>
           </div>
@@ -312,14 +501,17 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
           <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
             <div className="flex items-center gap-3">
               <CalendarIcon size={18} className="text-[#253154]" />
-              <span className="text-sm font-medium text-[#253154]">{date?.from && date?.to ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}` : 'Select range'}</span>
+              <span className="text-sm font-medium text-[#253154]">{date?.from && date?.to ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}` : 'All Bookings'}</span>
             </div>
             <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500">
               <RefreshCw size={18} className="text-[#253154]" />
             </button>
           </div>
           <div className="flex gap-3">
-            <button className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium"
+            >
               <Plus size={20} />Add Booking
             </button>
             <button onClick={() => setActiveMobileMenu(activeMobileMenu === 'import' ? 'none' : 'import')} className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center">
@@ -343,25 +535,138 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
         <div className="hidden md:flex justify-between items-center gap-4 mb-6">
           <div className="relative flex-1">
             <Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" />
-            <input type="text" placeholder="Search bookings..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" />
+            <input
+              type="text"
+              placeholder="Search bookings..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none"
+            />
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <button onClick={() => { setShowFilterMenu(!showFilterMenu); setShowSortMenu(false); setShowColumnMenu(false); setShowMoreMenu(false); }} className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <Filter size={20} strokeWidth={1.5} />
-            </button>
-            <button onClick={() => { setShowSortMenu(!showSortMenu); setShowFilterMenu(false); setShowColumnMenu(false); setShowMoreMenu(false); }} className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <ArrowUpDown size={20} strokeWidth={1.5} />
-            </button>
-            <button onClick={() => { setShowColumnMenu(!showColumnMenu); setShowFilterMenu(false); setShowSortMenu(false); setShowMoreMenu(false); }} className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <Columns size={20} strokeWidth={1.5} />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <Filter size={20} strokeWidth={1.5} />
+                  {filterConfig.status.length + filterConfig.mode.length > 0 && (
+                    <span className="ml-2 bg-purple-600 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
+                      {filterConfig.status.length + filterConfig.mode.length}
+                    </span>
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
+                <DropdownMenuLabel className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 py-1">Status</DropdownMenuLabel>
+                {['upcoming', 'completed', 'cancelled', 'no-show'].map(status => (
+                  <DropdownMenuCheckboxItem
+                    key={status}
+                    checked={filterConfig.status.includes(status)}
+                    onCheckedChange={() => handleToggleFilter('status', status)}
+                    className="rounded-lg capitalize"
+                  >
+                    {status}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuLabel className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 py-1">Mode</DropdownMenuLabel>
+                {['Online', 'In-Person', 'Call'].map(mode => (
+                  <DropdownMenuCheckboxItem
+                    key={mode}
+                    checked={filterConfig.mode.includes(mode)}
+                    onCheckedChange={() => handleToggleFilter('mode', mode)}
+                    className="rounded-lg"
+                  >
+                    {mode}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                {(filterConfig.status.length > 0 || filterConfig.mode.length > 0) && (
+                  <>
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setFilterConfig({ status: [], mode: [] });
+                        setDate(undefined);
+                      }}
+                      className="justify-center text-purple-600 font-medium focus:text-purple-700"
+                    >
+                      Clear all filters
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <ArrowUpDown size={20} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
+                <DropdownMenuLabel className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 py-1">Sort by</DropdownMenuLabel>
+                <DropdownMenuRadioGroup value={sortConfig?.key} onValueChange={handleSort}>
+                  {allColumns.map(col => (
+                    <DropdownMenuRadioItem
+                      key={col.key}
+                      value={col.key}
+                      className="rounded-lg"
+                    >
+                      {col.label}
+                      {sortConfig?.key === col.key && (
+                        <span className="ml-auto text-[10px] text-purple-600 font-bold uppercase">
+                          {sortConfig.direction}
+                        </span>
+                      )}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+                {sortConfig && (
+                  <>
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuItem
+                      onClick={() => setSortConfig(null)}
+                      className="justify-center text-gray-500 font-medium"
+                    >
+                      Reset sorting
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <Columns size={20} strokeWidth={1.5} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl p-2">
+                <DropdownMenuLabel className="text-xs font-bold text-gray-400 uppercase tracking-wider px-2 py-1">Visible Columns</DropdownMenuLabel>
+                {allColumns.map(col => (
+                  <DropdownMenuCheckboxItem
+                    key={col.key}
+                    checked={visibleColumns.includes(col.key)}
+                    onCheckedChange={() => handleToggleColumn(col.key)}
+                    className="rounded-lg"
+                  >
+                    {col.label}
+                  </DropdownMenuCheckboxItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
         <div className="flex md:hidden mb-4">
           <div className="relative flex-1">
             <Search size={18} className="absolute inset-y-0 left-4 my-auto text-[#253154]" />
-            <input type="text" placeholder="Search bookings..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-sm font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" />
+            <input
+              type="text"
+              placeholder="Search bookings..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-sm font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none"
+            />
           </div>
         </div>
 
@@ -381,66 +686,150 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
         )}
 
         <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50/50 border-b border-gray-100">
-                <tr>
-                  <th className="w-12 px-6 py-4 text-left">
-                    <CustomCheckbox checked={selectedBookings.length === bookings.length} partial={selectedBookings.length > 0 && selectedBookings.length < bookings.length} onChange={handleSelectAll} />
-                  </th>
-                  {visibleColumns.includes('bookingId') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Booking ID</th>}
-                  {visibleColumns.includes('dateTime') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Date & Time</th>}
-                  {visibleColumns.includes('studentName') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Student</th>}
-                  {visibleColumns.includes('service') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Service</th>}
-                  {visibleColumns.includes('expert') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Expert</th>}
-                  {visibleColumns.includes('mode') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Mode</th>}
-                  {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {bookings.map((booking) => (
-                  <tr
-                    key={booking.id}
-                    onClick={() => onNavigate?.('booking-detail', booking.id)}
-                    className="hover:bg-gray-50/50 transition-colors cursor-pointer"
-                  >
-                    <td
-                      className="px-6 py-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <CustomCheckbox checked={selectedBookings.includes(booking.id)} onChange={() => handleToggleBooking(booking.id)} />
-                    </td>
-                    {visibleColumns.includes('bookingId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#253154]">{booking.bookingId}</span></td>}
-                    {visibleColumns.includes('dateTime') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{format(new Date(booking.dateTime), 'MMM d, yyyy h:mm a')}</span></td>}
-                    {visibleColumns.includes('studentName') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{booking.studentName}</span></td>}
-                    {visibleColumns.includes('service') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{booking.service}</span></td>}
-                    {visibleColumns.includes('expert') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{booking.expert}</span></td>}
-                    {visibleColumns.includes('mode') && <td className="px-6 py-4"><span className="text-[12px] font-medium text-gray-600">{booking.mode}</span></td>}
-                    {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={booking.status} /></td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          {isLoading && (
+            <div className="flex items-center justify-center p-12">
+              <RefreshCw className="animate-spin text-purple-600" size={32} />
+              <span className="ml-3 text-gray-500 font-medium">Loading bookings...</span>
+            </div>
+          )}
 
-          <div className="md:hidden p-4 space-y-3">
-            {bookings.map((booking) => <MobileBookingCard key={booking.id} booking={booking} isSelected={selectedBookings.includes(booking.id)} onToggleSelect={() => handleToggleBooking(booking.id)} onNavigateToDetail={() => onNavigate?.('booking-detail', booking.id)} />)}
-          </div>
+          {!isLoading && bookings.length === 0 && (
+            <div className="flex flex-col items-center justify-center p-12 text-center">
+              <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <CalendarIcon className="text-gray-300" size={32} />
+              </div>
+              <h3 className="text-lg font-bold text-[#253154]">No bookings found</h3>
+              <p className="text-gray-500 max-w-xs mt-1">There are no bookings recorded in the system yet.</p>
+            </div>
+          )}
+
+          {!isLoading && bookings.length > 0 && (
+            <>
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50/50 border-b border-gray-100">
+                    <tr>
+                      <th className="w-12 px-6 py-4 text-left">
+                        <CustomCheckbox checked={selectedBookings.length === paginatedBookings.length && paginatedBookings.length > 0} partial={selectedBookings.length > 0 && selectedBookings.length < paginatedBookings.length} onChange={handleSelectAll} />
+                      </th>
+                      {visibleColumns.includes('bookingId') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Booking ID</th>}
+                      {visibleColumns.includes('dateTime') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Date & Time</th>}
+                      {visibleColumns.includes('studentName') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Student</th>}
+                      {visibleColumns.includes('service') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Service</th>}
+                      {visibleColumns.includes('expert') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Expert</th>}
+                      {visibleColumns.includes('mode') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Mode</th>}
+                      {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>}
+                      {visibleColumns.includes('actions') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {paginatedBookings.map((booking) => (
+                      <tr
+                        key={booking.booking_id}
+                        onClick={() => onNavigate?.('booking-detail', booking.booking_id)}
+                        className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                      >
+                        <td
+                          className="px-6 py-4"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <CustomCheckbox checked={selectedBookings.includes(booking.booking_id)} onChange={() => handleToggleBooking(booking.booking_id)} />
+                        </td>
+                        {visibleColumns.includes('bookingId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#253154]">{booking.booking_id}</span></td>}
+                        {visibleColumns.includes('dateTime') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{format(new Date(booking.date_time), 'MMM d, yyyy h:mm a')}</span></td>}
+                        {visibleColumns.includes('studentName') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{booking.student_name}</span></td>}
+                        {visibleColumns.includes('service') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{booking.service}</span></td>}
+                        {visibleColumns.includes('expert') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{booking.expert}</span></td>}
+                        {visibleColumns.includes('mode') && <td className="px-6 py-4"><span className="text-[12px] font-medium text-gray-600">{booking.mode}</span></td>}
+                        {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={booking.status} /></td>}
+                        {visibleColumns.includes('actions') && (
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEdit(booking); }}
+                                className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                                title="Edit"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(booking.booking_id); }}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="md:hidden p-4 space-y-3">
+                {paginatedBookings.map((booking) => (
+                  <MobileBookingCard
+                    key={booking.booking_id}
+                    booking={booking}
+                    isSelected={selectedBookings.includes(booking.booking_id)}
+                    onToggleSelect={() => handleToggleBooking(booking.booking_id)}
+                    onNavigateToDetail={() => onNavigate?.('booking-detail', booking.booking_id)}
+                    onEdit={() => handleEdit(booking)}
+                    onDelete={() => handleDelete(booking.booking_id)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
 
           <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Rows per page:</span>
               <div className="relative">
-                <button onClick={() => setShowRowsMenu(!showRowsMenu)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 flex items-center gap-2">
-                  {rowsPerPage}<ChevronDown size={14} />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 flex items-center gap-2">
+                      {rowsPerPage}<ChevronDown size={14} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-20 rounded-xl">
+                    {[10, 20, 50, 100].map(size => (
+                      <DropdownMenuItem
+                        key={size}
+                        onClick={() => { setRowsPerPage(size); setCurrentPage(1); }}
+                        className="rounded-lg justify-center"
+                      >
+                        {size}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
-              <span className="text-sm text-gray-600 ml-4">1-{Math.min(rowsPerPage, bookings.length)} of {bookings.length}</span>
+              <span className="text-sm text-gray-600 ml-4">
+                {filteredAndSortedBookings.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0}-
+                {Math.min(currentPage * rowsPerPage, filteredAndSortedBookings.length)} of {filteredAndSortedBookings.length}
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"><ChevronLeft size={18} /></button>
-              <span className="text-sm text-gray-600">Page 1 of 1</span>
-              <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"><ChevronRight size={18} /></button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                title="Previous Page"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="text-sm text-gray-600">Page {currentPage} of {Math.max(1, totalPages)}</span>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                title="Next Page"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           </div>
         </div>
@@ -463,6 +852,17 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
         fields={importFields}
         onImport={handleImport}
         allowUpdate={true}
+      />
+      <AddBookingModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={handleRefresh}
+      />
+      <EditBookingModal
+        isOpen={isEditModalOpen}
+        onClose={() => { setIsEditModalOpen(false); setEditingBooking(null); }}
+        onSuccess={handleRefresh}
+        booking={editingBooking}
       />
     </div>
   );

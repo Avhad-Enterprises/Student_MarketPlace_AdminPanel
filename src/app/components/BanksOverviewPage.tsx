@@ -543,7 +543,7 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
       });
 
       // Simple implementation using window.XLSX if available or similar logic
-      // Since it's a client tool, I'll assume XLSX is imported as in SIMCardsOverviewPage
+      // Since it&apos;s a client tool, I'll assume XLSX is imported as in SIMCardsOverviewPage
       const XLSX = (window as any).XLSX;
       if (!XLSX) {
         // Fallback to JSON if XLSX isn't loaded

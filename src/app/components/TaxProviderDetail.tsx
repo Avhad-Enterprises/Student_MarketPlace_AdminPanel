@@ -15,10 +15,10 @@
  */
 
 import React, { useState } from 'react';
-import { 
-  FileText, 
-  Globe, 
-  CheckCircle, 
+import {
+  FileText,
+  Globe,
+  CheckCircle,
   Award,
   Users,
   Activity,
@@ -27,7 +27,7 @@ import {
   TrendingUp,
   Building2,
 } from 'lucide-react';
-import { 
+import {
   ServiceProviderDetailTemplate,
   ServiceProvider,
   KPICard,
@@ -37,7 +37,7 @@ import { useProviderActions } from './common/useProviderActions';
 import { EditProviderModal, ProviderBasicData } from './common/EditProviderModal';
 import { TaxProviderOverviewTab } from './TaxProviderOverviewTab';
 import { TaxProviderServicesTab } from './TaxProviderServicesTab';
-import { 
+import {
   TaxProviderEligibilityTab,
   TaxProviderDocumentsTab,
   TaxProviderWorkflowTab,
@@ -189,8 +189,8 @@ export const TaxProviderDetail: React.FC<{ onBack?: () => void }> = ({ onBack })
 
       {/* Edit Provider Modal */}
       <EditProviderModal
-        isOpen={providerActions.isEditModalOpen}
-        onClose={() => providerActions.setIsEditModalOpen(false)}
+        open={providerActions.isEditModalOpen}
+        onOpenChange={(open) => providerActions.setIsEditModalOpen(open)}
         onSave={providerActions.handleSaveProvider}
         serviceType="Tax Service"
         initialData={providerActions.providerData}

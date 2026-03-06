@@ -52,6 +52,22 @@
     @apply text-gray-900;
     /* Do not set bg here globally — pages control their own backgrounds */
   }
+
+  h1 {
+    @apply text-3xl font-medium leading-normal mb-6;
+  }
+
+  h2 {
+    @apply text-2xl font-medium leading-normal mb-4;
+  }
+
+  h3 {
+    @apply text-xl font-medium leading-normal mb-3;
+  }
+
+  h4 {
+    @apply text-lg font-medium leading-normal mb-2;
+  }
 }
 
 .container {

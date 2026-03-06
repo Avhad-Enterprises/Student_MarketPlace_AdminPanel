@@ -1562,7 +1562,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-[#253154]">Add Internal Note</DialogTitle>
             <DialogDescription className="text-gray-500">
-              This note will be added to the student's status history for internal reference.
+              This note will be added to the student&apos;s status history for internal reference.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">

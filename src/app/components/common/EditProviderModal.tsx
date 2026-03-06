@@ -9,8 +9,8 @@ import { X, Building2, Globe, MapPin, User, Mail, Phone, Lock } from 'lucide-rea
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 
 export interface EditProviderModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onSave: (data: ProviderBasicData) => void;
   serviceType: string; // "Bank", "Insurance", "SIM Card", etc.
   initialData: ProviderBasicData;
@@ -28,8 +28,8 @@ export interface ProviderBasicData {
 }
 
 export const EditProviderModal: React.FC<EditProviderModalProps> = ({
-  isOpen,
-  onClose,
+  open,
+  onOpenChange,
   onSave,
   serviceType,
   initialData,
@@ -39,7 +39,7 @@ export const EditProviderModal: React.FC<EditProviderModalProps> = ({
 
   const handleSave = () => {
     onSave(formData);
-    onClose();
+    onOpenChange(false);
   };
 
   const addCountry = () => {
@@ -60,7 +60,7 @@ export const EditProviderModal: React.FC<EditProviderModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-gray-900">
@@ -235,7 +235,7 @@ export const EditProviderModal: React.FC<EditProviderModalProps> = ({
         {/* Footer Actions */}
         <div className="flex items-center justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
           <button
-            onClick={onClose}
+            onClick={() => onOpenChange(false)}
             className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium text-gray-700"
           >
             Cancel

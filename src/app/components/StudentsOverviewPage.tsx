@@ -380,7 +380,7 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect
   const statusConfig = getStatusConfig(student.account_status);
   const riskConfig = getRiskLevelConfig(student.risk_level);
 
-  // Parse country preferences if it's a string
+  // Parse country preferences if it&apos;s a string
   let countryPref = 'N/A';
   try {
     const parsed = JSON.parse(student.country_preferences);
@@ -1419,40 +1419,32 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
       </div>
 
       {/* Export Dialog */}
-      {
-        showExportDialog && (
-          <ExportDialog
-            open={showExportDialog}
-            onOpenChange={setShowExportDialog}
-            moduleName="Students"
-            columns={exportColumns}
-            onExport={async (options) => {
-              console.log('Exporting with options:', options);
-              toast.success(`Exporting ${selectedStudents.length || pagination.total} students as ${options.format.toUpperCase()}`);
-              setShowExportDialog(false);
-            }}
-            totalCount={pagination.total}
-            selectedCount={selectedStudents.length}
-          />
-        )
-      }
+      <ExportDialog
+        open={showExportDialog}
+        onOpenChange={setShowExportDialog}
+        moduleName="Students"
+        columns={exportColumns}
+        onExport={async (options) => {
+          console.log('Exporting with options:', options);
+          toast.success(`Exporting ${selectedStudents.length || pagination.total} students as ${options.format.toUpperCase()}`);
+          setShowExportDialog(false);
+        }}
+        totalCount={pagination.total}
+        selectedCount={selectedStudents.length}
+      />
 
       {/* Import Dialog */}
-      {
-        showImportDialog && (
-          <ImportDialog
-            open={showImportDialog}
-            onOpenChange={setShowImportDialog}
-            moduleName="Students"
-            fields={importFields}
-            onImport={async (data, mode) => {
-              console.log('Importing data:', data, 'mode:', mode);
-              toast.success(`Processing import for students...`);
-              setShowImportDialog(false);
-            }}
-          />
-        )
-      }
+      <ImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        moduleName="Students"
+        fields={importFields}
+        onImport={async (data, mode) => {
+          console.log('Importing data:', data, 'mode:', mode);
+          toast.success(`Processing import for students...`);
+          setShowImportDialog(false);
+        }}
+      />
 
       {/* Archive Dialog */}
       {

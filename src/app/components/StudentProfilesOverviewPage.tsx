@@ -1290,10 +1290,10 @@ export const StudentProfilesOverviewPage: React.FC = () => {
 
       {/* Change Counselor Modal */}
       <ChangeCounselorModal
-        isOpen={showCounselorModal}
-        onClose={() => {
-          setShowCounselorModal(false);
-          setSelectedIndividualStudent(null);
+        open={showCounselorModal}
+        onOpenChange={(open) => {
+          setShowCounselorModal(open);
+          if (!open) setSelectedIndividualStudent(null);
         }}
         studentName={selectedIndividualStudent ? `${selectedIndividualStudent.first_name} ${selectedIndividualStudent.last_name}` : (selectedStudents.length > 0 ? `${selectedStudents.length} Selected Students` : '')}
         currentCounselor={selectedIndividualStudent ? { name: selectedIndividualStudent.assigned_counselor || 'Unassigned', initials: (selectedIndividualStudent.assigned_counselor || 'U').substring(0, 2).toUpperCase() } : { name: 'Multiple', initials: 'MS' }}
@@ -1313,10 +1313,10 @@ export const StudentProfilesOverviewPage: React.FC = () => {
 
       {/* Archive Student Modal */}
       <ArchiveStudentModal
-        isOpen={showArchiveModal}
-        onClose={() => {
-          setShowArchiveModal(false);
-          setStudentToArchive(null);
+        open={showArchiveModal}
+        onOpenChange={(open) => {
+          setShowArchiveModal(open);
+          if (!open) setStudentToArchive(null);
         }}
         studentName={studentToArchive?.name || ''}
         onConfirm={handleConfirmArchive}

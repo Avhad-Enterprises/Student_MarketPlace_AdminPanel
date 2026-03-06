@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal, Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Columns, FileText, Edit, Archive, Clock, Eye } from 'lucide-react';
+"use client";
+
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal, Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Columns, FileText, Edit, Archive, Clock, Eye, List, LayoutGrid, Globe, Lock } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -10,6 +12,8 @@ import Slider from "react-slick";
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
+import { blogService, Blog, BlogFormData } from '@/services/blogService';
+import { BlogModal } from './BlogModal';
 
 const CustomCheckbox: React.FC<{ checked: boolean; partial?: boolean; onChange: () => void }> = ({ checked, partial = false, onChange }) => (
   <div onClick={onChange} className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
@@ -39,48 +43,71 @@ const MetricCard: React.FC<{ title: string; value: string; icon: React.ElementTy
   <div className="bg-white p-5 rounded-2xl shadow-md flex flex-col justify-between min-w-[180px] h-[130px] relative overflow-hidden group hover:shadow-lg transition-all border border-gray-50/50">
     <div className="flex items-center justify-between">
       <span className="text-[#253154] font-medium text-[15px]">{title}</span>
-      <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><div className="w-4 h-4 rounded-full border border-current text-[10px] flex items-center justify-center cursor-help hover:text-[#0e042f] hover:border-[#0e042f] transition-colors">i</div></TooltipTrigger><TooltipContent className="bg-[#0e042f] text-white rounded-xl text-xs px-3 py-2"><p>{tooltip}</p></TooltipContent></Tooltip></TooltipProvider>
+      <TooltipProvider delayDuration={200}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="w-4 h-4 rounded-full border border-current text-[10px] flex items-center justify-center cursor-help hover:text-[#0e042f] hover:border-[#0e042f] transition-colors">i</div>
+          </TooltipTrigger>
+          <TooltipContent className="bg-[#0e042f] text-white rounded-xl text-xs px-3 py-2">
+            <p>{tooltip}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     </div>
     <div className="flex items-end gap-3 mt-2">
-      <div className={`w-10 h-10 rounded-xl ${bgClass} ${colorClass} flex items-center justify-center`}><Icon size={22} strokeWidth={1.5} /></div>
-      <div><p className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</p></div>
+      <div className={`w-10 h-10 rounded-xl ${bgClass} ${colorClass} flex items-center justify-center`}>
+        <Icon size={22} strokeWidth={1.5} />
+      </div>
+      <div>
+        <p className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</p>
+      </div>
     </div>
-    <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-500"><Icon size={80} /></div>
+    <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-500">
+      <Icon size={80} />
+    </div>
   </div>
 );
 
-interface Blog {
-  id: string;
-  blogId: string;
-  title: string;
-  author: string;
-  category: string;
-  tags: string[];
-  status: 'draft' | 'published' | 'scheduled' | 'archived';
-  publishDate: string;
-  lastUpdated: string;
-  visibility: 'public' | 'restricted';
-  language?: string;
+// Interface is imported from blogService
+
+interface BlogsOverviewPageProps {
+  onNavigate?: (page: string) => void;
 }
 
-const BlogsOverviewPage: React.FC = () => {
-  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(2025, 0, 1), to: new Date(2025, 0, 31) });
+const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => {
+  const [blogs, setBlogs] = useState<Blog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(2025, 0, 1), to: new Date(2026, 11, 31) });
   const [selectedBlogs, setSelectedBlogs] = useState<string[]>([]);
   const [selectAllStore, setSelectAllStore] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<string[]>(['blogId', 'title', 'author', 'category', 'status', 'publishDate', 'lastUpdated', 'visibility']);
+  const [visibleColumns, setVisibleColumns] = useState<string[]>(['blogId', 'title', 'author', 'category', 'status', 'publishDate', 'updatedAt', 'visibility']);
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showBlogModal, setShowBlogModal] = useState(false);
+  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'updated_at', direction: 'desc' });
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
 
-  const blogs: Blog[] = [
-    { id: 'BLOG-001', blogId: 'BLOG-001', title: 'Complete Guide to Student Visas in 2025', author: 'Sarah Johnson', category: 'Visa Guides', tags: ['visa', 'guide', 'student'], status: 'published', publishDate: '2025-01-10T08:00:00', lastUpdated: '2025-01-15T14:30:00', visibility: 'public', language: 'English' },
-    { id: 'BLOG-002', blogId: 'BLOG-002', title: 'Top Universities for International Students', author: 'Mike Davis', category: 'University Rankings', tags: ['university', 'rankings'], status: 'published', publishDate: '2025-01-12T09:00:00', lastUpdated: '2025-01-12T09:00:00', visibility: 'public', language: 'English' },
-    { id: 'BLOG-003', blogId: 'BLOG-003', title: 'How to Write a Winning SOP', author: 'Emma Wilson', category: 'Application Tips', tags: ['sop', 'application'], status: 'draft', publishDate: '', lastUpdated: '2025-01-18T16:45:00', visibility: 'public', language: 'English' },
-    { id: 'BLOG-004', blogId: 'BLOG-004', title: 'Scholarship Opportunities for 2025', author: 'David Chen', category: 'Financial Aid', tags: ['scholarship', 'funding'], status: 'scheduled', publishDate: '2025-02-01T10:00:00', lastUpdated: '2025-01-20T11:00:00', visibility: 'public', language: 'English' },
-    { id: 'BLOG-005', blogId: 'BLOG-005', title: 'Study Abroad Success Stories', author: 'Lisa Anderson', category: 'Student Stories', tags: ['success', 'testimonial'], status: 'published', publishDate: '2025-01-05T07:00:00', lastUpdated: '2025-01-05T07:00:00', visibility: 'public', language: 'English' },
-    { id: 'BLOG-006', blogId: 'BLOG-006', title: 'Internal Policy Updates Q1 2025', author: 'Admin Team', category: 'Internal Updates', tags: ['policy', 'internal'], status: 'published', publishDate: '2025-01-08T12:00:00', lastUpdated: '2025-01-08T12:00:00', visibility: 'restricted', language: 'English' },
-    { id: 'BLOG-007', blogId: 'BLOG-007', title: 'Understanding Visa Interview Process', author: 'Sarah Johnson', category: 'Visa Guides', tags: ['visa', 'interview'], status: 'archived', publishDate: '2024-11-15T08:00:00', lastUpdated: '2024-12-20T10:00:00', visibility: 'public', language: 'English' },
-    { id: 'BLOG-008', blogId: 'BLOG-008', title: 'Cost of Living Guide for Students', author: 'Mike Davis', category: 'Financial Aid', tags: ['budget', 'cost'], status: 'draft', publishDate: '', lastUpdated: '2025-01-22T13:15:00', visibility: 'public', language: 'English' },
-  ];
+  const fetchBlogs = React.useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await blogService.getAllBlogs();
+      setBlogs(data);
+    } catch (error) {
+      console.error('Error fetching blogs:', error);
+      toast.error('Failed to fetch blogs');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchBlogs();
+  }, [fetchBlogs]);
 
   const metrics = [
     { title: 'Total Blogs', value: '156', icon: FileText, bgClass: 'bg-purple-50', colorClass: 'text-purple-600', tooltip: 'Total number of blog posts in the system' },
@@ -90,14 +117,81 @@ const BlogsOverviewPage: React.FC = () => {
     { title: 'Archived', value: '7', icon: Archive, bgClass: 'bg-amber-50', colorClass: 'text-amber-600', tooltip: 'Archived blog posts' }
   ];
 
-  const handleRefresh = () => toast.success("Refreshing data...");
+  const handleRefresh = () => fetchBlogs();
+
+  const handleOpenModal = (blog: Blog | null = null) => {
+    setSelectedBlog(blog);
+    setShowBlogModal(true);
+  };
+
+  const handleSaveBlog = async (data: BlogFormData) => {
+    try {
+      if (selectedBlog) {
+        await blogService.updateBlog(selectedBlog.id, data);
+      } else {
+        await blogService.createBlog(data);
+      }
+      fetchBlogs();
+    } catch (error) {
+      console.error('Error saving blog:', error);
+      throw error;
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this blog post?')) {
+      try {
+        await blogService.deleteBlog(id);
+        toast.success('Blog post deleted');
+        fetchBlogs();
+      } catch (error) {
+        toast.error('Failed to delete blog');
+      }
+    }
+  };
+
+  const filteredAndSortedBlogs = useMemo(() => {
+    let result = [...blogs];
+
+    if (searchTerm) {
+      const lowSearch = searchTerm.toLowerCase();
+      result = result.filter(b =>
+        b.title.toLowerCase().includes(lowSearch) ||
+        b.author.toLowerCase().includes(lowSearch) ||
+        b.blog_id.toLowerCase().includes(lowSearch)
+      );
+    }
+
+    if (statusFilter.length > 0) {
+      result = result.filter(b => statusFilter.includes(b.status));
+    }
+
+    if (categoryFilter.length > 0) {
+      result = result.filter(b => categoryFilter.includes(b.category));
+    }
+
+    return result.sort((a, b) => {
+      const aValue = a[sortConfig.key as keyof Blog];
+      const bValue = b[sortConfig.key as keyof Blog];
+
+      if (aValue === bValue) return 0;
+      if (aValue === null || aValue === undefined) return 1;
+      if (bValue === null || bValue === undefined) return -1;
+
+      const comparison = aValue < bValue ? -1 : 1;
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [blogs, searchTerm, statusFilter, categoryFilter, sortConfig]);
+
+  const totalPages = Math.ceil(filteredAndSortedBlogs.length / rowsPerPage);
+  const paginatedBlogs = filteredAndSortedBlogs.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const handleSelectAll = () => {
     if (selectedBlogs.length === blogs.length) {
       setSelectedBlogs([]);
       setSelectAllStore(false);
     } else {
-      setSelectedBlogs(blogs.map(b => b.id));
+      setSelectedBlogs(blogs.map(b => b.id.toString()));
       setSelectAllStore(false);
     }
   };
@@ -108,7 +202,7 @@ const BlogsOverviewPage: React.FC = () => {
 
   const handleSelectAllStore = () => {
     setSelectAllStore(true);
-    setSelectedBlogs(blogs.map(b => b.id));
+    setSelectedBlogs(blogs.map(b => b.id.toString()));
   };
 
   const handleClearSelection = () => {
@@ -148,9 +242,7 @@ const BlogsOverviewPage: React.FC = () => {
 
   return (
     <div className="w-full px-4 sm:px-8 lg:px-10 py-6 md:py-10 bg-gray-50 min-h-screen">
-
       <div className="max-w-[1600px] mx-auto">
-        {/* Desktop Action Bar */}
         <div className="hidden md:flex justify-between items-center gap-4 mb-8">
           <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
             <Popover>
@@ -178,115 +270,154 @@ const BlogsOverviewPage: React.FC = () => {
             <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
               <Upload size={20} strokeWidth={1.5} />Import
             </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+            <button onClick={() => handleOpenModal(null)} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
               <Plus size={20} strokeWidth={1.5} />New Blog
             </button>
           </div>
         </div>
 
-        {/* Mobile Action Bar */}
-        <div className="flex md:hidden flex-col gap-4 mb-6">
-          <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-            <div className="flex items-center gap-3">
-              <CalendarIcon size={18} className="text-[#253154]" />
-              <span className="text-sm font-medium text-[#253154]">
-                {date?.from && date?.to ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}` : 'Select range'}
-              </span>
-            </div>
-            <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500">
-              <RefreshCw size={18} className="text-[#253154]" />
-            </button>
-          </div>
-          <div className="flex gap-3">
-            <button className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium">
-              <Plus size={20} />New Blog
-            </button>
-            <button className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center">
-              <MoreHorizontal size={22} className="text-[#253154]" />
-            </button>
-          </div>
-        </div>
-
-        {/* Metrics Cards */}
-        <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
-          {metrics.map((m, i) => <MetricCard key={i} {...m} />)}
-        </div>
-        <div className="block lg:hidden mb-14 -mx-4">
-          <Slider dots={false} infinite={false} speed={500} slidesToShow={5} slidesToScroll={1} arrows={true} responsive={[{ breakpoint: 1536, settings: { slidesToShow: 4 } }, { breakpoint: 1280, settings: { slidesToShow: 3 } }, { breakpoint: 1024, settings: { slidesToShow: 2 } }, { breakpoint: 640, settings: { slidesToShow: 1 } }]}>
-            {metrics.map((m, i) => <div key={i} className="px-2 py-2"><MetricCard {...m} /></div>)}
-          </Slider>
-        </div>
-
-        {/* Search and Filter Bar */}
-        <div className="hidden md:flex justify-between items-center gap-4 mb-6">
+        <div className="flex items-center gap-4 mb-6">
           <div className="relative flex-1">
             <Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" />
-            <input type="text" placeholder="Search by title, author, or category..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" />
+            <input
+              type="text"
+              placeholder="Search blogs by title or author..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none"
+            />
           </div>
+
           <div className="flex items-center gap-3 shrink-0">
-            <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <Filter size={20} strokeWidth={1.5} />
-            </button>
-            <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <ArrowUpDown size={20} strokeWidth={1.5} />
-            </button>
-            <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <Columns size={20} strokeWidth={1.5} />
-            </button>
+            {/* Filter Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className={`h-[50px] min-w-[50px] bg-white border ${statusFilter.length > 0 || categoryFilter.length > 0 ? 'border-purple-600 ring-2 ring-purple-100' : 'border-gray-200'} rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center relative`}>
+                  <Filter size={20} strokeWidth={1.5} />
+                  {(statusFilter.length > 0 || categoryFilter.length > 0) && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+                      {statusFilter.length + categoryFilter.length}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-4 rounded-2xl shadow-xl border-gray-100" align="end">
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      <span>Status</span>
+                      {(statusFilter.length > 0 || categoryFilter.length > 0) && (
+                        <button onClick={() => { setStatusFilter([]); setCategoryFilter([]); }} className="text-purple-600 hover:text-purple-700 capitalize text-[10px] font-bold">Clear All</button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {['draft', 'published', 'scheduled', 'archived'].map(status => (
+                        <div key={status} className="flex items-center justify-between">
+                          <label className="text-[14px] text-[#253154] capitalize">{status}</label>
+                          <CustomCheckbox
+                            checked={statusFilter.includes(status)}
+                            onChange={() => setStatusFilter(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status])}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Category</h4>
+                    <div className="space-y-2">
+                      {['Visa Guides', 'University Rankings', 'Application Tips', 'Financial Aid', 'Student Stories', 'Internal Updates'].map(cat => (
+                        <div key={cat} className="flex items-center justify-between">
+                          <label className="text-[14px] text-[#253154]">{cat}</label>
+                          <CustomCheckbox
+                            checked={categoryFilter.includes(cat)}
+                            onChange={() => setCategoryFilter(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat])}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Sort Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <ArrowUpDown size={20} strokeWidth={1.5} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2 rounded-2xl shadow-xl border-gray-100" align="end">
+                <div className="space-y-1">
+                  {[
+                    { id: 'blog_id', label: 'Blog ID' },
+                    { id: 'title', label: 'Title' },
+                    { id: 'author', label: 'Author' },
+                    { id: 'updated_at', label: 'Last Updated' },
+                    { id: 'status', label: 'Status' }
+                  ].map((field) => (
+                    <button
+                      key={field.id}
+                      onClick={() => {
+                        if (sortConfig.key === field.id) {
+                          setSortConfig({ key: field.id, direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
+                        } else {
+                          setSortConfig({ key: field.id, direction: 'desc' });
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all ${sortConfig.key === field.id ? 'bg-purple-50 text-purple-600 font-bold' : 'text-[#253154] hover:bg-gray-50'}`}
+                    >
+                      {field.label}
+                      {sortConfig.key === field.id && (
+                        sortConfig.direction === 'asc' ? <ArrowUpDown size={14} className="rotate-180" /> : <ArrowUpDown size={14} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Columns Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <Columns size={20} strokeWidth={1.5} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-3 rounded-2xl shadow-xl border-gray-100" align="end">
+                <h4 className="font-bold text-[#0e042f] mb-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Visible Columns</h4>
+                <div className="space-y-2">
+                  {[
+                    { id: 'blogId', label: 'Blog ID' },
+                    { id: 'title', label: 'Title' },
+                    { id: 'author', label: 'Author' },
+                    { id: 'category', label: 'Category' },
+                    { id: 'status', label: 'Status' },
+                    { id: 'publishDate', label: 'Publish Date' },
+                    { id: 'updatedAt', label: 'Last Updated' },
+                    { id: 'visibility', label: 'Visibility' }
+                  ].map(col => (
+                    <div key={col.id} className="flex items-center justify-between">
+                      <span className="text-[14px] text-[#253154]">{col.label}</span>
+                      <CustomCheckbox
+                        checked={visibleColumns.includes(col.id)}
+                        onChange={() => setVisibleColumns(prev => prev.includes(col.id) ? prev.filter(c => c !== col.id) : [...prev, col.id])}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
-        {/* Selection Banner */}
-        {selectedBlogs.length > 0 && !selectAllStore && (
-          <div className="bg-purple-50 border border-purple-200 rounded-xl px-6 py-4 mb-6 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <CustomCheckbox checked={true} onChange={handleClearSelection} />
-              <span className="text-[#253154] font-medium">
-                {selectedBlogs.length} blog{selectedBlogs.length > 1 ? 's' : ''} selected
-              </span>
-              {selectedBlogs.length === blogs.length && (
-                <button onClick={handleSelectAllStore} className="text-purple-600 hover:text-purple-700 text-sm font-medium underline">
-                  Select all {blogs.length} blogs
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-[#253154] hover:bg-gray-50">
-                Change Status
-              </button>
-              <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-[#253154] hover:bg-gray-50">
-                Assign Category
-              </button>
-              <button className="px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-[#253154] hover:bg-gray-50">
-                Archive
-              </button>
-            </div>
-          </div>
-        )}
-
-        {selectAllStore && (
-          <div className="bg-purple-100 border border-purple-300 rounded-xl px-6 py-4 mb-6 flex items-center justify-between">
-            <span className="text-[#253154] font-medium">
-              All {blogs.length} blogs are selected
-            </span>
-            <button onClick={handleClearSelection} className="text-purple-600 hover:text-purple-700 text-sm font-medium underline">
-              Clear selection
-            </button>
-          </div>
-        )}
-
-        {/* Data Table */}
         <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50/50 border-b border-gray-100">
                 <tr>
                   <th className="w-12 px-6 py-4 text-left">
-                    <CustomCheckbox
-                      checked={selectedBlogs.length === blogs.length}
-                      partial={selectedBlogs.length > 0 && selectedBlogs.length < blogs.length}
-                      onChange={handleSelectAll}
-                    />
+                    <CustomCheckbox checked={selectedBlogs.length === blogs.length} partial={selectedBlogs.length > 0 && selectedBlogs.length < blogs.length} onChange={handleSelectAll} />
                   </th>
                   {visibleColumns.includes('blogId') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Blog ID</th>}
                   {visibleColumns.includes('title') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Title</th>}
@@ -294,109 +425,118 @@ const BlogsOverviewPage: React.FC = () => {
                   {visibleColumns.includes('category') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Category</th>}
                   {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>}
                   {visibleColumns.includes('publishDate') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Publish Date</th>}
-                  {visibleColumns.includes('lastUpdated') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Last Updated</th>}
+                  {visibleColumns.includes('updatedAt') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Last Updated</th>}
                   {visibleColumns.includes('visibility') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Visibility</th>}
                   <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {blogs.map((blog) => (
-                  <tr key={blog.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <CustomCheckbox checked={selectedBlogs.includes(blog.id)} onChange={() => handleToggleBlog(blog.id)} />
-                    </td>
-                    {visibleColumns.includes('blogId') && (
-                      <td className="px-6 py-4">
-                        <span className="text-[14px] font-bold text-[#253154]">{blog.blogId}</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('title') && (
-                      <td className="px-6 py-4">
-                        <span className="text-[14px] text-gray-700 font-medium max-w-[300px] line-clamp-2">{blog.title}</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('author') && (
-                      <td className="px-6 py-4">
-                        <span className="text-[14px] text-gray-700">{blog.author}</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('category') && (
-                      <td className="px-6 py-4">
-                        <span className="text-[12px] font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-md">{blog.category}</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('status') && (
-                      <td className="px-6 py-4">
-                        <StatusBadge status={blog.status} />
-                      </td>
-                    )}
-                    {visibleColumns.includes('publishDate') && (
-                      <td className="px-6 py-4">
-                        <span className="text-[14px] text-gray-700">
-                          {blog.publishDate ? format(new Date(blog.publishDate), 'MMM d, yyyy') : '—'}
-                        </span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('lastUpdated') && (
-                      <td className="px-6 py-4">
-                        <span className="text-[12px] text-gray-500">{format(new Date(blog.lastUpdated), 'MMM d, yyyy HH:mm')}</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('visibility') && (
-                      <td className="px-6 py-4">
-                        <VisibilityBadge visibility={blog.visibility} />
-                      </td>
-                    )}
-                    <td className="px-6 py-4">
-                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                        <MoreHorizontal size={18} className="text-[#253154]" />
-                      </button>
+                {loading ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-10 text-center text-gray-400">
+                      <RefreshCw size={24} className="animate-spin mx-auto mb-2" />
+                      Loading blogs...
                     </td>
                   </tr>
-                ))}
+                ) : paginatedBlogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-10 text-center text-gray-400">
+                      No blogs found.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedBlogs.map((blog) => (
+                    <tr key={blog.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <CustomCheckbox checked={selectedBlogs.includes(blog.id.toString())} onChange={() => handleToggleBlog(blog.id.toString())} />
+                      </td>
+                      {visibleColumns.includes('blogId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#253154]">{blog.blog_id}</span></td>}
+                      {visibleColumns.includes('title') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700 font-medium max-w-[300px] line-clamp-2">{blog.title}</span></td>}
+                      {visibleColumns.includes('author') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{blog.author}</span></td>}
+                      {visibleColumns.includes('category') && <td className="px-6 py-4"><span className="text-[12px] font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-md">{blog.category}</span></td>}
+                      {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={blog.status} /></td>}
+                      {visibleColumns.includes('publishDate') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{blog.publish_date ? format(new Date(blog.publish_date), 'MMM d, yyyy') : '—'}</span></td>}
+                      {visibleColumns.includes('updatedAt') && <td className="px-6 py-4"><span className="text-[12px] text-gray-500">{format(new Date(blog.updated_at), 'MMM d, yyyy HH:mm')}</span></td>}
+                      {visibleColumns.includes('visibility') && <td className="px-6 py-4"><VisibilityBadge visibility={blog.visibility} /></td>}
+                      <td className="px-6 py-4">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                              <MoreHorizontal size={18} className="text-[#253154]" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-40 p-1" align="end">
+                            <button
+                              onClick={() => handleOpenModal(blog)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
+                            >
+                              <Edit size={16} /> Edit Blog
+                            </button>
+                            <button
+                              onClick={() => handleDelete(blog.id)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Archive size={16} /> Delete
+                            </button>
+                          </PopoverContent>
+                        </Popover>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
 
-          {/* Pagination */}
-          <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
+          {/* Pagination Footer */}
+          <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between bg-gray-50/30">
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Rows per page:</span>
-              <button className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 flex items-center gap-2">
-                10<ChevronDown size={14} />
-              </button>
-              <span className="text-sm text-gray-600 ml-4">1-{Math.min(10, blogs.length)} of {blogs.length}</span>
+              <span className="text-sm text-gray-600 font-medium">Rows per page:</span>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => {
+                  setRowsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 outline-none transition-all cursor-pointer font-medium text-[#253154]"
+              >
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-500 ml-4">
+                {filteredAndSortedBlogs.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0}-
+                {Math.min(currentPage * rowsPerPage, filteredAndSortedBlogs.length)} of {filteredAndSortedBlogs.length}
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-all text-[#253154]"
+              >
                 <ChevronLeft size={18} />
               </button>
-              <span className="text-sm text-gray-600">Page 1 of 1</span>
-              <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50">
+              <span className="text-sm font-bold text-[#253154] px-2">Page {currentPage} of {Math.max(1, totalPages)}</span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-all text-[#253154]"
+              >
                 <ChevronRight size={18} />
               </button>
             </div>
           </div>
         </div>
       </div>
+      <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} moduleName="Blogs" totalCount={blogs.length} selectedCount={selectedBlogs.length} columns={exportColumns} supportsDateRange={true} onExport={handleExport} />
+      <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} moduleName="Blogs" fields={importFields} onImport={handleImport} allowUpdate={true} />
 
-      <ExportDialog
-        open={showExportDialog}
-        onOpenChange={setShowExportDialog}
-        moduleName="Blogs"
-        totalCount={blogs.length}
-        selectedCount={selectedBlogs.length}
-        columns={exportColumns}
-        supportsDateRange={true}
-        onExport={handleExport}
-      />
-      <ImportDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        moduleName="Blogs"
-        fields={importFields}
-        onImport={handleImport}
-        allowUpdate={true}
+      <BlogModal
+        isOpen={showBlogModal}
+        onClose={() => setShowBlogModal(false)}
+        onSave={handleSaveBlog}
+        blog={selectedBlog}
       />
     </div>
   );

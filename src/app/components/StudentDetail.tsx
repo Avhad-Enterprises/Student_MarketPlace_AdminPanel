@@ -194,7 +194,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
           const mappedApps = response.data.map((app: BackendApplication) => ({
             id: app.id,
             university: app.university_name,
-            course: 'Not Specified', // Backend doesn't seem to have course field in Application interface yet, or it's hidden. 
+            course: 'Not Specified', // Backend doesn't seem to have course field in Application interface yet, or it&apos;s hidden. 
             // I'll check Application interface in applicationsService again if needed, but for now I'll use a placeholder or check notes.
             country: app.country,
             intake: app.intake,
@@ -322,6 +322,36 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
     behaviorFunnel: false,
     aiInsights: false,
     partnerRevenue: false
+  });
+
+  const [appFilters, setAppFilters] = useState({
+    country: 'all',
+    status: 'all',
+    intake: 'all'
+  });
+
+  const [docFilters, setDocFilters] = useState({
+    category: 'all',
+    status: 'all'
+  });
+
+  const [eventTypeFilter, setEventTypeFilter] = useState('all');
+
+  const [newAppFormData, setNewAppFormData] = useState({
+    university: '',
+    country: '',
+    course: '',
+    intake: '',
+    status: 'draft',
+    offerStatus: 'pending',
+    counselor: '',
+    type: 'Regular'
+  });
+
+  const [uploadDocFormData, setUploadDocFormData] = useState({
+    name: '',
+    category: '',
+    application: ''
   });
 
   // Modal states
@@ -1339,7 +1369,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 <div className="space-y-5">
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Highest Qualification</div>
-                    <div className="font-medium text-gray-900">Bachelor's Degree</div>
+                    <div className="font-medium text-gray-900">Bachelor&apos;s Degree</div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Field of Study</div>
@@ -1395,7 +1425,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Preferred Course Level</div>
-                    <div className="font-medium text-gray-900">Master's Degree</div>
+                    <div className="font-medium text-gray-900">Master&apos;s Degree</div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Budget Range</div>
@@ -1473,6 +1503,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
               <div className="flex items-center gap-3">
                 <CustomSelect
                   placeholder="All Countries"
+                  value={appFilters.country}
+                  onChange={(val) => setAppFilters(prev => ({ ...prev, country: val }))}
                   options={[
                     { value: "all", label: "All Countries" },
                     { value: "usa", label: "USA" },
@@ -1483,6 +1515,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 />
                 <CustomSelect
                   placeholder="All Statuses"
+                  value={appFilters.status}
+                  onChange={(val) => setAppFilters(prev => ({ ...prev, status: val }))}
                   options={[
                     { value: "all", label: "All Statuses" },
                     { value: "draft", label: "Draft" },
@@ -1493,6 +1527,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 />
                 <CustomSelect
                   placeholder="All Intakes"
+                  value={appFilters.intake}
+                  onChange={(val) => setAppFilters(prev => ({ ...prev, intake: val }))}
                   options={[
                     { value: "all", label: "All Intakes" },
                     { value: "fall-2025", label: "Fall 2025" },
@@ -2713,6 +2749,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
               <div className="flex items-center gap-3">
                 <CustomSelect
                   placeholder="All Categories"
+                  value={docFilters.category}
+                  onChange={(val) => setDocFilters(prev => ({ ...prev, category: val }))}
                   options={[
                     { value: "all", label: "All Categories" },
                     { value: "academic", label: "Academic" },
@@ -2723,6 +2761,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 />
                 <CustomSelect
                   placeholder="All Statuses"
+                  value={docFilters.status}
+                  onChange={(val) => setDocFilters(prev => ({ ...prev, status: val }))}
                   options={[
                     { value: "all", label: "All Statuses" },
                     { value: "pending", label: "Pending" },
@@ -3034,6 +3074,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </div>
                   <CustomSelect
                     placeholder="All Event Types"
+                    value={eventTypeFilter}
+                    onChange={setEventTypeFilter}
                     options={[
                       { value: "all", label: "All Event Types" },
                       { value: "page-viewed", label: "Page Viewed" },
@@ -4876,6 +4918,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </label>
                   <CustomSelect
                     placeholder="Select University"
+                    value={newAppFormData.university}
+                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, university: val }))}
                     options={[
                       { value: "", label: "Select University" },
                       { value: "toronto", label: "University of Toronto" },
@@ -4884,7 +4928,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                       { value: "mit", label: "MIT" },
                       { value: "oxford", label: "Oxford University" }
                     ]}
-                    required
                   />
                 </div>
                 <div>
@@ -4893,6 +4936,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </label>
                   <CustomSelect
                     placeholder="Select Country"
+                    value={newAppFormData.country}
+                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, country: val }))}
                     options={[
                       { value: "", label: "Select Country" },
                       { value: "canada", label: "Canada" },
@@ -4901,7 +4946,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                       { value: "australia", label: "Australia" },
                       { value: "germany", label: "Germany" }
                     ]}
-                    required
                   />
                 </div>
                 <div>
@@ -4910,6 +4954,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </label>
                   <CustomSelect
                     placeholder="Select Course"
+                    value={newAppFormData.course}
+                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, course: val }))}
                     options={[
                       { value: "", label: "Select Course" },
                       { value: "cs", label: "Computer Science" },
@@ -4918,7 +4964,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                       { value: "data-science", label: "Data Science" },
                       { value: "medicine", label: "Medicine" }
                     ]}
-                    required
                   />
                 </div>
                 <div>
@@ -4927,6 +4972,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </label>
                   <CustomSelect
                     placeholder="Select Intake"
+                    value={newAppFormData.intake}
+                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, intake: val }))}
                     options={[
                       { value: "", label: "Select Intake" },
                       { value: "fall-2025", label: "Fall 2025" },
@@ -4934,7 +4981,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                       { value: "summer-2026", label: "Summer 2026" },
                       { value: "fall-2026", label: "Fall 2026" }
                     ]}
-                    required
                   />
                 </div>
                 <div>
@@ -4977,6 +5023,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </label>
                   <CustomSelect
                     placeholder="Select Status"
+                    value={newAppFormData.status}
+                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, status: val }))}
                     options={[
                       { value: "", label: "Select Status" },
                       { value: "draft", label: "Draft" },
@@ -4984,7 +5032,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                       { value: "accepted", label: "Accepted" },
                       { value: "rejected", label: "Rejected" }
                     ]}
-                    required
                   />
                 </div>
                 <div>
@@ -4993,6 +5040,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </label>
                   <CustomSelect
                     placeholder="Select Status"
+                    value={newAppFormData.offerStatus}
+                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, offerStatus: val }))}
                     options={[
                       { value: "", label: "Select Status" },
                       { value: "na", label: "N/A" },
@@ -5000,7 +5049,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                       { value: "received", label: "Offer Received" },
                       { value: "accepted", label: "Offer Accepted" }
                     ]}
-                    required
                   />
                 </div>
                 <div>
@@ -5009,6 +5057,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </label>
                   <CustomSelect
                     placeholder="Select Counselor"
+                    value={newAppFormData.counselor}
+                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, counselor: val }))}
                     options={[
                       { value: "", label: "Select Counselor" },
                       { value: "sarah", label: "Sarah Johnson" },
@@ -5016,7 +5066,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                       { value: "emma", label: "Emma Wilson" },
                       { value: "james", label: "James Chen" }
                     ]}
-                    required
                   />
                 </div>
                 <div>
@@ -5055,6 +5104,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </label>
                   <CustomSelect
                     placeholder="Select Type"
+                    value={newAppFormData.type}
+                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, type: val }))}
                     options={[
                       { value: "Regular", label: "Regular" },
                       { value: "Early Decision", label: "Early Decision" },
@@ -5137,6 +5188,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 </label>
                 <CustomSelect
                   placeholder="Select Category"
+                  value={uploadDocFormData.category}
+                  onChange={(val) => setUploadDocFormData(prev => ({ ...prev, category: val }))}
                   options={[
                     { value: "", label: "Select Category" },
                     { value: "academic", label: "Academic" },
@@ -5144,7 +5197,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                     { value: "visa", label: "Visa" },
                     { value: "other", label: "Other" }
                   ]}
-                  required
                 />
               </div>
               <div>
@@ -5153,6 +5205,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 </label>
                 <CustomSelect
                   placeholder="Select Application (Optional)"
+                  value={uploadDocFormData.application}
+                  onChange={(val) => setUploadDocFormData(prev => ({ ...prev, application: val }))}
                   options={[
                     { value: "", label: "Select Application (Optional)" },
                     { value: "toronto-cs", label: "University of Toronto - Computer Science" },
@@ -5203,7 +5257,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
         student={student}
         onSave={(updatedStudent: any) => {
           setStudent(updatedStudent);
-          // Update derived status if it's based on account_status
+          // Update derived status if it&apos;s based on account_status
           setStudentStatus(updatedStudent.account_status ? 'Active' : 'Inactive');
 
           // Create activity record
@@ -5573,10 +5627,10 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
 
       {/* Change Counselor Modal */}
       <ChangeCounselorModal
-        isOpen={changeCounselorModalOpen}
+        open={changeCounselorModalOpen}
         currentCounselor={studentCounselor}
         studentName={student ? `${student.first_name} ${student.last_name}` : 'Student'}
-        onClose={() => setChangeCounselorModalOpen(false)}
+        onOpenChange={setChangeCounselorModalOpen}
         onSave={handleChangeCounselor}
       />
 
@@ -5590,9 +5644,9 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
 
       {/* Archive Student Modal */}
       <ArchiveStudentModal
-        isOpen={archiveStudentModalOpen}
+        open={archiveStudentModalOpen}
         studentName={student ? `${student.first_name} ${student.last_name}` : 'Student'}
-        onClose={() => setArchiveStudentModalOpen(false)}
+        onOpenChange={setArchiveStudentModalOpen}
         onConfirm={handleArchiveStudent}
       />
 

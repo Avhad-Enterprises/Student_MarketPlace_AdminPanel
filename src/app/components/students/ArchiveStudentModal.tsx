@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
 import { CustomSelect } from '../common/CustomSelect';
 import { AlertTriangle, Archive, Lock, Eye } from 'lucide-react';
 
 interface ArchiveStudentModalProps {
-  isOpen: boolean;
+  open: boolean;
   studentName: string;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   onConfirm?: (data: {
     reason: string;
     notes: string;
@@ -14,9 +14,9 @@ interface ArchiveStudentModalProps {
 }
 
 export const ArchiveStudentModal: React.FC<ArchiveStudentModalProps> = ({
-  isOpen,
+  open,
   studentName,
-  onClose,
+  onOpenChange,
   onConfirm,
 }) => {
   const [formData, setFormData] = useState({
@@ -38,7 +38,7 @@ export const ArchiveStudentModal: React.FC<ArchiveStudentModalProps> = ({
       reason: formData.reason,
       notes: formData.notes,
     });
-    onClose();
+    onOpenChange(false);
   };
 
   const reasonOptions = [
@@ -54,7 +54,7 @@ export const ArchiveStudentModal: React.FC<ArchiveStudentModalProps> = ({
   ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[600px] w-[95vw] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b border-gray-200 shrink-0">
           <DialogTitle className="flex items-center gap-2 text-amber-900">
@@ -111,7 +111,6 @@ export const ArchiveStudentModal: React.FC<ArchiveStudentModalProps> = ({
               value={formData.reason}
               onChange={(value) => setFormData({ ...formData, reason: value })}
               options={reasonOptions}
-              required
             />
           </div>
 
@@ -132,7 +131,7 @@ export const ArchiveStudentModal: React.FC<ArchiveStudentModalProps> = ({
           {/* Confirmation Input */}
           <div className="border-t border-gray-200 pt-5">
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-              Type "ARCHIVE" to confirm <span className="text-red-500">*</span>
+              Type &quot;ARCHIVE&quot; to confirm <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -150,7 +149,7 @@ export const ArchiveStudentModal: React.FC<ArchiveStudentModalProps> = ({
 
         <DialogFooter className="px-6 py-4 border-t border-gray-200 shrink-0">
           <button
-            onClick={onClose}
+            onClick={() => onOpenChange(false)}
             className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all text-sm font-semibold"
           >
             Cancel

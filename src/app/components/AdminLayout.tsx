@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   House, Users, Grid3x3, Globe, Sparkles, Calendar, Mail, Wallet,
-  BarChart3, FileEdit, Store, Settings, Bell, Menu, ChevronDown, ChevronRight, User, LogOut
+  BarChart3, FileEdit, Store, Settings, Bell, Menu, ChevronDown, ChevronRight, User, LogOut, FileText, GraduationCap
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { GlobalSearch } from './GlobalSearch';
@@ -63,7 +63,8 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'services-forex', label: 'Forex' },
       { id: 'services-employment', label: 'Employment' },
       { id: 'services-food', label: 'Food' },
-      { id: 'services-courses', label: 'Courses' }
+      { id: 'services-courses', label: 'Courses' },
+      { id: 'services-provider-redesigned', label: 'Provider Overview (Redesigned)' }
     ]
   },
   {
@@ -86,6 +87,18 @@ const NAV_SECTIONS: NavSection[] = [
       { id: 'ai-knowledge', label: 'Content & Knowledge Base' },
       { id: 'ai-flows', label: 'Flows & Forms' },
       { id: 'ai-conversations', label: 'Conversations & Quality' }
+    ]
+  },
+  {
+    id: 'ai-test-assistant',
+    icon: <GraduationCap size={20} />,
+    label: 'AI Test Assistant',
+    items: [
+      { id: 'ai-test-overview', label: 'Overview' },
+      { id: 'ai-test-library', label: 'Library' },
+      { id: 'ai-test-plans', label: 'Plans' },
+      { id: 'ai-test-reports', label: 'Reports' },
+      { id: 'ai-test-scoring', label: 'Scoring' }
     ]
   },
   {
@@ -130,8 +143,18 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { id: 'store-themes', label: 'Themes' },
       { id: 'store-pages', label: 'Pages' },
+      { id: 'store-builder', label: 'Website Builder' },
       { id: 'store-navigation', label: 'Navigation' },
       { id: 'store-preferences', label: 'Preferences' }
+    ]
+  },
+  {
+    id: 'sop',
+    icon: <FileText size={20} />,
+    label: 'SOP Assistant',
+    items: [
+      { id: 'sop-overview', label: 'Overview' },
+      { id: 'sop-settings', label: 'Settings' }
     ]
   }
 ];
@@ -181,9 +204,48 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
           'add-country': '/countries/add',
           'communications': '/communications',
           'finance': '/finance',
+          'reports': '/reports',
+          'ai-test-overview': '/ai-test-assistant/overview',
+          'ai-test-library': '/ai-test-assistant/library',
+          'ai-test-plans': '/ai-test-assistant/plans',
+          'ai-test-reports': '/ai-test-assistant/reports',
+          'ai-test-scoring': '/ai-test-assistant/scoring',
+          'store-themes': '/online-store/themes',
+          'store-pages': '/online-store/pages',
+          'store-builder': '/online-store/website-builder',
+          'store-navigation': '/online-store/navigation',
+          'store-preferences': '/online-store/preferences',
+          'sop-overview': '/sop-assistant/overview',
+          'sop-settings': '/sop-assistant/settings',
+          'ai-overview': '/ai-visa-assistant/overview',
+          'ai-setup': '/ai-visa-assistant/setup',
+          'ai-features': '/ai-visa-assistant/features',
+          'ai-knowledge': '/ai-visa-assistant/knowledge',
+          'ai-flows': '/ai-visa-assistant/flows',
+          'ai-conversations': '/ai-visa-assistant/conversations',
+          'blogs': '/blogs',
+          'report-analytics': '/reports',
+          'services-sim-cards': '/services/sim-cards',
+          'services-banks': '/services/banks',
+          'services-insurance': '/services/insurance',
+          'services-visa': '/services/visa',
+          'services-taxes': '/services/taxes',
+          'services-loans': '/services/loans',
+          'services-credit': '/services/credit',
+          'services-housing': '/services/housing',
+          'services-forex': '/services/forex',
+          'services-employment': '/services/employment',
+          'services-food': '/services/food',
+          'services-courses': '/services/courses',
+          'services-provider-redesigned': '/service-provider/overview',
+          'bookings-list': '/bookings/list',
+          'bookings-enquiries': '/bookings/enquiries',
+          'bookings-status': '/bookings/status',
+          'bookings-experts': '/bookings/experts',
         };
 
         const targetRoute = routeMap[page];
+        console.log('[AdminLayout] Target route for', page, 'is:', targetRoute);
         if (targetRoute) {
           console.log('[AdminLayout] Navigating to mapped route:', targetRoute);
           if (pathname !== targetRoute) {

@@ -277,7 +277,7 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
             Course Relevance
           </Label>
           <p className="text-xs text-gray-500 mt-1 mb-2">
-            How relevant is this course to the student's background?
+            How relevant is this course to the student&apos;s background?
           </p>
           <Select
             value={data.courseRelevance || ''}
@@ -340,7 +340,7 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
             Industry Alignment
           </Label>
           <p className="text-xs text-gray-500 mt-1 mb-2">
-            Does the course align with the student's target industry?
+            Does the course align with the student&apos;s target industry?
           </p>
           <Select
             value={data.industryAlignment || ''}
@@ -409,7 +409,7 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
             Gap Sensitivity
           </Label>
           <p className="text-xs text-gray-500 mt-1 mb-2">
-            Will the student's profile gaps be questioned?
+            Will the student&apos;s profile gaps be questioned?
           </p>
           <Select
             value={data.gapSensitivity || ''}

@@ -4,13 +4,13 @@ import { CustomSelect } from '../common/CustomSelect';
 import { User, Bell } from 'lucide-react';
 
 interface ChangeCounselorModalProps {
-  isOpen: boolean;
+  open: boolean;
   currentCounselor: {
     name: string;
     initials: string;
   };
   studentName: string;
-  onClose: () => void;
+  onOpenChange: (open: boolean) => void;
   onSave?: (data: {
     newCounselor: string;
     reason: string;
@@ -19,10 +19,10 @@ interface ChangeCounselorModalProps {
 }
 
 export const ChangeCounselorModal: React.FC<ChangeCounselorModalProps> = ({
-  isOpen,
+  open,
   currentCounselor,
   studentName,
-  onClose,
+  onOpenChange,
   onSave,
 }) => {
   const [formData, setFormData] = useState({
@@ -37,7 +37,7 @@ export const ChangeCounselorModal: React.FC<ChangeCounselorModalProps> = ({
       return;
     }
     onSave?.(formData);
-    onClose();
+    onOpenChange(false);
   };
 
   const counselorOptions = [
@@ -51,7 +51,7 @@ export const ChangeCounselorModal: React.FC<ChangeCounselorModalProps> = ({
   ];
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[600px] w-[95vw] flex flex-col p-0 gap-0">
         <DialogHeader className="px-6 py-4 border-b border-gray-200 shrink-0">
           <DialogTitle>Assign / Change Counselor</DialogTitle>
@@ -87,7 +87,6 @@ export const ChangeCounselorModal: React.FC<ChangeCounselorModalProps> = ({
               value={formData.newCounselor}
               onChange={(value) => setFormData({ ...formData, newCounselor: value })}
               options={counselorOptions}
-              required
             />
             <p className="text-xs text-gray-500 mt-1.5">
               Type to search by name or use the dropdown
@@ -134,7 +133,7 @@ export const ChangeCounselorModal: React.FC<ChangeCounselorModalProps> = ({
 
         <DialogFooter className="px-6 py-4 border-t border-gray-200 shrink-0">
           <button
-            onClick={onClose}
+            onClick={() => onOpenChange(false)}
             className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all text-sm font-semibold"
           >
             Cancel

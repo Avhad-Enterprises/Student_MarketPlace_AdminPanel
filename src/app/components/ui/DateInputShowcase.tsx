@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DATE INPUT COMPONENT - SHOWCASE & DOCUMENTATION
  * 
  * This file demonstrates all variants, states, and usage examples
@@ -514,12 +514,12 @@ export const DateInputShowcase: React.FC = () => {
             <div className="p-6 bg-red-50 border-2 border-red-200 rounded-xl">
               <div className="flex items-center gap-2 mb-4">
                 <XCircle className="w-5 h-5 text-red-600" />
-                <h3 className="font-bold text-red-900">✗ Don't</h3>
+                <h3 className="font-bold text-red-900">✗ Don&apos;t</h3>
               </div>
               <ul className="space-y-3 text-sm text-red-900">
                 <li className="flex gap-2">
                   <span>✗</span>
-                  <span>Use vague labels like "Date" or "Select"</span>
+                  <span>Use vague labels like &quot;Date&quot; or &quot;Select&quot;</span>
                 </li>
                 <li className="flex gap-2">
                   <span>✗</span>
@@ -670,8 +670,8 @@ export const DateInputShowcase: React.FC = () => {
                   </tr>
                   <tr>
                     <td className="px-4 py-3 font-mono text-purple-600">size</td>
-                    <td className="px-4 py-3 text-gray-600">'sm' | 'md' | 'lg'</td>
-                    <td className="px-4 py-3 text-gray-400">'md'</td>
+                    <td className="px-4 py-3 text-gray-600">&apos;sm&apos; | &apos;md&apos; | &apos;lg&apos;</td>
+                    <td className="px-4 py-3 text-gray-400">&apos;md&apos;</td>
                     <td className="px-4 py-3 text-gray-700">Size variant</td>
                   </tr>
                   <tr>

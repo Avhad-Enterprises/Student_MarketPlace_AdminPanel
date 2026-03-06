@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal,
   Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Search, Check,
-  Columns, MessageSquare, Clock, CheckCircle, XCircle, Mail
+  Columns, MessageSquare, Clock, CheckCircle, XCircle, Mail, Edit2, Trash2
 } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -14,6 +14,9 @@ import Slider from "react-slick";
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
+import { enquiryService, Enquiry as ApiEnquiry } from '../../services/enquiryService';
+import { AddEnquiryModal } from './AddEnquiryModal';
+import { EditEnquiryModal } from './EditEnquiryModal';
 
 interface CustomCheckboxProps {
   checked: boolean;
@@ -106,36 +109,123 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
 
-  const enquiries: Enquiry[] = [
-    { id: 'ENQ-001', enquiryId: 'ENQ-001', dateSubmitted: '2025-01-15T09:30:00', studentName: 'Sarah Miller', email: 'sarah.m@email.com', subject: 'Visa Application Process', status: 'new', priority: 'High' },
-    { id: 'ENQ-002', enquiryId: 'ENQ-002', dateSubmitted: '2025-01-16T11:20:00', studentName: 'John Davis', email: 'john.d@email.com', subject: 'Document Requirements', status: 'in-progress', priority: 'Medium' },
-    { id: 'ENQ-003', enquiryId: 'ENQ-003', dateSubmitted: '2025-01-17T14:15:00', studentName: 'Emily Chen', email: 'emily.c@email.com', subject: 'University Selection Help', status: 'responded', priority: 'Low' },
-    { id: 'ENQ-004', enquiryId: 'ENQ-004', dateSubmitted: '2025-01-18T10:00:00', studentName: 'Michael Brown', email: 'michael.b@email.com', subject: 'SOP Review Request', status: 'closed', priority: 'Medium' },
-    { id: 'ENQ-005', enquiryId: 'ENQ-005', dateSubmitted: '2025-01-19T16:45:00', studentName: 'Lisa Wang', email: 'lisa.w@email.com', subject: 'Interview Preparation', status: 'new', priority: 'High' },
-  ];
+  const [enquiries, setEnquiries] = useState<ApiEnquiry[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'date_submitted', direction: 'desc' });
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
+  const [showColumnMenu, setShowColumnMenu] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingEnquiry, setEditingEnquiry] = useState<ApiEnquiry | null>(null);
 
-  const metrics = [
-    { title: 'Total Enquiries', value: '186', icon: MessageSquare, bgClass: 'bg-purple-50', colorClass: 'text-purple-600', tooltip: 'Total enquiries received in selected period' },
-    { title: 'New', value: '42', icon: Mail, bgClass: 'bg-blue-50', colorClass: 'text-blue-600', tooltip: 'Unread new enquiries' },
-    { title: 'In Progress', value: '64', icon: Clock, bgClass: 'bg-amber-50', colorClass: 'text-amber-600', tooltip: 'Enquiries being processed' },
-    { title: 'Responded', value: '58', icon: CheckCircle, bgClass: 'bg-green-50', colorClass: 'text-green-600', tooltip: 'Enquiries with responses sent' },
-    { title: 'Closed', value: '22', icon: XCircle, bgClass: 'bg-gray-50', colorClass: 'text-gray-600', tooltip: 'Resolved and closed enquiries' }
-  ];
-
-  const handleRefresh = () => toast.success("Refreshing data...");
-
-  const handleSelectAll = () => {
-    if (selectedEnquiries.length === enquiries.length) {
-      setSelectedEnquiries([]);
-      setSelectAllStore(false);
-    } else {
-      setSelectedEnquiries(enquiries.map(e => e.id));
-      setSelectAllStore(false);
+  const fetchEnquiries = async () => {
+    try {
+      setIsLoading(true);
+      const data = await enquiryService.getAllEnquiries();
+      setEnquiries(data);
+    } catch (error) {
+      console.error('Error fetching enquiries:', error);
+      toast.error('Failed to load enquiries');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleToggleEnquiry = (enquiryId: string) => {
-    setSelectedEnquiries(prev => prev.includes(enquiryId) ? prev.filter(id => id !== enquiryId) : [...prev, enquiryId]);
+  useEffect(() => {
+    fetchEnquiries();
+  }, [date]);
+
+  const metrics = useMemo(() => {
+    const total = enquiries.length;
+    const isNew = enquiries.filter(e => e.status === 'new').length;
+    const inProgress = enquiries.filter(e => e.status === 'in-progress').length;
+    const responded = enquiries.filter(e => e.status === 'responded').length;
+    const closed = enquiries.filter(e => e.status === 'closed').length;
+
+    return [
+      { title: 'Total Enquiries', value: total.toString(), icon: MessageSquare, bgClass: 'bg-purple-50', colorClass: 'text-purple-600', tooltip: 'Total enquiries received in selected period' },
+      { title: 'New', value: isNew.toString(), icon: Mail, bgClass: 'bg-blue-50', colorClass: 'text-blue-600', tooltip: 'Unread new enquiries' },
+      { title: 'In Progress', value: inProgress.toString(), icon: Clock, bgClass: 'bg-amber-50', colorClass: 'text-amber-600', tooltip: 'Enquiries being processed' },
+      { title: 'Responded', value: responded.toString(), icon: CheckCircle, bgClass: 'bg-green-50', colorClass: 'text-green-600', tooltip: 'Enquiries with responses sent' },
+      { title: 'Closed', value: closed.toString(), icon: XCircle, bgClass: 'bg-gray-50', colorClass: 'text-gray-600', tooltip: 'Resolved and closed enquiries' }
+    ];
+  }, [enquiries]);
+
+  const handleRefresh = () => {
+    fetchEnquiries();
+    toast.success("Refreshing data...");
+  };
+
+  const handleSelectAll = () => {
+    if (selectedEnquiries.length === paginatedBookings.length) {
+      setSelectedEnquiries([]);
+    } else {
+      setSelectedEnquiries(paginatedBookings.map(e => e.enquiry_id));
+    }
+  };
+
+  const handleToggleEnquiry = (id: string) => {
+    setSelectedEnquiries(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
+  };
+
+  const filteredEnquiries = useMemo(() => {
+    let result = [...enquiries];
+
+    if (searchTerm) {
+      const lowSearch = searchTerm.toLowerCase();
+      result = result.filter(e =>
+        e.student_name.toLowerCase().includes(lowSearch) ||
+        e.enquiry_id.toLowerCase().includes(lowSearch) ||
+        e.subject.toLowerCase().includes(lowSearch) ||
+        e.email.toLowerCase().includes(lowSearch)
+      );
+    }
+
+    if (statusFilter.length > 0) {
+      result = result.filter(e => statusFilter.includes(e.status));
+    }
+
+    if (priorityFilter.length > 0) {
+      result = result.filter(e => priorityFilter.includes(e.priority));
+    }
+
+    return result.sort((a, b) => {
+      const aValue = a[sortConfig.key as keyof ApiEnquiry];
+      const bValue = b[sortConfig.key as keyof ApiEnquiry];
+
+      if (aValue === bValue) return 0;
+      if (aValue === undefined) return 1;
+      if (bValue === undefined) return -1;
+
+      const comparison = aValue < bValue ? -1 : 1;
+      return sortConfig.direction === 'asc' ? comparison : -comparison;
+    });
+  }, [enquiries, searchTerm, sortConfig, statusFilter, priorityFilter]);
+
+  const totalPages = Math.ceil(filteredEnquiries.length / rowsPerPage);
+  const paginatedBookings = filteredEnquiries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this enquiry?')) {
+      try {
+        await enquiryService.deleteEnquiry(id);
+        toast.success("Enquiry deleted successfully");
+        fetchEnquiries();
+      } catch (error) {
+        toast.error("Failed to delete enquiry");
+      }
+    }
+  };
+
+  const handleEdit = (enquiry: ApiEnquiry) => {
+    setEditingEnquiry(enquiry);
+    setIsEditModalOpen(true);
   };
 
   const exportColumns: ExportColumn[] = [
@@ -149,12 +239,12 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
   ];
 
   const importFields: ImportField[] = [
-    { id: 'enquiryDate', label: 'Enquiry Date', required: true, type: 'date' },
-    { id: 'dateSubmitted', label: 'Date Submitted', required: true, type: 'date' },
-    { id: 'studentName', label: 'Student Name', required: true, type: 'text' },
+    { id: 'enquiry_id', label: 'Enquiry ID', required: true, type: 'text' },
+    { id: 'student_name', label: 'Student Name', required: true, type: 'text' },
     { id: 'email', label: 'Email', required: true, type: 'email' },
     { id: 'subject', label: 'Subject', required: true, type: 'text' },
-    { id: 'priority', label: 'Priority', required: true, type: 'select', options: ['High', 'Medium', 'Low'] },
+    { id: 'message', label: 'Message', required: false, type: 'text' },
+    { id: 'priority', label: 'Priority', required: true, type: 'select', options: ['high', 'medium', 'low'] },
     { id: 'status', label: 'Status', required: true, type: 'select', options: ['new', 'in-progress', 'responded', 'closed'] }
   ];
 
@@ -209,7 +299,7 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
             <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
               <Upload size={20} strokeWidth={1.5} />Import
             </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
               <Plus size={20} strokeWidth={1.5} />Add Enquiry
             </button>
           </div>
@@ -227,8 +317,8 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
             </button>
           </div>
           <div className="flex gap-3">
-            <button className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium">
-              <Plus size={20} />Add Enquiry
+            <button onClick={() => setIsAddModalOpen(true)} className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium">
+              <Plus size={18} />Add Enquiry
             </button>
             <button className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center">
               <MoreHorizontal size={22} className="text-[#253154]" />
@@ -251,18 +341,134 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
         <div className="hidden md:flex justify-between items-center gap-4 mb-6">
           <div className="relative flex-1">
             <Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" />
-            <input type="text" placeholder="Search enquiries..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" />
+            <input
+              type="text"
+              placeholder="Search enquiries..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none"
+            />
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <Filter size={20} strokeWidth={1.5} />
-            </button>
-            <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <ArrowUpDown size={20} strokeWidth={1.5} />
-            </button>
-            <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-              <Columns size={20} strokeWidth={1.5} />
-            </button>
+            {/* Filter Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className={`h-[50px] min-w-[50px] bg-white border ${statusFilter.length > 0 || priorityFilter.length > 0 ? 'border-purple-600 ring-2 ring-purple-100' : 'border-gray-200'} rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center relative`}>
+                  <Filter size={20} strokeWidth={1.5} />
+                  {(statusFilter.length > 0 || priorityFilter.length > 0) && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-purple-600 rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+                      {statusFilter.length + priorityFilter.length}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-4 rounded-2xl shadow-xl border-gray-100" align="end">
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between mb-3 text-xs font-bold text-gray-400 uppercase tracking-wider">
+                      <span>Status</span>
+                      {(statusFilter.length > 0 || priorityFilter.length > 0) && (
+                        <button onClick={() => { setStatusFilter([]); setPriorityFilter([]); }} className="text-purple-600 hover:text-purple-700 capitalize text-[10px] font-bold">Clear All</button>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {['new', 'in-progress', 'responded', 'closed'].map(status => (
+                        <div key={status} className="flex items-center justify-between">
+                          <label className="text-[14px] text-[#253154] capitalize" htmlFor={`status-${status}`}>{status.replace('-', ' ')}</label>
+                          <CustomCheckbox
+                            checked={statusFilter.includes(status)}
+                            onChange={() => setStatusFilter(prev => prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status])}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Priority</h4>
+                    <div className="space-y-2">
+                      {['high', 'medium', 'low'].map(priority => (
+                        <div key={priority} className="flex items-center justify-between">
+                          <label className="text-[14px] text-[#253154] capitalize" htmlFor={`priority-${priority}`}>{priority}</label>
+                          <CustomCheckbox
+                            checked={priorityFilter.includes(priority)}
+                            onChange={() => setPriorityFilter(prev => prev.includes(priority) ? prev.filter(p => p !== priority) : [...prev, priority])}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Sort Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <ArrowUpDown size={20} strokeWidth={1.5} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2 rounded-2xl shadow-xl border-gray-100" align="end">
+                <div className="space-y-1">
+                  {[
+                    { id: 'enquiry_id', label: 'Enquiry ID' },
+                    { id: 'date_submitted', label: 'Date Submitted' },
+                    { id: 'student_name', label: 'Student Name' },
+                    { id: 'subject', label: 'Subject' },
+                    { id: 'priority', label: 'Priority' },
+                    { id: 'status', label: 'Status' }
+                  ].map((field) => (
+                    <button
+                      key={field.id}
+                      onClick={() => {
+                        if (sortConfig.key === field.id) {
+                          setSortConfig({ key: field.id, direction: sortConfig.direction === 'asc' ? 'desc' : 'asc' });
+                        } else {
+                          setSortConfig({ key: field.id, direction: 'desc' });
+                        }
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm transition-all ${sortConfig.key === field.id ? 'bg-purple-50 text-purple-600 font-bold' : 'text-[#253154] hover:bg-gray-50'}`}
+                    >
+                      {field.label}
+                      {sortConfig.key === field.id && (
+                        sortConfig.direction === 'asc' ? <ArrowUpDown size={14} className="rotate-180" /> : <ArrowUpDown size={14} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            {/* Columns Popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                  <Columns size={20} strokeWidth={1.5} />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-4 rounded-2xl shadow-xl border-gray-100" align="end">
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Visible Columns</h4>
+                <div className="space-y-3">
+                  {[
+                    { id: 'enquiryId', label: 'Enquiry ID' },
+                    { id: 'dateSubmitted', label: 'Date Submitted' },
+                    { id: 'studentName', label: 'Student Name' },
+                    { id: 'email', label: 'Email' },
+                    { id: 'subject', label: 'Subject' },
+                    { id: 'priority', label: 'Priority' },
+                    { id: 'status', label: 'Status' }
+                  ].map((col) => (
+                    <div key={col.id} className="flex items-center justify-between">
+                      <span className="text-[14px] text-[#253154]">{col.label}</span>
+                      <CustomCheckbox
+                        checked={visibleColumns.includes(col.id)}
+                        onChange={() => setVisibleColumns(prev => prev.includes(col.id) ? prev.filter(c => c !== col.id) : [...prev, col.id])}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -272,7 +478,7 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
               <thead className="bg-gray-50/50 border-b border-gray-100">
                 <tr>
                   <th className="w-12 px-6 py-4 text-left">
-                    <CustomCheckbox checked={selectedEnquiries.length === enquiries.length} partial={selectedEnquiries.length > 0 && selectedEnquiries.length < enquiries.length} onChange={handleSelectAll} />
+                    <CustomCheckbox checked={selectedEnquiries.length === paginatedBookings.length && paginatedBookings.length > 0} partial={selectedEnquiries.length > 0 && selectedEnquiries.length < paginatedBookings.length} onChange={handleSelectAll} />
                   </th>
                   {visibleColumns.includes('enquiryId') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Enquiry ID</th>}
                   {visibleColumns.includes('dateSubmitted') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Date Submitted</th>}
@@ -281,28 +487,47 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
                   {visibleColumns.includes('subject') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Subject</th>}
                   {visibleColumns.includes('priority') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Priority</th>}
                   {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>}
+                  <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {enquiries.map((enquiry) => (
+                {paginatedBookings.map((enquiry) => (
                   <tr
-                    key={enquiry.id}
-                    onClick={() => onNavigate?.('enquiry-detail', enquiry.id)}
+                    key={enquiry.enquiry_id}
+                    onClick={() => onNavigate?.('enquiry-detail', enquiry.enquiry_id)}
                     className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                   >
                     <td
                       className="px-6 py-4"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <CustomCheckbox checked={selectedEnquiries.includes(enquiry.id)} onChange={() => handleToggleEnquiry(enquiry.id)} />
+                      <CustomCheckbox checked={selectedEnquiries.includes(enquiry.enquiry_id)} onChange={() => handleToggleEnquiry(enquiry.enquiry_id)} />
                     </td>
-                    {visibleColumns.includes('enquiryId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#253154]">{enquiry.enquiryId}</span></td>}
-                    {visibleColumns.includes('dateSubmitted') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{format(new Date(enquiry.dateSubmitted), 'MMM d, yyyy h:mm a')}</span></td>}
-                    {visibleColumns.includes('studentName') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{enquiry.studentName}</span></td>}
+                    {visibleColumns.includes('enquiryId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#253154]">{enquiry.enquiry_id}</span></td>}
+                    {visibleColumns.includes('dateSubmitted') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{format(new Date(enquiry.date_submitted), 'MMM d, yyyy h:mm a')}</span></td>}
+                    {visibleColumns.includes('studentName') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{enquiry.student_name}</span></td>}
                     {visibleColumns.includes('email') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{enquiry.email}</span></td>}
                     {visibleColumns.includes('subject') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{enquiry.subject}</span></td>}
-                    {visibleColumns.includes('priority') && <td className="px-6 py-4"><span className="text-[12px] font-medium text-gray-600">{enquiry.priority}</span></td>}
+                    {visibleColumns.includes('priority') && <td className="px-6 py-4"><span className="text-[12px] font-medium text-gray-600 capitalize">{enquiry.priority}</span></td>}
                     {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={enquiry.status} /></td>}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(enquiry); }}
+                          className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(enquiry.enquiry_id); }}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -312,15 +537,36 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
           <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-600">Rows per page:</span>
-              <button className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 flex items-center gap-2">
-                10<ChevronDown size={14} />
-              </button>
-              <span className="text-sm text-gray-600 ml-4">1-{Math.min(10, enquiries.length)} of {enquiries.length}</span>
+              <select
+                value={rowsPerPage}
+                onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 outline-none"
+              >
+                {[5, 10, 20, 50].map(size => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-600 ml-4">
+                {filteredEnquiries.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0}-
+                {Math.min(currentPage * rowsPerPage, filteredEnquiries.length)} of {filteredEnquiries.length}
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"><ChevronLeft size={18} /></button>
-              <span className="text-sm text-gray-600">Page 1 of 1</span>
-              <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"><ChevronRight size={18} /></button>
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <span className="text-sm text-gray-600">Page {currentPage} of {Math.max(1, totalPages)}</span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
           </div>
         </div>
@@ -344,7 +590,20 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
         onImport={handleImport}
         allowUpdate={true}
       />
-    </div>
+
+      <AddEnquiryModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={fetchEnquiries}
+      />
+
+      <EditEnquiryModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={fetchEnquiries}
+        enquiry={editingEnquiry}
+      />
+    </div >
   );
 };
 

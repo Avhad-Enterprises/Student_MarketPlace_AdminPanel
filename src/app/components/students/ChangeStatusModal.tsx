@@ -92,7 +92,6 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
               value={formData.newStatus}
               onChange={(value) => setFormData({ ...formData, newStatus: value })}
               options={statusOptions}
-              required
             />
           </div>
 
@@ -106,7 +105,6 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
               value={formData.reason}
               onChange={(value) => setFormData({ ...formData, reason: value })}
               options={reasonOptions}
-              required
             />
           </div>
 
@@ -145,7 +143,7 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
               <div>
                 <p className="text-sm font-semibold text-amber-900 mb-1">Important</p>
                 <p className="text-xs text-amber-800">
-                  {formData.newStatus === 'Archived' 
+                  {formData.newStatus === 'Archived'
                     ? 'Archiving will make this student read-only and hidden from default lists. They will still be visible in reports and audit logs.'
                     : 'Marking as Withdrawn/Dropped will lock all services and notify assigned counselors.'}
                 </p>

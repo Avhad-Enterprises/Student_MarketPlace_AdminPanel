@@ -955,8 +955,8 @@ export const HousingProviderDetail: React.FC<{ providerId?: string; onBack?: () 
 
       {/* Edit Provider Modal */}
       <EditProviderModal
-        isOpen={providerActions.isEditModalOpen}
-        onClose={() => providerActions.setIsEditModalOpen(false)}
+        open={providerActions.isEditModalOpen}
+        onOpenChange={(open) => providerActions.setIsEditModalOpen(open)}
         onSave={providerActions.handleSaveProvider}
         serviceType="Housing"
         initialData={providerActions.providerData}

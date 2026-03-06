@@ -224,7 +224,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onNavigate }) => {
         <div id="search-results" ref={resultsRef} role="listbox">
           {filteredResults.length === 0 ? (
             <div className="py-8 text-center text-slate-500">
-              No results found for "{query}"
+              No results found for &quot;{query}&quot;
             </div>
           ) : (
             <>
@@ -250,8 +250,8 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onNavigate }) => {
                         onClick={() => handleSelect(item)}
                         onMouseEnter={() => setSelectedIndex(globalIndex)}
                         className={`w-full py-2.5 px-3 rounded-lg cursor-pointer transition-all flex items-center justify-between border ${isSelected
-                            ? 'bg-slate-50 border-slate-100'
-                            : 'border-transparent hover:bg-slate-50'
+                          ? 'bg-slate-50 border-slate-100'
+                          : 'border-transparent hover:bg-slate-50'
                           }`}
                         role="option"
                         aria-selected={isSelected}

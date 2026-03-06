@@ -251,7 +251,7 @@ export const ServiceProviderDetailTemplate: React.FC<ServiceProviderDetailTempla
   const renderActiveTab = () => {
     if (!ActiveTabComponent) return null;
 
-    // Check if it's a function component or a React element
+    // Check if it&apos;s a function component or a React element
     if (typeof ActiveTabComponent === 'function') {
       const Component = ActiveTabComponent as React.ComponentType;
       return <Component />;

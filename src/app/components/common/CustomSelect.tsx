@@ -1,32 +1,32 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Check } from 'lucide-react';
+
+interface Option {
+  value: string;
+  label: string;
+}
 
 interface CustomSelectProps {
-  value?: string;
-  onChange?: (value: string) => void;
-  options: { value: string; label: string }[];
+  value: string;
+  onChange: (value: string) => void;
+  options: Option[];
   placeholder?: string;
   className?: string;
-  required?: boolean;
 }
 
 export const CustomSelect: React.FC<CustomSelectProps> = ({
   value,
   onChange,
   options,
-  placeholder = "Select option",
-  className = "",
-  required = false
+  placeholder = 'Select option',
+  className = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedValue, setSelectedValue] = useState(value || "");
   const containerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (value !== undefined) {
-      setSelectedValue(value);
-    }
-  }, [value]);
+  const selectedOption = options.find((opt) => opt.value === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -39,61 +39,37 @@ export const CustomSelect: React.FC<CustomSelectProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelect = (optionValue: string) => {
-    setSelectedValue(optionValue);
-    setIsOpen(false);
-    if (onChange) {
-      onChange(optionValue);
-    }
-  };
-
-  const selectedLabel = options.find(opt => opt.value === selectedValue)?.label || placeholder;
-
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div className={`relative ${className}`} ref={containerRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className={`
-          w-full h-[44px] px-4 bg-white border rounded-xl
-          text-sm font-medium text-left
-          flex items-center justify-between
-          transition-all duration-200
-          ${isOpen
-            ? 'border-[#7C5CFF] shadow-[0_0_0_3px_rgba(124,92,255,0.1)]'
-            : 'border-[#E6E8EF] hover:border-[#7C5CFF]'
-          }
-          ${!selectedValue ? 'text-gray-400' : 'text-gray-700'}
-        `}
+        className="w-full h-10 px-3 flex items-center justify-between bg-white border border-gray-200 rounded-lg text-sm text-[#253154] hover:bg-gray-50 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
       >
-        <span className="truncate">{selectedLabel}</span>
+        <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
         <ChevronDown
           size={16}
-          className={`text-gray-400 transition-transform duration-200 flex-shrink-0 ml-2 ${isOpen ? 'rotate-180' : ''}`}
+          className={`text-gray-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
         />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 w-full mt-2 bg-white border border-gray-100 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] overflow-hidden">
-          <div className="max-h-[280px] overflow-y-auto py-1">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => handleSelect(option.value)}
-                className={`
-                  w-full px-4 py-2.5 text-sm text-left
-                  transition-colors duration-150
-                  ${selectedValue === option.value
-                    ? 'bg-purple-50 text-purple-700 font-medium'
-                    : 'text-gray-700 hover:bg-gray-50'
-                  }
-                `}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-xl py-1 animate-in fade-in zoom-in-95 duration-200">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+              className={`w-full px-3 py-2 flex items-center justify-between hover:bg-purple-50 transition-colors text-sm ${option.value === value ? 'text-purple-700 font-medium bg-purple-50/50' : 'text-gray-700'
+                }`}
+            >
+              <span className="truncate">{option.label}</span>
+              {option.value === value && <Check size={14} className="text-purple-600" />}
+            </button>
+          ))}
         </div>
       )}
     </div>

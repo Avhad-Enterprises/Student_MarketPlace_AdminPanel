@@ -795,8 +795,8 @@ export const ForexProviderDetail: React.FC<ForexProviderDetailProps> = ({
 
       {/* Edit Provider Modal */}
       <EditProviderModal
-        isOpen={providerActions.isEditModalOpen}
-        onClose={() => providerActions.setIsEditModalOpen(false)}
+        open={providerActions.isEditModalOpen}
+        onOpenChange={(open) => providerActions.setIsEditModalOpen(open)}
         onSave={providerActions.handleSaveProvider}
         serviceType="Forex"
         initialData={providerActions.providerData}

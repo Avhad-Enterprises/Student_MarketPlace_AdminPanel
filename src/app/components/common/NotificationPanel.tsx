@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useRef, useEffect } from 'react';
 import { X, Bell, AlertCircle, Shield, Activity, CheckCircle } from 'lucide-react';
