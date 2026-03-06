@@ -224,6 +224,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
           'ai-flows': '/ai-visa-assistant/flows',
           'ai-conversations': '/ai-visa-assistant/conversations',
           'blogs': '/blogs',
+          'settings': '/settings',
           'report-analytics': '/reports',
           'services-sim-cards': '/services/sim-cards',
           'services-banks': '/services/banks',
