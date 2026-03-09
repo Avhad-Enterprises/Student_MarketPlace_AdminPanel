@@ -41,11 +41,15 @@ import {
     History,
     ChevronRight,
     Info,
-    ChevronDown
+    ChevronDown,
+    Send,
+    RefreshCw,
+    Loader2 as Loader
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
-import { aiAssistantService } from '../../services/aiAssistantService';
+import { aiAssistantService, AiAssistantSettingsVersion } from '../../services/aiAssistantService';
+import { AddEnquiryModal } from './AddEnquiryModal';
 
 // Fallback Select component since the UI one is missing
 const Select = ({ children, value, onValueChange }: any) => {
@@ -74,18 +78,22 @@ const Select = ({ children, value, onValueChange }: any) => {
             {isOpen && (
                 <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white p-1 text-gray-950 shadow-md">
                     {React.Children.map(children, (child: any) => {
-                        if (child.type === SelectContent) {
-                            return React.Children.map(child.props.children, (item: any) => (
-                                <div
-                                    className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none hover:bg-gray-100"
-                                    onClick={() => {
-                                        onValueChange(item.props.value);
-                                        setIsOpen(false);
-                                    }}
-                                >
-                                    {item.props.children}
-                                </div>
-                            ));
+                        if (child && child.type === SelectContent) {
+                            return React.Children.map(child.props.children, (item: any) => {
+                                if (!item) return null;
+                                return (
+                                    <div
+                                        key={item.props?.value || Math.random()}
+                                        className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 px-2 text-sm outline-none hover:bg-gray-100"
+                                        onClick={() => {
+                                            onValueChange(item.props?.value);
+                                            setIsOpen(false);
+                                        }}
+                                    >
+                                        {item.props?.children}
+                                    </div>
+                                );
+                            });
                         }
                         return null;
                     })}
@@ -106,6 +114,9 @@ export const AssistantSetup: React.FC = () => {
     const [strictMode, setStrictMode] = useState(true);
     const [loading, setLoading] = useState(true);
     const [lastPublished, setLastPublished] = useState<string>('');
+    const [versions, setVersions] = useState<AiAssistantSettingsVersion[]>([]);
+    const [isEnquiryModalOpen, setIsEnquiryModalOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Form state
     const [formData, setFormData] = useState({
@@ -127,6 +138,9 @@ export const AssistantSetup: React.FC = () => {
         confidenceVisibility: 'internal',
         escalationAction: 'show-button',
         welcomeMessage: 'Hello! I\'m your Study Abroad Visa Assistant. How can I help you today?',
+        profileIcon: '',
+        escalationMessage: 'I apologize, but I am not confident in my answer. Would you like to speak with a professional counsellor?',
+        escalationButtonText: 'Connect with Counsellor',
     });
 
     const [guardrails, setGuardrails] = useState({
@@ -151,6 +165,103 @@ export const AssistantSetup: React.FC = () => {
         estimatedTime: true,
         ctaButton: true,
     });
+
+    // Chat Simulation State
+    const [chatMessages, setChatMessages] = useState<any[]>([]);
+    const [chatInput, setChatInput] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+    const chatEndRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll chat
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages, isTyping]);
+
+    // Initialize and sync chat with welcome message
+    useEffect(() => {
+        if (chatMessages.length <= 1) {
+            setChatMessages([
+                { role: 'assistant', content: formData.welcomeMessage, timestamp: new Date() }
+            ]);
+        }
+    }, [formData.welcomeMessage]);
+
+    const handleConnectToCounsellor = () => {
+        setIsEnquiryModalOpen(true);
+    };
+
+    const resetChat = () => {
+        setChatMessages([
+            { role: 'assistant', content: formData.welcomeMessage, timestamp: new Date() }
+        ]);
+        setChatInput('');
+        setIsTyping(false);
+    };
+
+    const handleSendMessage = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (!chatInput.trim() || isTyping) return;
+
+        const currentInput = chatInput;
+        const userMsg = { role: 'user', content: currentInput, timestamp: new Date() };
+        setChatMessages(prev => [...prev, userMsg]);
+        setChatInput('');
+        setIsTyping(true);
+
+        // Simulate AI "Thinking"
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        let response = "";
+        const input = currentInput.toLowerCase();
+
+        // Mock AI Reasoning Logic
+        if (guardrails.noGuaranteedApproval && (input.includes('guarantee') || input.includes('will i get'))) {
+            response = "I cannot provide guarantees on visa approval. My role is to guide you through the requirements and best practices based on current regulations.";
+        } else if (input.includes('hello') || input.includes('hi')) {
+            response = `Hello! I am ${formData.assistantName}. How can I assist you with your study abroad visa process today?`;
+        } else if (input.includes('human') || input.includes('counsellor') || input.includes('person') || input.includes('talk to someone')) {
+            response = formData.escalationMessage;
+            setChatMessages(prev => [...prev, {
+                role: 'assistant',
+                content: response,
+                timestamp: new Date(),
+                isEscalation: true
+            }]);
+            setIsTyping(false);
+            return;
+        } else if (input.includes('usa') || input.includes('united states')) {
+            response = "The USA is a top destination! For a Student Visa (F-1), you'll primarily need an I-20 form from a SEVP-certified school, proof of financial support, and a valid passport. Popular universities include Stanford, MIT, and NYU. Are you looking for undergraduate or graduate programs?";
+        } else if (input.includes('uk') || input.includes('united kingdom')) {
+            response = "The UK offers great one-year Masters programs. You'll need a CAS (Confirmation of Acceptance for Studies) from your university and to meet the 70-point threshold under the Student Visa route. Would you like to know about the NHS health surcharge?";
+        } else if (input.includes('university') || input.includes('universities')) {
+            if (input.includes('usa') || input.includes('united states')) {
+                response = "In the United States, some highly-ranked universities for international students are Harvard, Yale, and UC Berkeley. Depending on your GPA and GRE/SAT scores, I can suggest more specific options.";
+            } else {
+                response = "I can suggest universities based on your target country. We have data for the USA, UK, Canada, and Australia. Which one interests you most?";
+            }
+        } else if (input.includes('cost') || input.includes('price') || input.includes('fee')) {
+            response = "Visa and tuition costs vary significantly. A US F-1 visa fee is $185 plus the SEVIS fee ($350). Would you like me to provide a breakdown for a specific country?";
+        } else if (input.includes('document') || input.includes('need') || input.includes('prep')) {
+            response = "Generally, you'll need: 1. A valid Passport, 2. Admission Letter, 3. Financial Statements, 4. English Proficiency scores (IELTS/TOEFL), and 5. Academic Transcripts. Should we go over the financial requirements in detail?";
+        } else {
+            // Contextual style-based varied fallback
+            const prefixes = formData.tone === 'friendly'
+                ? ["That's a great question! ", "I'd be happy to help with that. ", "Sure thing! "]
+                : ["I understand your query. ", "Rest assured, ", "Regarding your request: "];
+
+            const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+            response = randomPrefix + "I'm analyzing your request regarding " + (input.length > 20 ? "those details" : input) + ". ";
+
+            if (formData.answerStyle === 'detailed') {
+                response += "The study abroad process is multifaceted, involving academic selection, financial planning, and legal visa documentation. ";
+            }
+
+            response += "To give you the most accurate advice, could you tell me which country or specific university you are targeting?";
+        }
+
+        setChatMessages(prev => [...prev, { role: 'assistant', content: response, timestamp: new Date() }]);
+        setIsTyping(false);
+    };
 
     useEffect(() => {
         const fetchSettings = async () => {
@@ -177,6 +288,9 @@ export const AssistantSetup: React.FC = () => {
                         confidenceVisibility: data.confidence_visibility,
                         escalationAction: data.escalation_action,
                         welcomeMessage: data.welcome_message,
+                        profileIcon: data.profile_icon || '',
+                        escalationMessage: data.escalation_message || 'I apologize, but I am not confident in my answer. Would you like to speak with a professional counsellor?',
+                        escalationButtonText: data.escalation_button_text || 'Connect with Counsellor',
                     });
                     setGuardrails(typeof data.guardrails === 'string' ? JSON.parse(data.guardrails) : data.guardrails);
                     setEscalationTriggers(typeof data.escalation_triggers === 'string' ? JSON.parse(data.escalation_triggers) : data.escalation_triggers);
@@ -194,7 +308,87 @@ export const AssistantSetup: React.FC = () => {
             }
         };
         fetchSettings();
+        fetchVersions();
     }, []);
+
+    const fetchVersions = async () => {
+        try {
+            const data = await aiAssistantService.getVersions();
+            if (data && Array.isArray(data)) {
+                setVersions(data);
+            } else {
+                setVersions([]);
+            }
+        } catch (error) {
+            console.error('Failed to fetch versions:', error);
+            setVersions([]);
+        }
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 2 * 1024 * 1024) {
+                toast.error('File size should be less than 2MB');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setFormData({ ...formData, profileIcon: reader.result as string });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    const handleRollback = async (versionId: number) => {
+        if (!window.confirm('Are you sure you want to rollback to this version? This will overwrite your current settings.')) {
+            return;
+        }
+
+        try {
+            setLoading(true);
+            await aiAssistantService.rollbackVersion(versionId);
+            toast.success('Settings rolled back successfully');
+
+            // Reload settings and versions
+            const data = await aiAssistantService.getSettings();
+            if (data) {
+                setFormData({
+                    assistantName: data.assistant_name,
+                    tagline: data.tagline,
+                    defaultLanguage: data.default_language,
+                    modelProvider: data.model_provider,
+                    modelVersion: data.model_version,
+                    temperature: data.temperature,
+                    responseLength: data.response_length,
+                    memoryWindow: data.memory_window,
+                    streaming: data.streaming,
+                    timeout: data.timeout,
+                    retryAttempts: data.retry_attempts,
+                    tone: data.tone,
+                    answerStyle: data.answer_style,
+                    communicationStyle: data.communication_style,
+                    confidenceThreshold: data.confidence_threshold,
+                    confidenceVisibility: data.confidence_visibility,
+                    escalationAction: data.escalation_action,
+                    welcomeMessage: data.welcome_message,
+                    profileIcon: data.profile_icon || '',
+                    escalationMessage: data.escalation_message,
+                    escalationButtonText: data.escalation_button_text,
+                } as any);
+                setAssistantStatus(data.status);
+                setStrictMode(data.strict_mode);
+                if (data.updated_at) {
+                    setLastPublished(new Date(data.updated_at).toLocaleString());
+                }
+                fetchVersions();
+            }
+        } catch (error) {
+            toast.error('Failed to rollback settings');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSave = async (isPublish: boolean = false) => {
         try {
@@ -222,6 +416,9 @@ export const AssistantSetup: React.FC = () => {
                 formatting_rules: formattingRules,
                 status: assistantStatus,
                 strict_mode: strictMode,
+                profile_icon: formData.profileIcon,
+                escalation_message: formData.escalationMessage,
+                escalation_button_text: formData.escalationButtonText,
             };
 
             await aiAssistantService.updateSettings(dataToSave);
@@ -229,6 +426,7 @@ export const AssistantSetup: React.FC = () => {
             if (isPublish) {
                 setLastPublished(new Date().toLocaleString());
             }
+            fetchVersions();
         } catch (error) {
             toast.error('Failed to save settings');
         }
@@ -353,8 +551,8 @@ export const AssistantSetup: React.FC = () => {
                         <div className="space-y-6">
                             {/* ========== CORE IDENTITY ========== */}
                             {activeSection === 'identity' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-blue-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-blue-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-[#253154] rounded-lg flex items-center justify-center">
                                                 <Bot size={20} className="text-white" />
@@ -418,15 +616,34 @@ export const AssistantSetup: React.FC = () => {
 
                                             {/* Right Column - Icon Upload */}
                                             <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-6 flex flex-col items-center justify-center border-2 border-dashed border-gray-300">
-                                                <div className="w-20 h-20 bg-gradient-to-br from-[#253154] to-[#0e042f] rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-                                                    <Bot size={40} className="text-white" />
+                                                <input
+                                                    type="file"
+                                                    ref={fileInputRef}
+                                                    onChange={handleFileChange}
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                />
+                                                <div className="w-20 h-20 bg-gradient-to-br from-[#253154] to-[#0e042f] rounded-2xl flex items-center justify-center mb-4 shadow-lg overflow-hidden border-2 border-white">
+                                                    {formData.profileIcon ? (
+                                                        <img src={formData.profileIcon} alt="Icon Preview" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Bot size={40} className="text-white" />
+                                                    )}
                                                 </div>
                                                 <p className="text-sm font-semibold text-gray-700 mb-2">Profile Icon</p>
-                                                <Button variant="outline" size="sm">
-                                                    <Upload size={14} className="mr-2" />
-                                                    Upload Icon
-                                                </Button>
-                                                <p className="text-xs text-gray-500 mt-2 text-center">Recommended: 512x512px PNG</p>
+                                                <div className="flex gap-2">
+                                                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                                                        <Upload size={14} className="mr-2" />
+                                                        Upload
+                                                    </Button>
+                                                    {formData.profileIcon && (
+                                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setFormData({ ...formData, profileIcon: '' })}>
+                                                            <RotateCcw size={14} className="mr-2" />
+                                                            Reset
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-2 text-center">Recommended: 512x512px PNG (Max 2MB)</p>
                                             </div>
                                         </div>
                                     </div>
@@ -435,8 +652,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== ENVIRONMENT CONTROL ========== */}
                             {activeSection === 'environment' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-blue-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-blue-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
                                                 <Activity size={20} className="text-white" />
@@ -525,8 +742,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== AI RUNTIME ========== */}
                             {activeSection === 'runtime' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
                                                 <Settings size={20} className="text-white" />
@@ -646,8 +863,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== BEHAVIOR ========== */}
                             {activeSection === 'behavior' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
                                                 <MessageCircle size={20} className="text-white" />
@@ -709,8 +926,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== GUARDRAILS ========== */}
                             {activeSection === 'guardrails' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-red-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-red-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-amber-600 rounded-lg flex items-center justify-center">
                                                 <Shield size={20} className="text-white" />
@@ -788,8 +1005,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== ESCALATION ========== */}
                             {activeSection === 'escalation' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-red-50 to-orange-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-red-50 to-orange-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center">
                                                 <AlertTriangle size={20} className="text-white" />
@@ -859,6 +1076,20 @@ export const AssistantSetup: React.FC = () => {
                                             </div>
                                         </div>
 
+                                        {/* Escalation Action Configuration */}
+                                        <div className="pt-4 border-t border-gray-100 space-y-4">
+                                            <div>
+                                                <label className="block text-sm font-bold text-gray-700 mb-2">Escalation Message:</label>
+                                                <textarea
+                                                    value={formData.escalationMessage}
+                                                    onChange={(e) => setFormData({ ...formData, escalationMessage: e.target.value })}
+                                                    rows={3}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#253154] focus:border-transparent text-sm resize-none"
+                                                    placeholder="Enter message to show before escalation button..."
+                                                />
+                                            </div>
+                                        </div>
+
                                         {/* Escalation Preview */}
                                         <div className="pt-4 border-t border-gray-100">
                                             <label className="block text-sm font-bold text-gray-700 mb-3">Escalation Flow Preview:</label>
@@ -866,9 +1097,12 @@ export const AssistantSetup: React.FC = () => {
                                                 <div className="flex items-start gap-3">
                                                     <Bot size={20} className="text-[#253154] flex-shrink-0 mt-1" />
                                                     <div className="flex-1">
-                                                        <p className="text-sm text-gray-700 mb-3">I apologize, but I&apos;m not confident in my answer. Would you like to speak with a professional counsellor?</p>
-                                                        <button className="px-4 py-2 bg-[#253154] text-white text-sm font-semibold rounded-lg hover:bg-[#1a2340] transition-colors">
-                                                            Connect with Counsellor
+                                                        <p className="text-sm text-gray-700 mb-3">{formData.escalationMessage}</p>
+                                                        <button
+                                                            onClick={handleConnectToCounsellor}
+                                                            className="px-4 py-2 bg-[#253154] text-white text-sm font-semibold rounded-lg hover:bg-[#1a2340] transition-colors"
+                                                        >
+                                                            {formData.escalationButtonText}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -880,8 +1114,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== WELCOME MESSAGES ========== */}
                             {activeSection === 'messages' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
                                                 <Megaphone size={20} className="text-white" />
@@ -929,8 +1163,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== FORMATTING ========== */}
                             {activeSection === 'formatting' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-cyan-50 to-blue-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-cyan-50 to-blue-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-cyan-600 rounded-lg flex items-center justify-center">
                                                 <FileCheck size={20} className="text-white" />
@@ -975,8 +1209,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== CONFIDENCE DISPLAY ========== */}
                             {activeSection === 'confidence' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-green-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-teal-50 to-green-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-teal-600 rounded-lg flex items-center justify-center">
                                                 <BarChart3 size={20} className="text-white" />
@@ -1046,8 +1280,8 @@ export const AssistantSetup: React.FC = () => {
 
                             {/* ========== VERSIONING ========== */}
                             {activeSection === 'versioning' && (
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-violet-50 to-purple-50">
+                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                                    <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-violet-50 to-purple-50 rounded-t-xl">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-violet-600 rounded-lg flex items-center justify-center">
                                                 <GitBranch size={20} className="text-white" />
@@ -1062,37 +1296,51 @@ export const AssistantSetup: React.FC = () => {
                                     <div className="p-6 space-y-5">
                                         {/* Timeline */}
                                         <div className="relative">
-                                            <div className="absolute left-[11px] top-0 bottom-0 w-0.5 bg-gray-200"></div>
-                                            {[
-                                                { version: 'v1.4', date: '2024-02-15', status: 'current', author: 'Admin User' },
-                                                { version: 'v1.3', date: '2024-02-10', status: 'previous', author: 'Admin User' },
-                                                { version: 'v1.2', date: '2024-02-05', status: 'archived', author: 'System' },
-                                            ].map((item, idx) => (
-                                                <div key={item.version} className="relative flex gap-4 pb-6">
-                                                    <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center ${item.status === 'current'
-                                                        ? 'bg-green-600 border-green-600'
-                                                        : 'bg-white border-gray-300'
-                                                        }`}>
-                                                        {item.status === 'current' && <CheckCircle2 size={14} className="text-white" />}
-                                                    </div>
-                                                    <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <div>
-                                                                <h4 className="text-sm font-bold text-gray-900">{item.version}</h4>
-                                                                <p className="text-xs text-gray-600">Published {item.date} by {item.author}</p>
-                                                            </div>
-                                                            {item.status === 'current' ? (
-                                                                <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-bold rounded-full">LIVE</span>
-                                                            ) : (
-                                                                <Button variant="outline" size="sm">
-                                                                    <RotateCcw size={14} className="mr-2" />
-                                                                    Rollback
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </div>
+                                            {(!Array.isArray(versions) || versions.length === 0) ? (
+                                                <div className="text-center py-10">
+                                                    <History size={40} className="mx-auto text-gray-300 mb-3" />
+                                                    <p className="text-sm text-gray-500">No version history available yet.</p>
+                                                    <p className="text-xs text-gray-400 mt-1">Versions are created automatically when you save changes.</p>
                                                 </div>
-                                            ))}
+                                            ) : (
+                                                <div className="space-y-6">
+                                                    <div className="absolute left-[11px] top-0 bottom-0 w-0.5 bg-gray-200"></div>
+                                                    {versions.map((item, idx) => (
+                                                        <div key={item.id} className="relative flex gap-4">
+                                                            <div className={`relative z-10 w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ${idx === 0
+                                                                ? 'bg-green-600 border-green-600'
+                                                                : 'bg-white border-gray-300'
+                                                                }`}>
+                                                                {idx === 0 && <CheckCircle2 size={12} className="text-white" />}
+                                                            </div>
+                                                            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                                                <div className="flex items-center justify-between mb-2">
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <h4 className="text-sm font-bold text-gray-900">{item.version_label}</h4>
+                                                                            <span className="text-[10px] px-1.5 py-0.5 bg-gray-200 text-gray-600 rounded">ID: {item.id}</span>
+                                                                        </div>
+                                                                        <p className="text-xs text-gray-600">Created {new Date(item.created_at).toLocaleString()} by {item.created_by}</p>
+                                                                    </div>
+                                                                    {idx === 0 ? (
+                                                                        <span className="px-3 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">CURRENT VERSION</span>
+                                                                    ) : (
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            onClick={() => handleRollback(item.id)}
+                                                                            className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 h-8"
+                                                                        >
+                                                                            <RotateCcw size={14} className="mr-2" />
+                                                                            Restore
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1111,29 +1359,100 @@ export const AssistantSetup: React.FC = () => {
                                         <h3 className="text-sm font-bold">Live Preview</h3>
                                     </div>
                                 </div>
-                                <div className="p-5">
-                                    <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-4 border border-gray-200">
-                                        <div className="flex items-start gap-3 mb-4">
-                                            <div className="w-12 h-12 bg-gradient-to-br from-[#253154] to-[#0e042f] rounded-full flex items-center justify-center flex-shrink-0">
-                                                <Bot size={24} className="text-white" />
+                                <div className="p-0 flex flex-col h-[500px]">
+                                    {/* Chat Header (Compact) */}
+                                    <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-50/50">
+                                        <div className="flex items-center gap-2">
+                                            <div className="relative">
+                                                {formData.profileIcon ? (
+                                                    <img src={formData.profileIcon} className="w-8 h-8 rounded-full object-cover border border-gray-200" alt="Bot Icon" />
+                                                ) : (
+                                                    <div className="w-8 h-8 bg-[#253154] rounded-full flex items-center justify-center">
+                                                        <Bot size={18} className="text-white" />
+                                                    </div>
+                                                )}
+                                                <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                                             </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-bold text-[#253154]">{formData.assistantName}</p>
-                                                <p className="text-xs text-gray-600">{formData.tagline}</p>
+                                            <div>
+                                                <p className="text-xs font-bold text-[#253154]">{formData.assistantName}</p>
+                                                <p className="text-[10px] text-gray-500">{assistantStatus === 'online' ? 'Online' : 'Offline'}</p>
                                             </div>
                                         </div>
-                                        <div className="bg-white rounded-lg p-4 shadow-sm mb-3">
-                                            <p className="text-sm text-gray-700">{formData.welcomeMessage}</p>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <button className="px-3 py-2 bg-white hover:bg-gray-50 rounded-lg text-xs font-medium text-gray-700 border border-gray-200">
-                                                University Search
-                                            </button>
-                                            <button className="px-3 py-2 bg-white hover:bg-gray-50 rounded-lg text-xs font-medium text-gray-700 border border-gray-200">
-                                                Visa Requirements
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={resetChat}
+                                            className="p-1.5 text-gray-400 hover:text-[#253154] transition-colors"
+                                            title="Reset Chat"
+                                        >
+                                            <RefreshCw size={14} />
+                                        </button>
                                     </div>
+
+                                    {/* Messages Area */}
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50/30">
+                                        {chatMessages.map((msg, idx) => (
+                                            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${msg.role === 'user'
+                                                    ? 'bg-[#253154] text-white rounded-tr-none'
+                                                    : 'bg-white border text-gray-700 shadow-sm rounded-tl-none'
+                                                    }`}>
+                                                    <p>{msg.content}</p>
+                                                    {msg.isEscalation && (
+                                                        <button
+                                                            onClick={handleConnectToCounsellor}
+                                                            className="mt-3 w-full py-2 bg-[#253154] text-white text-xs font-bold rounded-lg hover:bg-[#1a2340] transition-colors"
+                                                        >
+                                                            {formData.escalationButtonText}
+                                                        </button>
+                                                    )}
+                                                    <p className={`text-[9px] mt-1 ${msg.role === 'user' ? 'text-gray-300 text-right' : 'text-gray-400'}`}>
+                                                        {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {isTyping && (
+                                            <div className="flex justify-start">
+                                                <div className="bg-white border rounded-2xl rounded-tl-none px-4 py-3 shadow-sm">
+                                                    <div className="flex gap-1">
+                                                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+                                                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                                                        <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div ref={chatEndRef} />
+                                    </div>
+
+                                    {/* Input Area */}
+                                    <form
+                                        onSubmit={(e) => {
+                                            e.preventDefault();
+                                            handleSendMessage();
+                                        }}
+                                        className="p-3 border-t bg-white"
+                                    >
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                value={chatInput}
+                                                onChange={(e) => setChatInput(e.target.value)}
+                                                placeholder="Ask your assistant anything..."
+                                                className="w-full pl-4 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#253154] transition-all"
+                                                disabled={isTyping}
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={!chatInput.trim() || isTyping}
+                                                className="absolute right-1.5 top-1.5 p-1.5 bg-[#253154] text-white rounded-lg hover:bg-[#1a2340] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                            >
+                                                {isTyping ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}
+                                            </button>
+                                        </div>
+                                        <p className="text-[10px] text-gray-400 text-center mt-2">
+                                            Testing: {formData.tone} tone • {formData.answerStyle} style
+                                        </p>
+                                    </form>
                                 </div>
                             </div>
 
@@ -1175,6 +1494,15 @@ export const AssistantSetup: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            <AddEnquiryModal
+                isOpen={isEnquiryModalOpen}
+                onClose={() => setIsEnquiryModalOpen(false)}
+                onSuccess={() => {
+                    setIsEnquiryModalOpen(false);
+                    fetchVersions(); // Or just a success toast, AddEnquiryModal already toasts
+                }}
+            />
         </div>
     );
 };

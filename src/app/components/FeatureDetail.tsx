@@ -38,6 +38,7 @@ import {
     GripVertical,
     Activity,
     GitBranch,
+    RefreshCw,
     Info,
     Bot,
     ChevronRight,
@@ -118,24 +119,70 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
         category: 'academic'
     });
 
+    const [lastFetchStatus, setLastFetchStatus] = useState<string>('idle');
+
+    const fetchDetails = async (isManual = false) => {
+        setIsLoading(true);
+        setLastFetchStatus('fetching');
+        try {
+            console.log(`[DIAGNOSTIC] ${isManual ? 'MANUAL' : 'AUTO'} - Initiating API call for featureId:`, featureId);
+            const data = await aiFeatureService.getFeatureById(featureId);
+            console.log('[DIAGNOSTIC] API response received:', data);
+
+            if (data) {
+                // Normalize data
+                setFeature({
+                    feature_id: data.feature_id || featureId,
+                    order: data.order ?? 1,
+                    name: data.name || '',
+                    status: data.status || 'active',
+                    show_in_dashboard: data.show_in_dashboard ?? true,
+                    linked_flow: data.linked_flow || '',
+                    description: data.description || '',
+                    starter_prompt: data.starter_prompt || '',
+                    usage_30d: data.usage_30d ?? 0,
+                    requires_ielts: data.requires_ielts ?? false,
+                    requires_country: data.requires_country ?? false,
+                    requires_profile: data.requires_profile ?? false,
+                    category: data.category || 'academic',
+                    updated_at: data.updated_at
+                });
+                setLastFetchStatus('success');
+                console.log('[DIAGNOSTIC] Feature state updated successfully');
+            } else {
+                setLastFetchStatus('not_found');
+                console.warn('[DIAGNOSTIC] No data returned for featureId:', featureId);
+                toast.error('Feature not found');
+                onBack();
+            }
+        } catch (error) {
+            setLastFetchStatus('error');
+            console.error('[DIAGNOSTIC] Error fetching feature details:', error);
+            toast.error('Failed to load feature details');
+            onBack();
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
+        console.log('[DIAGNOSTIC] FeatureDetail mounted/updated with featureId:', featureId);
         if (featureId === 'new') {
+            console.log('[DIAGNOSTIC] New feature mode - skipping fetch');
             setIsLoading(false);
             return;
         }
-        const fetchDetails = async () => {
-            try {
-                const data = await aiFeatureService.getFeatureById(featureId);
-                setFeature(data);
-            } catch (error) {
-                console.error('Error fetching feature details:', error);
-                toast.error('Failed to load feature details');
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchDetails();
-    }, [featureId]);
+        fetchDetails(false);
+    }, [featureId, onBack]);
+
+    if (isLoading && featureId !== 'new') {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+                <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+                <p className="text-gray-600 font-medium">Loading feature details...</p>
+            </div>
+        );
+    }
 
     const handleChange = (field: keyof AiFeature, value: any, section: string) => {
         setFeature({ ...feature, [field]: value });
@@ -308,8 +355,38 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
                 </div>
             </div>
 
-            {/* Main Layout: Two-Column Split */}
             <div className="max-w-[1800px] mx-auto px-8 py-8">
+                {/* Diagnostic Panel - Ultra Visible for Debugging */}
+                <div className="mb-6 p-4 bg-black text-lime-400 font-mono text-xs rounded-xl border-2 border-lime-500/30 shadow-2xl flex flex-wrap items-center gap-6">
+                    <div className="flex items-center gap-2">
+                        <span className="text-white bg-lime-900 px-2 py-0.5 rounded uppercase">FeatureID:</span>
+                        <span className="text-lg font-bold">{featureId || 'NULL'}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-white bg-lime-900 px-2 py-0.5 rounded uppercase">Status:</span>
+                        <span className={`font-bold ${lastFetchStatus === 'success' ? 'text-lime-400' : 'text-orange-400'}`}>{lastFetchStatus}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-white bg-lime-900 px-2 py-0.5 rounded uppercase">Loading:</span>
+                        <span className="font-bold">{isLoading ? 'TRUE' : 'FALSE'}</span>
+                    </div>
+                    <div className="flex-1" />
+                    <button
+                        onClick={() => fetchDetails(true)}
+                        className="flex items-center gap-2 bg-lime-600 hover:bg-lime-500 text-black px-4 py-2 rounded-lg font-bold transition-all active:scale-95 shadow-lg"
+                    >
+                        <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+                        MANUAL RETRY FETCH
+                    </button>
+                    <button
+                        onClick={() => window.alert(`Current Feature State:\n${JSON.stringify(feature, null, 2)}`)}
+                        className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-bold transition-all"
+                    >
+                        INSPECT STATE
+                    </button>
+                </div>
+
+                {/* Main Layout: Two-Column Split */}
                 <div className="flex gap-8">
                     {/* LEFT: Configuration Workspace (65%) */}
                     <div className="flex-1 w-[65%] space-y-6">

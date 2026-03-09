@@ -34,6 +34,8 @@ import {
     TrendingUp,
     Eye,
     GripVertical,
+    Pencil,
+    Trash2,
 } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -172,6 +174,20 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
             toast.error("Failed to refresh data");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleDeleteFeature = async (e: React.MouseEvent, featureId: string, featureName: string) => {
+        e.stopPropagation();
+        if (window.confirm(`Are you sure you want to delete "${featureName}"? This action cannot be undone.`)) {
+            try {
+                await aiFeatureService.deleteFeature(featureId);
+                toast.success(`Feature "${featureName}" deleted successfully`);
+                handleRefresh();
+            } catch (error) {
+                console.error('Error deleting feature:', error);
+                toast.error('Failed to delete feature');
+            }
         }
     };
 
@@ -339,7 +355,10 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
                                 {features.map((feature) => (
                                     <tr
                                         key={feature.feature_id}
-                                        onClick={() => onNavigate('feature-detail', feature.feature_id)}
+                                        onClick={() => {
+                                            console.log('Row clicked for feature:', feature.feature_id);
+                                            onNavigate('feature-detail', feature.feature_id);
+                                        }}
                                         className="hover:bg-gray-50/50 cursor-pointer transition-colors"
                                     >
                                         <td className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
@@ -393,15 +412,40 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
                                         )}
                                         <td className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
                                             <div className="flex items-center gap-1">
-                                                <button
-                                                    onClick={() => onNavigate('feature-detail', feature.feature_id)}
-                                                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                                                >
-                                                    <Eye size={16} className="text-gray-600" />
-                                                </button>
-                                                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                                    <MoreHorizontal size={16} className="text-gray-600" />
-                                                </button>
+                                                <TooltipProvider delayDuration={200}>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    console.log('[DEBUG_UI] Edit button clicked for:', feature.feature_id);
+                                                                    if (typeof window !== 'undefined') {
+                                                                        window.alert(`[Child Trace] Clicked Edit for ID: ${feature.feature_id}`);
+                                                                    }
+                                                                    onNavigate('feature-detail', feature.feature_id);
+                                                                }}
+                                                                className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                                                            >
+                                                                <Pencil size={16} className="text-gray-600 group-hover:text-blue-600" />
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">Edit Feature</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+
+                                                <TooltipProvider delayDuration={200}>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={(e) => handleDeleteFeature(e, feature.feature_id, feature.name)}
+                                                                className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                                                            >
+                                                                <Trash2 size={16} className="text-gray-600 group-hover:text-red-600" />
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">Delete Feature</TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             </div>
                                         </td>
                                     </tr>
@@ -411,6 +455,6 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };

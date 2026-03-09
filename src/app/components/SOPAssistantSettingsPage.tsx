@@ -339,7 +339,7 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                         <div className="flex items-center justify-between ml-1">
                                             <div className="space-y-0.5">
                                                 <label className="text-sm font-bold text-[#0f172b]">Confidence Pass-Rate (%)</label>
-                                                <p className="text-xs text-gray-500 font-medium">Minimum AI certainty required to flag a record as "Reviewed"</p>
+                                                <p className="text-xs text-gray-500 font-medium">Minimum AI certainty required to flag a record as &quot;Reviewed&quot;</p>
                                             </div>
                                             <span className="text-2xl font-black text-purple-600 tabular-nums">{settings.confidence_threshold}%</span>
                                         </div>
@@ -371,7 +371,7 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                                 </div>
                                                 <div>
                                                     <h3 className="text-sm font-bold text-[#0f172b]">Autonomous Approval</h3>
-                                                    <p className="text-xs text-gray-500 font-medium">Automatically mark SOPs as "Approved" if score exceeds threshold</p>
+                                                    <p className="text-xs text-gray-500 font-medium">Automatically mark SOPs as &quot;Approved&quot; if score exceeds threshold</p>
                                                 </div>
                                             </div>
                                             <label className="relative inline-flex items-center cursor-pointer">
