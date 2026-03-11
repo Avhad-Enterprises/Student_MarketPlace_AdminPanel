@@ -17,6 +17,7 @@ import {
   Printer,
   Archive,
   Edit,
+  Trash2,
   Check,
   Columns,
   Eye,
@@ -164,84 +165,58 @@ const MobileBankCard: React.FC<MobileBankCardProps> = ({
   onToggleStatus,
   onCopyId
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   return (
-    <div className={`bg-white rounded-[16px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 w-full transition-all active:scale-[0.99] cursor-pointer flex flex-col gap-2 ${isSelected ? 'bg-purple-50/30' : ''}`}>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-bold text-[#253154] text-[15px]">{bank.bank_id}</span>
-        <span className="bg-[#F4F4F4] text-gray-500 text-[10px] px-2 py-1 rounded-lg">Tap to view</span>
-        <span className="text-sm text-gray-600 ml-auto">{bank.countries_covered} countries</span>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ChevronDown
-            size={16}
-            className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-          />
-        </button>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-gray-600 text-sm">{bank.bank_name}</span>
-        <div className="ml-auto transform scale-90 origin-right">
-          <StatusBadge status={bank.status} />
+    <div className={`bg-white rounded-[16px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 w-full transition-all active:scale-[0.99] flex flex-col gap-3 ${isSelected ? 'bg-purple-50/30 border-purple-200' : ''}`}>
+      {/* Top row */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-3 flex-1">
+          <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
+          <div className="flex-1">
+            <h3
+              onClick={(e) => { e.stopPropagation(); onNavigate?.('bank-provider-detail'); }}
+              className="font-bold text-[#253154] text-base cursor-pointer hover:text-purple-600 hover:underline"
+            >
+              {bank.bank_name}
+            </h3>
+            <p className="text-sm text-gray-500 mt-0.5">{bank.account_type}</p>
+            <p className="text-xs text-gray-400 mt-1 font-medium">{bank.bank_id}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="transform scale-90 origin-right">
+            <StatusBadge status={bank.status} />
+          </div>
+          <div className="text-[10px] text-gray-400 font-medium">{bank.countries_covered} Countries</div>
         </div>
       </div>
-      {isExpanded && (
-        <div className="mt-2 pt-3 border-t border-gray-50 animate-in slide-in-from-top-2 fade-in duration-200">
-          <div className="grid grid-cols-2 gap-y-3 gap-x-4 mb-4">
-            <div>
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Account Type</div>
-              <div className="text-sm text-gray-700 font-medium">{bank.account_type}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Min Balance</div>
-              <div className="text-sm text-gray-700 font-medium">{bank.min_balance}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Digital</div>
-              <div className="text-sm text-gray-700 font-medium">{bank.digital_onboarding ? 'Yes' : 'No'}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Student Friendly</div>
-              <div className="text-sm text-gray-700 font-medium">{bank.student_friendly ? 'Yes' : 'No'}</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <button
-              onClick={() => onNavigate?.('bank-provider-detail')}
-              className="flex items-center justify-center gap-2 h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-xs whitespace-nowrap"
-            >
-              <Eye size={14} /> View Details
-            </button>
-            <button
-              onClick={() => onEdit?.(bank)}
-              className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#253154] border border-gray-100 rounded-xl hover:bg-gray-100 transition-colors font-medium text-xs whitespace-nowrap"
-            >
-              <Edit size={14} /> Edit
-            </button>
-            <button
-              onClick={() => onToggleStatus?.(bank)}
-              className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#253154] border border-gray-100 rounded-xl hover:bg-gray-100 transition-colors font-medium text-xs whitespace-nowrap"
-            >
-              <Power size={14} /> {bank.status === 'active' ? 'Deactivate' : 'Activate'}
-            </button>
-            <button
-              onClick={() => onCopyId?.(bank.bank_id)}
-              className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#253154] border border-gray-100 rounded-xl hover:bg-gray-100 transition-colors font-medium text-xs whitespace-nowrap"
-            >
-              <Copy size={14} /> Copy ID
-            </button>
-          </div>
+
+      <div className="grid grid-cols-2 gap-4 py-2 border-y border-gray-50 border-dashed">
+        <div>
+          <div className="text-[9px] text-gray-400 uppercase tracking-wider font-bold mb-0.5">Min Balance</div>
+          <div className="text-xs text-gray-700 font-medium truncate">{bank.min_balance}</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-gray-400 uppercase tracking-wider font-bold mb-0.5">Onboarding</div>
+          <div className="text-xs text-gray-700 font-medium truncate">{bank.digital_onboarding ? 'Digital' : 'Manual'}</div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 pt-1">
+        <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => onDelete?.(bank.id)}
-            className="w-full h-10 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs border border-red-100 flex items-center justify-center gap-2"
+            onClick={(e) => { e.stopPropagation(); onEdit?.(bank); }}
+            className="w-full h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-xs flex items-center justify-center gap-2 shadow-sm"
           >
-            <Archive size={14} /> Delete Partner
+            <Edit size={14} /> Edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete?.(bank.id); }}
+            className="w-full h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs flex items-center justify-center gap-2"
+          >
+            <Trash2 size={14} /> Delete
           </button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -1061,70 +1036,21 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
                       {visibleColumns.includes('popularity') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{bank.popularity.toLocaleString()}</td>}
                       {visibleColumns.includes('updated') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{bank.updated_at ? new Date(bank.updated_at).toLocaleDateString() : 'N/A'}</td>}
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="relative">
+                        <div className="flex items-center gap-2">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenRowMenuId(openRowMenuId === bank.id.toString() ? null : bank.id.toString());
-                            }}
-                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                            onClick={(e) => { e.stopPropagation(); handleEditBank(bank); }}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                            title="Edit"
                           >
-                            <MoreHorizontal size={18} className="text-gray-400" />
+                            <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
                           </button>
-                          {openRowMenuId === bank.id.toString() && (
-                            <>
-                              <div className="fixed inset-0 z-10" onClick={() => setOpenRowMenuId(null)} />
-                              <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 z-20 p-2 w-56 animate-in fade-in zoom-in-95 duration-200">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onNavigate?.('bank-provider-detail');
-                                    setOpenRowMenuId(null);
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                                >
-                                  <Eye size={16} />View Details
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditBank(bank);
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                                >
-                                  <Edit size={16} />Edit Service
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleStatus(bank);
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                                >
-                                  <Power size={16} />{bank.status === 'active' ? 'Deactivate' : 'Activate'} Partner
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleCopyId(bank.bank_id);
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                                >
-                                  <Copy size={16} />Copy Reference ID
-                                </button>
-                                <div className="h-px bg-gray-100 my-1" />
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteBank(bank.id);
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-red-50 rounded-lg text-sm text-red-600 text-left flex items-center gap-2"
-                                >
-                                  <Archive size={16} />Delete Partner
-                                </button>
-                              </div>
-                            </>
-                          )}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteBank(bank.id); }}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                          </button>
                         </div>
                       </td>
                     </tr>

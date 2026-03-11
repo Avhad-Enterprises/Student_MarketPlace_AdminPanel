@@ -61,6 +61,64 @@ const MetricCard: React.FC<{ title: string; value: string; icon: React.ElementTy
   </div>
 );
 
+const MobileHousingCard: React.FC<{
+  item: Housing;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onEdit: (item: Housing) => void;
+  onDelete: (id: string) => void;
+  onView: () => void;
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onView }) => (
+  <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-purple-600 bg-purple-50/30' : 'border-gray-100'} shadow-sm space-y-4`} onClick={onView}>
+    <div className="flex items-start justify-between">
+      <div className="flex items-center gap-3">
+        <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
+        <div>
+          <h3 className="font-bold text-[#253154] text-[16px]">{item.provider_name}</h3>
+          <p className="text-gray-500 text-xs">Ref: {item.reference_id}</p>
+        </div>
+      </div>
+      <StatusBadge status={item.status} />
+    </div>
+
+    <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-3 border-y border-gray-50">
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Type</p>
+        <p className="text-sm font-medium text-gray-700">{item.housing_type}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Location</p>
+        <p className="text-sm font-medium text-gray-700">{item.location}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Countries</p>
+        <p className="text-sm font-medium text-gray-700">{item.countries_covered}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Visibility</p>
+        <p className="text-sm font-medium text-gray-700">{item.student_visible ? 'Visible' : 'Hidden'}</p>
+      </div>
+    </div>
+
+    <div className="flex items-center justify-end gap-2 pt-1">
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+        className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+        title="Edit"
+      >
+        <Edit size={18} />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+        className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+        title="Delete"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  </div>
+);
+
 export const HousingOverviewPage: React.FC<{ onNavigate?: (page: string, data?: any) => void }> = ({ onNavigate }) => {
   // State management
   const [date, setDate] = useState<DateRange | undefined>(undefined);
@@ -480,9 +538,20 @@ export const HousingOverviewPage: React.FC<{ onNavigate?: (page: string, data?: 
                   {visibleColumns.includes('popularity') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.popularity}</td>}
                   <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
-                      <button onClick={() => handleEdit(item)} className="p-1 hover:bg-blue-50 text-blue-600 rounded transition-colors"><Edit size={18} /></button>
-                      <button onClick={() => handleDelete(item.id)} className="p-1 hover:bg-red-50 text-red-600 rounded transition-colors"><Trash2 size={18} /></button>
-                      <button className="p-1 hover:bg-gray-100 rounded transition-colors"><MoreHorizontal size={18} className="text-gray-400" /></button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                        className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                        title="Edit"
+                      >
+                        <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                        className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                        title="Delete"
+                      >
+                        <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                      </button>
                     </div>
                   </td>
                 </tr>

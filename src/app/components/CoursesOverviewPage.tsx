@@ -522,19 +522,24 @@ export const CoursesOverviewPage = () => {
                         </div>
                       </td>
                     )}
-                    {visibleColumns.includes('actions') && (
-                      <td className="px-6 py-5 text-right">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button className="p-2 hover:bg-white hover:shadow-md rounded-lg transition-all text-gray-400 hover:text-indigo-600"><MoreVertical size={18} /></button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-40 p-1">
-                            <button onClick={() => { setEditingCourse(item); setIsAddDialogOpen(true); }} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"><Edit2 size={14} /> Edit</button>
-                            <button onClick={() => handleDelete(item.id)} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"><Trash2 size={14} /> Delete</button>
-                          </PopoverContent>
-                        </Popover>
-                      </td>
-                    )}
+                    <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditingCourse(item); setIsAddDialogOpen(true); }}
+                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                          title="Edit"
+                        >
+                          <Edit2 size={18} className="text-gray-400 group-hover:text-blue-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}

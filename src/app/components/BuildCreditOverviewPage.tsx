@@ -40,6 +40,64 @@ const MetricCard: React.FC<{ title: string; value: string; icon: React.ElementTy
   </div>
 );
 
+const MobileBuildCreditCard: React.FC<{
+  item: BuildCredit;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onEdit: (item: BuildCredit) => void;
+  onDelete: (id: number) => void;
+  onView: () => void;
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onView }) => (
+  <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-purple-600 bg-purple-50/30' : 'border-gray-100'} shadow-sm space-y-4`} onClick={onView}>
+    <div className="flex items-start justify-between">
+      <div className="flex items-center gap-3">
+        <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
+        <div>
+          <h3 className="font-bold text-[#253154] text-[16px]">{item.program_name}</h3>
+          <p className="text-gray-500 text-xs">Ref: {item.reference_id}</p>
+        </div>
+      </div>
+      <StatusBadge status={item.status} />
+    </div>
+
+    <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-3 border-y border-gray-50">
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Provider</p>
+        <p className="text-sm font-medium text-gray-700">{item.provider_name}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Card Type</p>
+        <p className="text-sm font-medium text-gray-700">{item.card_type}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Countries</p>
+        <p className="text-sm font-medium text-gray-700">{item.countries_supported}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Visibility</p>
+        <p className="text-sm font-medium text-gray-700">{item.student_visible ? 'Visible' : 'Hidden'}</p>
+      </div>
+    </div>
+
+    <div className="flex items-center justify-end gap-2 pt-1">
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+        className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+        title="Edit"
+      >
+        <Edit size={18} />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+        className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+        title="Delete"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  </div>
+);
+
 export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => void }> = ({ onNavigate }) => {
   const [date, setDate] = useState<DateRange | undefined>(undefined);
   const [selected, setSelected] = useState<number[]>([]);
@@ -263,162 +321,191 @@ export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => 
     }
   };
 
-  return (<TooltipProvider><div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
-    <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-      <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-        <Popover><PopoverTrigger asChild><button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"><CalendarIcon size={20} className="text-[#253154]" /><span className="font-medium text-[#253154] text-[14px]">{date?.from ? `${format(date.from, 'MMM d')} - ${date.to ? format(date.to, 'MMM d') : ''}` : 'Select date range'}</span></button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CalendarComponent initialFocus mode="range" selected={date} onSelect={setDate} numberOfMonths={2} /></PopoverContent></Popover>
-        <div className="w-px h-4 bg-gray-200 mx-2" /><button onClick={fetchData} className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"><RefreshCw size={20} className="text-[#253154]" /></button>
-      </div>
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setShowExportDialog(true)}
-          className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-        >
-          <Download size={20} />
-          Export
-        </button>
-        <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Upload size={20} />Import</button>
-        <button onClick={() => { setEditItem(null); setShowAddDialog(true); }} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"><Plus size={20} />Add Program</button>
-      </div>
-    </div>
-
-    <div className="hidden lg:grid grid-cols-4 gap-5 mb-8">{metrics.map((m, i) => <MetricCard key={i} {...m} />)}</div>
-    <div className="block lg:hidden mb-14 -mx-4"><Slider dots infinite={false} speed={500} slidesToShow={1.1} slidesToScroll={1} arrows={false} centerMode centerPadding='20px'>{metrics.map((m, i) => <div key={i} className="px-2 py-2"><MetricCard {...m} /></div>)}</Slider></div>
-
-    <div className="hidden md:flex justify-between items-center gap-4 mb-6">
-      <div className="relative flex-1"><Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" /><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search credit programs..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" /></div>
-      <div className="flex items-center gap-3 shrink-0">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 shadow-sm transition-colors flex items-center justify-center"><Filter size={20} /></button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => fetchData()}>All Status</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => fetchData()}>Active Only</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => fetchData()}>Inactive Only</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 shadow-sm transition-colors flex items-center justify-center"><ArrowUpDown size={20} /></button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Sort By</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleSort('created_at')}>Recently Added</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort('provider_name')}>Provider Name</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort('program_name')}>Program Name</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleSort('popularity')}>Popularity</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 shadow-sm transition-colors flex items-center justify-center"><Columns size={20} /></button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {['reference_id', 'provider_name', 'program_name', 'card_type', 'countries_supported', 'status', 'student_visible'].map(col => (
-              <DropdownMenuItem
-                key={col}
-                onClick={() => setVisibleColumns(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col])}
-                className="flex items-center justify-between"
-              >
-                {col.replace('_', ' ')}
-                {visibleColumns.includes(col) && <Check size={14} />}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </div>
-
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative min-h-[400px]">
-      {loading && (
-        <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-20 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin" />
-            <p className="text-sm font-medium text-purple-600">Loading programs...</p>
+  return (
+    <TooltipProvider>
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
+        <div className="hidden md:flex justify-between items-center gap-4 mb-8">
+          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
+            <Popover><PopoverTrigger asChild><button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"><CalendarIcon size={20} className="text-[#253154]" /><span className="font-medium text-[#253154] text-[14px]">{date?.from ? `${format(date.from, 'MMM d')} - ${date.to ? format(date.to, 'MMM d') : ''}` : 'Select date range'}</span></button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CalendarComponent initialFocus mode="range" selected={date} onSelect={setDate} numberOfMonths={2} /></PopoverContent></Popover>
+            <div className="w-px h-4 bg-gray-200 mx-2" /><button onClick={fetchData} className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"><RefreshCw size={20} className="text-[#253154]" /></button>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowExportDialog(true)}
+              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+            >
+              <Download size={20} />
+              Export
+            </button>
+            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Upload size={20} />Import</button>
+            <button onClick={() => { setEditItem(null); setShowAddDialog(true); }} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"><Plus size={20} />Add Program</button>
           </div>
         </div>
-      )}
 
-      <div className="hidden md:block overflow-auto custom-scrollbar-light max-h-[600px]">
-        <table className="w-full">
-          <thead><tr className="border-b border-gray-100">
-            <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left w-12"><CustomCheckbox checked={selected.length === items.length && items.length > 0} partial={selected.length > 0 && selected.length < items.length} onChange={() => setSelected(selected.length === items.length ? [] : items.map(i => i.id))} /></th>
-            {visibleColumns.includes('reference_id') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">ID</th>}
-            {visibleColumns.includes('provider_name') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Provider</th>}
-            {visibleColumns.includes('program_name') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Program</th>}
-            {visibleColumns.includes('card_type') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Card Type</th>}
-            {visibleColumns.includes('countries_supported') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Countries</th>}
-            {visibleColumns.includes('status') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Status</th>}
-            {visibleColumns.includes('student_visible') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Visible</th>}
-            <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Actions</th>
-          </tr></thead>
-          <tbody className="divide-y divide-gray-50">
-            {items.length > 0 ? items.map((item) => (
-              <tr
-                key={item.id}
-                className={`hover:bg-gray-50 transition-colors cursor-pointer ${selected.includes(item.id) ? 'bg-purple-50/30' : ''}`}
-              >
-                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                  <CustomCheckbox checked={selected.includes(item.id)} onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])} />
-                </td>
-                {visibleColumns.includes('reference_id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{item.reference_id}</td>}
-                {visibleColumns.includes('provider_name') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.provider_name}</td>}
-                {visibleColumns.includes('program_name') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.program_name}</td>}
-                {visibleColumns.includes('card_type') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.card_type}</td>}
-                {visibleColumns.includes('countries_supported') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.countries_supported}</td>}
-                {visibleColumns.includes('status') && <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={item.status} /></td>}
-                {visibleColumns.includes('student_visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.student_visible ? 'Yes' : 'No'}</td>}
-                <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                        <MoreHorizontal size={20} className="text-gray-400" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48 p-2 rounded-2xl shadow-xl border-gray-100">
-                      <DropdownMenuItem onClick={() => { setEditItem(item); setShowAddDialog(true); }} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer">
-                        <Edit size={16} className="text-blue-600" /> Edit Details
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDelete(item.id)} className="flex items-center gap-2 p-3 rounded-xl cursor-pointer text-red-600 hover:bg-red-50">
-                        <Trash2 size={16} /> Delete Program
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
-            )) : (
-              <tr>
-                <td colSpan={10} className="px-6 py-20 text-center">
-                  <div className="flex flex-col items-center gap-2">
-                    <CreditCard size={40} className="text-gray-200" />
-                    <p className="text-gray-500 font-medium">No credit programs found</p>
-                  </div>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      <div className="h-[80px] bg-white flex items-center justify-between px-6 border-t border-gray-50">
-        <div className="flex items-center gap-2"><span className="text-gray-500 text-sm font-medium">Rows per page:</span><button className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm flex items-center justify-center gap-2 text-sm font-medium text-gray-700">{rowsPerPage}<ChevronDown size={14} className="text-gray-400" /></button></div>
-        <div className="flex items-center gap-3">
-          <button disabled={page === 1} onClick={() => setPage(prev => prev - 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronLeft size={18} strokeWidth={2} className="text-gray-500" /></button>
-          <span className="text-sm font-medium text-gray-700">Page {page} of {pagination.totalPages}</span>
-          <button disabled={page === pagination.totalPages} onClick={() => setPage(prev => prev + 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronRight size={18} strokeWidth={2} className="text-gray-500" /></button>
+        <div className="hidden lg:grid grid-cols-4 gap-5 mb-8">{metrics.map((m, i) => <MetricCard key={i} {...m} />)}</div>
+        <div className="block lg:hidden mb-14 -mx-4"><Slider dots infinite={false} speed={500} slidesToShow={1.1} slidesToScroll={1} arrows={false} centerMode centerPadding='20px'>{metrics.map((m, i) => <div key={i} className="px-2 py-2"><MetricCard {...m} /></div>)}</Slider></div>
+
+        <div className="hidden md:flex justify-between items-center gap-4 mb-6">
+          <div className="relative flex-1"><Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" /><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search credit programs..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" /></div>
+          <div className="flex items-center gap-3 shrink-0">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 shadow-sm transition-colors flex items-center justify-center"><Filter size={20} /></button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => fetchData()}>All Status</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fetchData()}>Active Only</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fetchData()}>Inactive Only</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 shadow-sm transition-colors flex items-center justify-center"><ArrowUpDown size={20} /></button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Sort By</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleSort('created_at')}>Recently Added</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSort('provider_name')}>Provider Name</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSort('program_name')}>Program Name</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSort('popularity')}>Popularity</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 shadow-sm transition-colors flex items-center justify-center"><Columns size={20} /></button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {['reference_id', 'provider_name', 'program_name', 'card_type', 'countries_supported', 'status', 'student_visible'].map(col => (
+                  <DropdownMenuItem
+                    key={col}
+                    onClick={() => setVisibleColumns(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col])}
+                    className="flex items-center justify-between"
+                  >
+                    {col.replace('_', ' ')}
+                    {visibleColumns.includes(col) && <Check size={14} />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden relative min-h-[400px]">
+          {loading && (
+            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-20 flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-10 h-10 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin" />
+                <p className="text-sm font-medium text-purple-600">Loading programs...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Mobile View */}
+          {!loading && (
+            <div className="md:hidden space-y-4 p-4">
+              {items.length > 0 ? (
+                items.map((item) => (
+                  <MobileBuildCreditCard
+                    key={item.id}
+                    item={item}
+                    isSelected={selected.includes(item.id)}
+                    onToggleSelect={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])}
+                    onEdit={(i) => { setEditItem(i); setShowAddDialog(true); }}
+                    onDelete={handleDelete}
+                    onView={() => onNavigate?.('build-credit-provider-detail')}
+                  />
+                ))
+              ) : (
+                <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-3">
+                  <CreditCard size={48} className="text-gray-200 mx-auto" />
+                  <p className="text-gray-500 font-medium">No credit programs found</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="hidden md:block overflow-auto custom-scrollbar-light max-h-[600px]">
+            <table className="w-full">
+              <thead><tr className="border-b border-gray-100">
+                <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left w-12"><CustomCheckbox checked={selected.length === items.length && items.length > 0} partial={selected.length > 0 && selected.length < items.length} onChange={() => setSelected(selected.length === items.length ? [] : items.map(i => i.id))} /></th>
+                {visibleColumns.includes('reference_id') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">ID</th>}
+                {visibleColumns.includes('provider_name') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Provider</th>}
+                {visibleColumns.includes('program_name') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Program</th>}
+                {visibleColumns.includes('card_type') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Card Type</th>}
+                {visibleColumns.includes('countries_supported') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Countries</th>}
+                {visibleColumns.includes('status') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Status</th>}
+                {visibleColumns.includes('student_visible') && <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Visible</th>}
+                <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Actions</th>
+              </tr></thead>
+              <tbody className="divide-y divide-gray-50">
+                {items.length > 0 ? items.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => onNavigate?.('build-credit-provider-detail')}
+                    className={`hover:bg-gray-50 transition-colors cursor-pointer ${selected.includes(item.id) ? 'bg-purple-50/30' : ''}`}
+                  >
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                      <CustomCheckbox checked={selected.includes(item.id)} onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])} />
+                    </td>
+                    {visibleColumns.includes('reference_id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{item.reference_id}</td>}
+                    {visibleColumns.includes('provider_name') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.provider_name}</td>}
+                    {visibleColumns.includes('program_name') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-bold underline decoration-purple-200 decoration-2 underline-offset-4">{item.program_name}</td>}
+                    {visibleColumns.includes('card_type') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.card_type}</td>}
+                    {visibleColumns.includes('countries_supported') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.countries_supported}</td>}
+                    {visibleColumns.includes('status') && <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={item.status} /></td>}
+                    {visibleColumns.includes('student_visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.student_visible ? 'Yes' : 'No'}</td>}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditItem(item); setShowAddDialog(true); }}
+                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                          title="Edit Details"
+                        >
+                          <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                          title="Delete Program"
+                        >
+                          <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <CreditCard size={40} className="text-gray-200" />
+                        <p className="text-gray-500 font-medium">No credit programs found</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="h-[80px] bg-white flex items-center justify-between px-6 border-t border-gray-50">
+            <div className="flex items-center gap-2"><span className="text-gray-500 text-sm font-medium">Rows per page:</span><button className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm flex items-center justify-center gap-2 text-sm font-medium text-gray-700">{rowsPerPage}<ChevronDown size={14} className="text-gray-400" /></button></div>
+            <div className="flex items-center gap-3">
+              <button disabled={page === 1} onClick={() => setPage(prev => prev - 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronLeft size={18} strokeWidth={2} className="text-gray-500" /></button>
+              <span className="text-sm font-medium text-gray-700">Page {page} of {pagination.totalPages}</span>
+              <button disabled={page === pagination.totalPages} onClick={() => setPage(prev => prev + 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronRight size={18} strokeWidth={2} className="text-gray-500" /></button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-    <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} moduleName="Build Credit" totalCount={pagination.total} selectedCount={selected.length} columns={exportColumns} supportsDateRange={true} onExport={handleExport} />
-    <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} moduleName="Build Credit" fields={importFields} onImport={handleImport} templateUrl="/templates/build-credit-import-template.xlsx" allowUpdate={true} />
-    <AddBuildCreditDialog open={showAddDialog} onOpenChange={setShowAddDialog} onSave={handleSave} initialData={editItem} mode={editItem ? 'edit' : 'add'} />
-  </TooltipProvider>);
+      <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} moduleName="Build Credit" totalCount={pagination.total} selectedCount={selected.length} columns={exportColumns} supportsDateRange={true} onExport={handleExport} />
+      <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} moduleName="Build Credit" fields={importFields} onImport={handleImport} templateUrl="/templates/build-credit-import-template.xlsx" allowUpdate={true} />
+      <AddBuildCreditDialog open={showAddDialog} onOpenChange={setShowAddDialog} onSave={handleSave} initialData={editItem} mode={editItem ? 'edit' : 'add'} />
+    </TooltipProvider>
+  );
 };

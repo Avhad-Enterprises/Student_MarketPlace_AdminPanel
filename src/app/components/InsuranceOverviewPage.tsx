@@ -96,60 +96,36 @@ const MobileInsuranceCard: React.FC<MobileInsuranceCardProps> = ({
         </div>
       </div>
 
-      {isExpanded && (
-        <div className="px-4 pb-4 pt-2 border-t border-dashed border-gray-100 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Reference ID</p>
-              <div className="text-sm font-bold text-gray-700">{insurance.insurance_id}</div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Duration</p>
-              <div className="text-sm text-gray-700 font-medium">{insurance.duration}</div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Visa Compliant</p>
-              <div className="text-sm text-gray-700 font-medium">{insurance.visa_compliant ? 'Yes' : 'No'}</div>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Mandatory</p>
-              <div className="text-sm text-gray-700 font-medium">{insurance.mandatory ? 'Yes' : 'No'}</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <button
-              onClick={() => onNavigate?.('insurance-provider-detail')}
-              className="flex items-center justify-center gap-2 h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-xs whitespace-nowrap"
-            >
-              <Eye size={14} /> View Details
-            </button>
-            <button
-              onClick={() => onEdit?.(insurance)}
-              className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#253154] border border-gray-100 rounded-xl hover:bg-gray-100 transition-colors font-medium text-xs whitespace-nowrap"
-            >
-              <Edit size={14} /> Edit
-            </button>
-            <button
-              onClick={() => onToggleStatus?.(insurance)}
-              className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#253154] border border-gray-100 rounded-xl hover:bg-gray-100 transition-colors font-medium text-xs whitespace-nowrap"
-            >
-              <Power size={14} /> {insurance.status === 'active' ? 'Deactivate' : 'Activate'}
-            </button>
-            <button
-              onClick={() => onCopyId?.(insurance.insurance_id)}
-              className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#253154] border border-gray-100 rounded-xl hover:bg-gray-100 transition-colors font-medium text-xs whitespace-nowrap"
-            >
-              <Copy size={14} /> Copy ID
-            </button>
-          </div>
+      <div className="flex flex-col gap-2 pt-3 border-t border-gray-100">
+        <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => onDelete?.(insurance.id)}
-            className="w-full h-10 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs border border-red-100 flex items-center justify-center gap-2"
+            onClick={(e) => { e.stopPropagation(); onEdit?.(insurance); }}
+            className="flex items-center justify-center gap-2 h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-xs whitespace-nowrap shadow-sm"
           >
-            <Archive size={14} /> Delete Policy
+            <Edit size={14} /> Edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete?.(insurance.id); }}
+            className="flex items-center justify-center gap-2 h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs whitespace-nowrap"
+          >
+            <Archive size={14} /> Delete
           </button>
         </div>
-      )}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onToggleStatus?.(insurance); }}
+            className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#64748b] rounded-xl hover:bg-gray-100 transition-colors font-medium text-[10px]"
+          >
+            <Power size={12} /> {insurance.status === 'active' ? 'Deactivate' : 'Activate'}
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onCopyId?.(insurance.insurance_id); }}
+            className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#64748b] rounded-xl hover:bg-gray-100 transition-colors font-medium text-[10px]"
+          >
+            <Copy size={12} /> Copy ID
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -550,68 +526,23 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
                     {visibleColumns.includes('countries') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ins.countries_covered}</td>}
                     {visibleColumns.includes('status') && <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={ins.status} /></td>}
                     {visibleColumns.includes('visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ins.student_visible ? 'Yes' : 'No'}</td>}
-                    <td className="relative px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => setOpenRowMenuId(openRowMenuId === ins.id ? null : ins.id)}
-                        className={`p-1.5 rounded-lg transition-colors ${openRowMenuId === ins.id ? 'bg-purple-100 text-purple-700' : 'hover:bg-gray-100 text-gray-400'}`}
-                      >
-                        <MoreHorizontal size={18} />
-                      </button>
-
-                      {openRowMenuId === ins.id && (
-                        <>
-                          <div className="fixed inset-0 z-20" onClick={() => setOpenRowMenuId(null)} />
-                          <div className="absolute right-[80px] top-1/2 -translate-y-1/2 bg-white rounded-xl shadow-2xl border border-gray-100 z-30 p-2 w-56 animate-in fade-in zoom-in-95 duration-200">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onNavigate?.('insurance-provider-detail');
-                                setOpenRowMenuId(null);
-                              }}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Eye size={16} />View Details
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditInsurance(ins);
-                              }}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Edit size={16} />Edit Insurance
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleStatus(ins);
-                              }}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Power size={16} />{ins.status === 'active' ? 'Deactivate' : 'Activate'} Policy
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopyId(ins.insurance_id);
-                              }}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Copy size={16} />Copy Reference ID
-                            </button>
-                            <div className="h-px bg-gray-100 my-1" />
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteInsurance(ins.id);
-                              }}
-                              className="w-full px-3 py-2 hover:bg-red-50 rounded-lg text-sm text-red-600 text-left flex items-center gap-2"
-                            >
-                              <Archive size={16} />Delete Policy
-                            </button>
-                          </div>
-                        </>
-                      )}
+                    <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditInsurance(ins); }}
+                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                          title="Edit Insurance"
+                        >
+                          <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteInsurance(ins.id); }}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                          title="Delete Policy"
+                        >
+                          <Archive size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

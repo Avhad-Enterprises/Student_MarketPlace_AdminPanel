@@ -34,6 +34,62 @@ const MetricCard: React.FC<{ title: string; value: string; icon: React.ElementTy
     <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-500"><Icon size={80} /></div>
   </div>
 );
+const MobileEmploymentCard: React.FC<{
+  item: Employment;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onEdit: (item: Employment) => void;
+  onDelete: (id: string) => void;
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete }) => (
+  <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-purple-600 bg-purple-50/30' : 'border-gray-100'} shadow-sm space-y-4`}>
+    <div className="flex items-start justify-between">
+      <div className="flex items-center gap-3">
+        <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
+        <div>
+          <h3 className="font-bold text-[#253154] text-[16px]">{item.platform}</h3>
+          <p className="text-gray-500 text-xs">Ref: {item.reference_id || item.id}</p>
+        </div>
+      </div>
+      <StatusBadge status={item.status} />
+    </div>
+
+    <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-3 border-y border-gray-50">
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Service Type</p>
+        <p className="text-sm font-medium text-gray-700">{item.service_type}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Job Types</p>
+        <p className="text-sm font-medium text-gray-700">{item.job_types}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Countries</p>
+        <p className="text-sm font-medium text-gray-700">{item.countries_covered}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Visibility</p>
+        <p className="text-sm font-medium text-gray-700">{item.student_visible ? 'Visible' : 'Hidden'}</p>
+      </div>
+    </div>
+
+    <div className="flex items-center justify-end gap-2 pt-1">
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+        className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+        title="Edit"
+      >
+        <Edit size={18} />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+        className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+        title="Delete"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  </div>
+);
 
 interface EmploymentOverviewPageProps {
   onNavigate?: (page: string, params?: any) => void;
@@ -425,31 +481,72 @@ export const EmploymentOverviewPage: React.FC<EmploymentOverviewPageProps> = ({ 
           </tr></thead>
           <tbody className="divide-y divide-gray-50">
             {isLoading ? (
-              <tr><td colSpan={10} className="px-6 py-10 text-center text-gray-400">Loading platforms...</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={10} className="px-6 py-10 text-center text-gray-400">No platforms found</td></tr>
-            ) : items.map((item) => (
-              <tr key={item.id} className={`hover:bg-gray-50 transition-colors cursor-pointer ${selected.includes(item.id) ? 'bg-purple-50/30' : ''}`}>
-                <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}><CustomCheckbox checked={selected.includes(item.id)} onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])} /></td>
-                {visibleColumns.includes('id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]" onClick={() => onNavigate?.('employment-provider-detail', { id: item.id })}>{item.reference_id || item.id}</td>}
-                {visibleColumns.includes('platform') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" onClick={() => onNavigate?.('employment-provider-detail', { id: item.id })}>{item.platform}</td>}
-                {visibleColumns.includes('service_type') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" onClick={() => onNavigate?.('employment-provider-detail', { id: item.id })}>{item.service_type}</td>}
-                {visibleColumns.includes('job_types') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" onClick={() => onNavigate?.('employment-provider-detail', { id: item.id })}>{item.job_types}</td>}
-                {visibleColumns.includes('countries_covered') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" onClick={() => onNavigate?.('employment-provider-detail', { id: item.id })}>{item.countries_covered}</td>}
-                {visibleColumns.includes('status') && <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={() => onNavigate?.('employment-provider-detail', { id: item.id })}><StatusBadge status={item.status} /></td>}
-                {visibleColumns.includes('student_visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" onClick={() => onNavigate?.('employment-provider-detail', { id: item.id })}>{item.student_visible ? 'Yes' : 'No'}</td>}
-                <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger className="p-1 hover:bg-gray-100 rounded transition-colors"><MoreHorizontal size={18} className="text-gray-400" /></DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-40" align="end">
-                      <DropdownMenuItem className="flex items-center gap-2" onClick={() => onNavigate?.('employment-provider-detail', { id: item.id })}><Eye size={16} className="text-gray-400" />View</DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-2" onClick={() => handleEditPlatform(item)}><Edit size={16} className="text-gray-400" />Edit</DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center gap-2 text-red-600" onClick={() => handleDelete(item.id)}><Trash2 size={16} className="text-red-400" />Delete</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </td>
-              </tr>
-            ))}
+              <tr><td colSpan={10} className="px-6 py-10 text-center text-gray-400"><RefreshCw size={24} className="animate-spin mx-auto mb-2" />Loading platforms...</td></tr>
+            ) : (
+              <>
+                {/* Mobile View */}
+                <div className="md:hidden space-y-4 p-4">
+                  {items.length > 0 ? (
+                    items.map((item) => (
+                      <MobileEmploymentCard
+                        key={item.id}
+                        item={item}
+                        isSelected={selected.includes(item.id)}
+                        onToggleSelect={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])}
+                        onEdit={handleEditPlatform}
+                        onDelete={handleDelete}
+                      />
+                    ))
+                  ) : (
+                    <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-3">
+                      <Briefcase size={48} className="text-gray-200 mx-auto" />
+                      <p className="text-gray-500 font-medium">No platforms found</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Desktop View Table rows */}
+                {items.length === 0 ? (
+                  <tr className="hidden md:table-row"><td colSpan={10} className="px-6 py-10 text-center text-gray-400">No platforms found</td></tr>
+                ) : items.map((item) => (
+                  <tr
+                    key={item.id}
+                    className={`hidden md:table-row hover:bg-gray-50 transition-colors cursor-pointer ${selected.includes(item.id) ? 'bg-purple-50/30' : ''}`}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest('td:first-child') || (e.target as HTMLElement).closest('td:last-child')) return;
+                      onNavigate?.('employment-provider-detail', { id: item.id });
+                    }}
+                  >
+                    <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}><CustomCheckbox checked={selected.includes(item.id)} onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])} /></td>
+                    {visibleColumns.includes('id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{item.reference_id || item.id}</td>}
+                    {visibleColumns.includes('platform') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-bold underline decoration-purple-200 decoration-2 underline-offset-4">{item.platform}</td>}
+                    {visibleColumns.includes('service_type') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.service_type}</td>}
+                    {visibleColumns.includes('job_types') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.job_types}</td>}
+                    {visibleColumns.includes('countries_covered') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.countries_covered}</td>}
+                    {visibleColumns.includes('status') && <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={item.status} /></td>}
+                    {visibleColumns.includes('student_visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.student_visible ? 'Yes' : 'No'}</td>}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditPlatform(item); }}
+                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                          title="Edit"
+                        >
+                          <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </>
+            )}
           </tbody>
         </table>
       </div>

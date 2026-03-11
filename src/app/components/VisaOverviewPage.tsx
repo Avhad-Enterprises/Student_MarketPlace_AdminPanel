@@ -77,12 +77,10 @@ interface MobileVisaCardProps {
   onToggleSelect: () => void;
   onEdit: (visa: Visa) => void;
   onDelete: (id: number) => void;
-  onToggleStatus: (visa: Visa) => void;
-  onCopyId: (id: string) => void;
 }
 
-const MobileVisaCard: React.FC<MobileVisaCardProps> = ({ visa, isSelected, onToggleSelect, onEdit, onDelete, onToggleStatus, onCopyId }) => {
-  const [showActions, setShowActions] = useState(false);
+const MobileVisaCard: React.FC<MobileVisaCardProps> = ({ visa, isSelected, onToggleSelect, onEdit, onDelete }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
     <div className={`bg-white rounded-2xl border transition-all ${isSelected ? 'border-purple-200 shadow-md ring-1 ring-purple-100' : 'border-gray-100 shadow-sm'}`}>
@@ -96,8 +94,14 @@ const MobileVisaCard: React.FC<MobileVisaCardProps> = ({ visa, isSelected, onTog
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={visa.status} />
-          <button onClick={() => setShowActions(!showActions)} className="p-2 hover:bg-gray-50 rounded-xl transition-colors text-gray-400">
-            <MoreHorizontal size={20} />
+          <button
+            onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+            className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-400"
+          >
+            <ChevronDown
+              size={16}
+              className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            />
           </button>
         </div>
       </div>
@@ -127,20 +131,22 @@ const MobileVisaCard: React.FC<MobileVisaCardProps> = ({ visa, isSelected, onTog
         </div>
       </div>
 
-      {showActions && (
-        <div className="px-3 pb-4 flex flex-wrap gap-2 animate-in slide-in-from-top-2 duration-200">
-          <button onClick={() => { onEdit(visa); setShowActions(false); }} className="flex-1 min-w-[100px] h-9 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 text-xs font-bold text-gray-700 transition-colors">
-            <Edit size={14} /> Edit
-          </button>
-          <button onClick={() => { onToggleStatus(visa); setShowActions(false); }} className="flex-1 min-w-[100px] h-9 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 text-xs font-bold text-gray-700 transition-colors">
-            <Power size={14} /> {visa.status === 'active' ? 'Deactivate' : 'Activate'}
-          </button>
-          <button onClick={() => { onCopyId(visa.visa_id); setShowActions(false); }} className="flex-1 min-w-[100px] h-9 bg-gray-50 hover:bg-gray-100 rounded-lg flex items-center justify-center gap-2 text-xs font-bold text-gray-700 transition-colors">
-            <Copy size={14} /> Copy ID
-          </button>
-          <button onClick={() => { onDelete(visa.id); setShowActions(false); }} className="flex-1 min-w-[100px] h-9 bg-red-50 hover:bg-red-100 rounded-lg flex items-center justify-center gap-2 text-xs font-bold text-red-600 transition-colors">
-            <Trash2 size={14} /> Delete
-          </button>
+      {isExpanded && (
+        <div className="px-3 pb-4 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit(visa); }}
+              className="w-full h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Edit size={16} /> Edit
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(visa.id); }}
+              className="w-full h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+            >
+              <Trash2 size={16} /> Delete
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -649,21 +655,23 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
                           )}
                         </td>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button className="p-2 hover:bg-white hover:shadow-md rounded-xl transition-all text-gray-400 hover:text-purple-600 border border-transparent hover:border-purple-100">
-                              <MoreHorizontal size={18} />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-52 p-1.5 rounded-2xl shadow-xl border-gray-100" align="end">
-                            <button onClick={() => handleEditVisa(visa)} className="w-full flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition-colors text-sm font-bold text-gray-700"><Edit size={16} className="text-blue-500" /> Edit Details</button>
-                            <button onClick={() => handleToggleStatus(visa)} className="w-full flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition-colors text-sm font-bold text-gray-700"><Power size={16} className={visa.status === 'active' ? 'text-gray-400' : 'text-green-500'} /> {visa.status === 'active' ? 'Deactivate' : 'Activate'}</button>
-                            <button onClick={() => handleCopyId(visa.visa_id)} className="w-full flex items-center gap-3 p-2.5 hover:bg-gray-50 rounded-xl transition-colors text-sm font-bold text-gray-700"><Copy size={16} className="text-gray-400" /> Copy Ref ID</button>
-                            <div className="my-1 border-t border-gray-50" />
-                            <button onClick={() => handleDeleteVisa(visa.id)} className="w-full flex items-center gap-3 p-2.5 hover:bg-red-50 rounded-xl transition-colors text-sm font-bold text-red-600"><Trash2 size={16} /> Delete Pathway</button>
-                          </PopoverContent>
-                        </Popover>
+                      <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEditVisa(visa); }}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                            title="Edit Visa Details"
+                          >
+                            <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteVisa(visa.id); }}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                            title="Delete Pathway"
+                          >
+                            <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -687,8 +695,6 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
                   onToggleSelect={() => handleToggleSelect(visa.id.toString())}
                   onEdit={handleEditVisa}
                   onDelete={handleDeleteVisa}
-                  onToggleStatus={handleToggleStatus}
-                  onCopyId={handleCopyId}
                 />
               ))
             )}

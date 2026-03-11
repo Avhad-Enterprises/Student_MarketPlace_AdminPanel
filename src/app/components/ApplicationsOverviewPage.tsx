@@ -28,7 +28,8 @@ import {
   FileUp,
   Eye,
   UserCog,
-  XOctagon
+  XOctagon,
+  Trash2
 } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -208,9 +209,12 @@ interface MobileApplicationCardProps {
   application: Application;
   isSelected: boolean;
   onToggleSelect: () => void;
+  onView: (app: Application) => void;
+  onEdit: (app: Application) => void;
+  onClose: (app: Application) => void;
 }
 
-const MobileApplicationCard: React.FC<MobileApplicationCardProps> = ({ application, isSelected, onToggleSelect }) => {
+const MobileApplicationCard: React.FC<MobileApplicationCardProps> = ({ application, isSelected, onToggleSelect, onView, onEdit, onClose }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -221,7 +225,7 @@ const MobileApplicationCard: React.FC<MobileApplicationCardProps> = ({ applicati
         <span className="bg-[#F4F4F4] text-gray-500 text-[10px] px-2 py-1 rounded-lg">Tap to view</span>
         <span className="text-sm text-gray-600 ml-auto">{application.intake}</span>
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
           className="p-1 hover:bg-gray-100 rounded-full transition-colors"
         >
           <ChevronDown
@@ -233,7 +237,7 @@ const MobileApplicationCard: React.FC<MobileApplicationCardProps> = ({ applicati
 
       {/* Middle row */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-gray-600 text-sm">{application.studentName}</span>
+        <span className="text-gray-600 text-sm font-medium">{application.studentName}</span>
         <div className="ml-auto transform scale-90 origin-right">
           <StatusBadge status={application.status} />
         </div>
@@ -245,7 +249,7 @@ const MobileApplicationCard: React.FC<MobileApplicationCardProps> = ({ applicati
           <div className="grid grid-cols-2 gap-y-3 gap-x-4 mb-4">
             <div>
               <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">University</div>
-              <div className="text-sm text-gray-700 font-medium">{application.university}</div>
+              <div className="text-sm text-gray-700 font-medium truncate">{application.university}</div>
             </div>
             <div>
               <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Country</div>
@@ -260,9 +264,28 @@ const MobileApplicationCard: React.FC<MobileApplicationCardProps> = ({ applicati
               <div className="text-sm text-gray-700 font-medium">{application.lastUpdated}</div>
             </div>
           </div>
-          <button className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm">
-            View Application
-          </button>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onView(application); }}
+              className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm flex items-center justify-center gap-2"
+            >
+              <Eye size={16} /> View Details
+            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit(application); }}
+                className="w-full h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+              >
+                <Edit size={16} /> Edit
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onClose(application); }}
+                className="w-full h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} /> Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -1460,50 +1483,29 @@ export const ApplicationsOverviewPage: React.FC = () => {
                     {visibleColumns.includes('submission') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{application.submissionDate}</td>}
                     {visibleColumns.includes('decision') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{application.decisionDate}</td>}
                     {visibleColumns.includes('updated') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{application.lastUpdated}</td>}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="relative">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => openRowMenu(application)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          onClick={(e) => { e.stopPropagation(); handleViewApplication(application); }}
+                          className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                          title="View Application"
                         >
-                          <MoreHorizontal size={18} className="text-gray-400" />
+                          <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
                         </button>
-                        {activeMenuId === application.id && (
-                          <>
-                            <div className="fixed inset-0 z-10" onClick={() => setActiveMenuId(null)} />
-                            <div className="absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 z-20 p-2 w-56 animate-in fade-in zoom-in-95 duration-150">
-                              <button onClick={() => handleViewApplication(application)} className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                                <Eye size={16} />
-                                View Application
-                              </button>
-                              <button onClick={() => handleEditApplication(application)} className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                                <Edit size={16} />
-                                Edit Application
-                              </button>
-                              <button onClick={() => { toast.info('Upload Documents coming soon'); setActiveMenuId(null); }} className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                                <FileUp size={16} />
-                                Upload Documents
-                              </button>
-                              <button onClick={() => handleRowChangeStatus(application)} className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                                <Edit size={16} />
-                                Change Status
-                              </button>
-                              <button onClick={() => handleRowAssignCounselor(application)} className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                                <UserCog size={16} />
-                                Assign Counselor
-                              </button>
-                              <button onClick={() => handleViewTimeline(application)} className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                                <Clock size={16} />
-                                View Timeline
-                              </button>
-                              <div className="h-px bg-gray-100 my-1" />
-                              <button onClick={() => handleCloseApplication(application)} className="w-full px-3 py-2 hover:bg-red-50 rounded-lg text-sm text-red-600 text-left flex items-center gap-2">
-                                <XOctagon size={16} />
-                                Close Application
-                              </button>
-                            </div>
-                          </>
-                        )}
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditApplication(application); }}
+                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                          title="Edit Application"
+                        >
+                          <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleCloseApplication(application); }}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                          title="Delete Application"
+                        >
+                          <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1520,6 +1522,9 @@ export const ApplicationsOverviewPage: React.FC = () => {
                 application={application}
                 isSelected={selectedApplications.includes(application.id)}
                 onToggleSelect={() => handleToggleApplication(application.id)}
+                onView={handleViewApplication}
+                onEdit={handleEditApplication}
+                onClose={handleCloseApplication}
               />
             ))}
           </div>

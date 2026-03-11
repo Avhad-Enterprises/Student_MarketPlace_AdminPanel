@@ -28,7 +28,8 @@ import {
   Plane,
   Eye,
   UserCog,
-  Clock
+  Clock,
+  Trash2
 } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -159,66 +160,61 @@ interface MobileStudentCardProps {
   isSelected: boolean;
   onToggleSelect: () => void;
   onViewProfile: (id: string) => void;
+  onEditProfile: (student: BackendStudent) => void;
+  onArchiveStudent: (id: string, name: string) => void;
 }
 
-const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, isSelected, onToggleSelect, onViewProfile }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
+const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, isSelected, onToggleSelect, onViewProfile, onEditProfile, onArchiveStudent }) => {
   return (
-    <div className={`bg-white rounded-[16px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 w-full transition-all active:scale-[0.99] cursor-pointer flex flex-col gap-2 ${isSelected ? 'bg-purple-50/30' : ''}`}>
+    <div className={`bg-white rounded-[16px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 w-full transition-all active:scale-[0.99] flex flex-col gap-3 ${isSelected ? 'bg-purple-50/30 border-purple-200' : ''}`}>
       {/* Top row */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="font-bold text-[#253154] text-[15px]">{student.id}</span>
-        <span className="bg-[#F4F4F4] text-gray-500 text-[10px] px-2 py-1 rounded-lg">Tap to view</span>
-        <span className="font-bold text-[#253154] text-[15px] ml-auto"><CompletionBadge percentage={student.completion} /></span>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ChevronDown
-            size={16}
-            className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-          />
-        </button>
-      </div>
-
-      {/* Middle row */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-gray-600 text-sm">{student.name}</span>
-        <div className="ml-auto text-xs text-gray-500">
-          {student.intake}
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-3 flex-1">
+          <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
+          <div className="flex-1">
+            <h3
+              onClick={(e) => { e.stopPropagation(); onViewProfile(student.dbId); }}
+              className="font-bold text-[#253154] text-base cursor-pointer hover:text-purple-600 hover:underline"
+            >
+              {student.name}
+            </h3>
+            <p className="text-sm text-gray-500 mt-0.5">{student.email}</p>
+            <p className="text-xs text-gray-400 mt-1 font-medium">{student.id}</p>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <CompletionBadge percentage={student.completion} />
+          <div className="text-[10px] text-gray-400 font-medium">{student.intake}</div>
         </div>
       </div>
 
-      {/* Expanded section */}
-      {isExpanded && (
-        <div className="mt-2 pt-3 border-t border-gray-50 animate-in slide-in-from-top-2 fade-in duration-200">
-          <div className="grid grid-cols-2 gap-y-3 gap-x-4 mb-4">
-            <div>
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Email</div>
-              <div className="text-sm text-gray-700 font-medium truncate">{student.email}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Country</div>
-              <div className="text-sm text-gray-700 font-medium">{student.countryPreference}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Counselor</div>
-              <div className="text-sm text-gray-700 font-medium">{student.counselor}</div>
-            </div>
-            <div>
-              <div className="text-[10px] text-gray-400 uppercase tracking-wider font-bold mb-1">Visa Stage</div>
-              <div className="text-sm text-gray-700 font-medium">{student.visaStage}</div>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 gap-4 py-2 border-y border-gray-50 border-dashed">
+        <div>
+          <div className="text-[9px] text-gray-400 uppercase tracking-wider font-bold mb-0.5">Country</div>
+          <div className="text-xs text-gray-700 font-medium truncate">{student.countryPreference}</div>
+        </div>
+        <div>
+          <div className="text-[9px] text-gray-400 uppercase tracking-wider font-bold mb-0.5">Visa Stage</div>
+          <div className="text-xs text-gray-700 font-medium truncate">{student.visaStage}</div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2 pt-1">
+        <div className="grid grid-cols-2 gap-2">
           <button
-            onClick={() => onViewProfile(student.dbId)}
-            className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm"
+            onClick={(e) => { e.stopPropagation(); if (student.raw) onEditProfile(student.raw); }}
+            className="w-full h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-xs flex items-center justify-center gap-2 shadow-sm"
           >
-            View Profile
+            <Edit size={14} /> Edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onArchiveStudent(student.dbId, student.name); }}
+            className="w-full h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs flex items-center justify-center gap-2"
+          >
+            <Archive size={14} /> Archive
           </button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -1144,56 +1140,22 @@ export const StudentProfilesOverviewPage: React.FC = () => {
                       {visibleColumns.includes('visaStage') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{student.visaStage}</td>}
                       {visibleColumns.includes('updated') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{student.lastUpdated}</td>}
                       {visibleColumns.includes('created') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{student.createdOn}</td>}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="relative group/menu">
-                          <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                            <MoreHorizontal size={18} className="text-gray-400" />
+                      <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); student.raw && handleActionEditProfile(student.raw); }}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                            title="Edit Profile"
+                          >
+                            <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
                           </button>
-                          <div className="hidden group-hover/menu:block absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-2 w-52">
-                            <button
-                              onClick={() => handleActionViewProfile(student.dbId)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Eye size={16} />
-                              View Profile
-                            </button>
-                            <button
-                              onClick={() => student.raw && handleActionEditProfile(student.raw)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Edit size={16} />
-                              Edit Profile
-                            </button>
-                            <button
-                              onClick={() => handleActionViewApplications(student.dbId)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Copy size={16} />
-                              View Applications
-                            </button>
-                            <button
-                              onClick={() => student.raw && handleActionAssignCounselor(student.raw)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <UserCog size={16} />
-                              Assign Counselor
-                            </button>
-                            <button
-                              onClick={() => handleActionViewTimeline(student.dbId)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Clock size={16} />
-                              View Timeline
-                            </button>
-                            <div className="h-px bg-gray-100 my-1" />
-                            <button
-                              onClick={() => handleActionArchiveStudent(student.dbId, student.name)}
-                              className="w-full px-3 py-2 hover:bg-red-50 rounded-lg text-sm text-red-600 text-left flex items-center gap-2"
-                            >
-                              <Archive size={16} />
-                              Archive Student
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleActionArchiveStudent(student.dbId, student.name); }}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/archive"
+                            title="Archive Student"
+                          >
+                            <Trash2 size={18} className="text-gray-400 group-hover/archive:text-red-600" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1212,6 +1174,8 @@ export const StudentProfilesOverviewPage: React.FC = () => {
                 isSelected={selectedStudents.includes(student.id)}
                 onToggleSelect={() => handleToggleStudent(student.id)}
                 onViewProfile={handleActionViewProfile}
+                onEditProfile={handleActionEditProfile}
+                onArchiveStudent={handleActionArchiveStudent}
               />
             ))}
           </div>

@@ -29,7 +29,8 @@ import {
   Eye,
   Flag,
   StickyNote,
-  History
+  History,
+  Trash2
 } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -257,9 +258,7 @@ interface MobileStatusCardProps {
   onToggleSelect: () => void;
   onOpenTimeline: (status: StudentStatus) => void;
   onOpenStatusUpdate: (status: StudentStatus) => void;
-  onOpenNote: (status: StudentStatus) => void;
-  onToggleFlag: (id: string) => void;
-  onOpenApplications: (status: StudentStatus) => void;
+  onDelete: (status: StudentStatus) => void;
 }
 
 const MobileStatusCard: React.FC<MobileStatusCardProps> = ({
@@ -268,9 +267,7 @@ const MobileStatusCard: React.FC<MobileStatusCardProps> = ({
   onToggleSelect,
   onOpenTimeline,
   onOpenStatusUpdate,
-  onOpenNote,
-  onToggleFlag,
-  onOpenApplications
+  onDelete
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -282,7 +279,7 @@ const MobileStatusCard: React.FC<MobileStatusCardProps> = ({
         <span className="bg-[#F4F4F4] text-gray-500 text-[10px] px-2 py-1 rounded-lg">Tap to view</span>
         <span className="ml-auto"><RiskBadge level={status.riskLevel} /></span>
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
+          onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
           className="p-1 hover:bg-gray-100 rounded-full transition-colors"
         >
           <ChevronDown
@@ -294,7 +291,7 @@ const MobileStatusCard: React.FC<MobileStatusCardProps> = ({
 
       {/* Middle row */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-gray-600 text-sm">{status.studentName}</span>
+        <span className="text-gray-600 text-sm font-medium">{status.studentName}</span>
         <div className="ml-auto transform scale-90 origin-right">
           <StageBadge stage={status.currentStage} />
         </div>
@@ -321,35 +318,27 @@ const MobileStatusCard: React.FC<MobileStatusCardProps> = ({
               <div className="text-sm text-gray-700 font-medium">{status.lastStatusChange}</div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2">
             <button
               onClick={(e) => { e.stopPropagation(); onOpenTimeline(status); }}
-              className="h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-xs flex items-center justify-center gap-2"
+              className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm flex items-center justify-center gap-2"
             >
-              <Eye size={14} />
-              Timeline
+              <Eye size={16} /> View Timeline
             </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onOpenStatusUpdate(status); }}
-              className="h-10 bg-purple-50 text-purple-700 rounded-xl hover:bg-purple-100 transition-colors font-medium text-xs flex items-center justify-center gap-2"
-            >
-              <Edit size={14} />
-              Update
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onOpenNote(status); }}
-              className="h-10 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium text-xs flex items-center justify-center gap-2"
-            >
-              <StickyNote size={14} />
-              Add Note
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onOpenApplications(status); }}
-              className="h-10 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors font-medium text-xs flex items-center justify-center gap-2"
-            >
-              <Copy size={14} />
-              Applications
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onOpenStatusUpdate(status); }}
+                className="w-full h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+              >
+                <Edit size={16} /> Update
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete(status); }}
+                className="w-full h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} /> Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1272,48 +1261,29 @@ export const StatusTrackingOverviewPage: React.FC = () => {
                       {visibleColumns.includes('risk') && <td className="px-6 py-4 whitespace-nowrap text-sm"><RiskBadge level={status.riskLevel} /></td>}
                       {visibleColumns.includes('lastChange') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{status.lastStatusChange}</td>}
                       {visibleColumns.includes('appRef') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{status.applicationRef}</td>}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="relative group/menu">
-                          <button className="p-1 hover:bg-gray-100 rounded transition-colors">
-                            <MoreHorizontal size={18} className="text-gray-400" />
+                      <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenTimeline(status); }}
+                            className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                            title="View Timeline"
+                          >
+                            <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
                           </button>
-                          <div className="hidden group-hover/menu:block absolute right-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-gray-100 z-50 p-2 w-56">
-                            <button
-                              onClick={() => handleOpenTimeline(status)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Eye size={16} />
-                              View Student Timeline
-                            </button>
-                            <button
-                              onClick={() => handleOpenStatusUpdate(status)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Edit size={16} />
-                              Update Status
-                            </button>
-                            <button
-                              onClick={() => handleOpenNote(status)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <StickyNote size={16} />
-                              Add Internal Note
-                            </button>
-                            <button
-                              onClick={() => handleToggleFlag(status.id)}
-                              className={`w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-left flex items-center gap-2 ${status.isFlagged ? 'text-red-600 font-medium' : 'text-gray-700'}`}
-                            >
-                              <Flag size={16} />
-                              {status.isFlagged ? 'Unflag Student' : 'Flag for Review'}
-                            </button>
-                            <button
-                              onClick={() => handleOpenApplications(status)}
-                              className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                            >
-                              <Copy size={16} />
-                              View Linked Applications
-                            </button>
-                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleOpenStatusUpdate(status); }}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                            title="Update Status"
+                          >
+                            <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toast.info('Delete functionality coming soon'); }}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                            title="Delete Status"
+                          >
+                            <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1343,9 +1313,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
                   onToggleSelect={() => handleToggleStatus(status.id)}
                   onOpenTimeline={handleOpenTimeline}
                   onOpenStatusUpdate={handleOpenStatusUpdate}
-                  onOpenNote={handleOpenNote}
-                  onToggleFlag={handleToggleFlag}
-                  onOpenApplications={handleOpenApplications}
+                  onDelete={() => toast.info('Delete functionality coming soon')}
                 />
               ))
             )}

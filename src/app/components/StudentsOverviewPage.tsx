@@ -31,6 +31,7 @@ import {
   X,
   TrendingUp,
   TrendingDown,
+  Trash2,
   StickyNote
 } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
@@ -359,9 +360,11 @@ interface MobileStudentCardProps {
   onSelect: (id: string) => void;
   isSelected: boolean;
   onNavigate?: (page: string) => void;
+  onEdit?: (studentId: string) => void;
+  onArchive?: (student: Student) => void;
 }
 
-const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect, isSelected, onNavigate }) => {
+const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect, isSelected, onNavigate, onEdit, onArchive }) => {
   const getStatusConfig = (isActive: boolean) => {
     return isActive
       ? { label: 'Active', bgColor: 'bg-green-50', textColor: 'text-green-700' }
@@ -400,7 +403,7 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect
           />
           <div className="flex-1">
             <h3
-              onClick={() => onNavigate?.('student-detail')}
+              onClick={(e) => { e.stopPropagation(); onNavigate?.('student-detail'); }}
               className="font-bold text-[#253154] text-base cursor-pointer hover:text-purple-600 hover:underline"
             >
               {student.first_name} {student.last_name}
@@ -409,9 +412,6 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect
             <p className="text-xs text-gray-500 mt-1">{student.student_id}</p>
           </div>
         </div>
-        <button className="p-2 hover:bg-gray-50 rounded-lg transition-colors">
-          <MoreHorizontal size={18} className="text-gray-600" />
-        </button>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -423,22 +423,20 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
-        <div>
-          <p className="text-xs text-gray-500">Country</p>
-          <p className="text-sm font-medium text-[#253154] mt-1 truncate" title={countryPref}>{countryPref}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Applications</p>
-          <p className="text-sm font-medium text-[#253154] mt-1">{student.applications_count}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Counselor</p>
-          <p className="text-sm font-medium text-[#253154] mt-1">{student.assigned_counselor || 'Unassigned'}</p>
-        </div>
-        <div>
-          <p className="text-xs text-gray-500">Intake</p>
-          <p className="text-sm font-medium text-[#253154] mt-1">{student.intended_intake || 'N/A'}</p>
+      <div className="flex flex-col gap-2 pt-3 border-t border-gray-100">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit?.(student.id); }}
+            className="flex items-center justify-center gap-2 h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-xs whitespace-nowrap shadow-sm"
+          >
+            <Edit size={14} /> Edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onArchive?.(student); }}
+            className="flex items-center justify-center gap-2 h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs whitespace-nowrap"
+          >
+            <Archive size={14} /> Archive
+          </button>
         </div>
       </div>
     </div>
@@ -1276,60 +1274,22 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                             className="px-6 py-4"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Popover open={openActionMenuId === student.id} onOpenChange={(open) => setOpenActionMenuId(open ? student.id : null)}>
-                              <PopoverTrigger asChild>
-                                <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                  <MoreHorizontal size={18} className="text-gray-600" />
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-56 p-2 bg-white" align="end">
-                                <div className="flex flex-col gap-1">
-                                  <button
-                                    onClick={() => handleViewStudent(student.id)}
-                                    className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
-                                  >
-                                    <Eye size={16} />
-                                    <span>View Student</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleEditStudent(student.id)}
-                                    className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
-                                  >
-                                    <Edit size={16} />
-                                    <span>Edit Student</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleAddNote(student.id)}
-                                    className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
-                                  >
-                                    <StickyNote size={16} />
-                                    <span>Add Note</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleViewDocuments(student.id)}
-                                    className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
-                                  >
-                                    <FileText size={16} />
-                                    <span>View Documents</span>
-                                  </button>
-                                  <button
-                                    onClick={() => handleViewApplications(student.id)}
-                                    className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
-                                  >
-                                    <FileText size={16} />
-                                    <span>View Applications</span>
-                                  </button>
-                                  <div className="h-px bg-gray-200 my-1" />
-                                  <button
-                                    onClick={() => handleArchiveStudent(student)}
-                                    className="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors text-left"
-                                  >
-                                    <Archive size={16} />
-                                    <span>Archive Student</span>
-                                  </button>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEditStudent(student.id); }}
+                                className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                                title="Edit Student"
+                              >
+                                <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleArchiveStudent(student); }}
+                                className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                                title="Archive Student"
+                              >
+                                <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -1392,6 +1352,8 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
               onSelect={toggleStudentSelection}
               isSelected={selectedStudents.includes(student.id)}
               onNavigate={onNavigate}
+              onEdit={handleEditStudent}
+              onArchive={handleArchiveStudent}
             />
           ))}
 
