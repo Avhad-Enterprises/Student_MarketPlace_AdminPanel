@@ -14,6 +14,7 @@ import {
     Upload,
     Eye,
     EyeOff,
+    Check,
     CheckCircle2,
     XCircle,
     AlertTriangle,
@@ -87,9 +88,10 @@ const SelectContent: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 const SelectItem: React.FC<{ value: string; children: React.ReactNode; onClick?: () => void; isSelected?: boolean }> = ({ children, onClick, isSelected }) => (
     <div
         onClick={onClick}
-        className={`px-4 py-2 text-sm cursor-pointer hover:bg-purple-50 flex items-center justify-between ${isSelected ? 'bg-purple-50 text-purple-700 font-medium' : 'text-gray-700'}`}
+        className={`px-4 py-2 text-sm cursor-pointer hover:bg-purple-50 flex items-center justify-between group transition-colors ${isSelected ? 'bg-purple-50 text-purple-700 font-bold' : 'text-gray-700'}`}
     >
-        {children}
+        <span className="truncate">{children}</span>
+        {isSelected && <Check size={14} className="text-purple-600 flex-shrink-0 ml-2" />}
     </div>
 );
 
@@ -119,61 +121,49 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
         category: 'academic'
     });
 
-    const [lastFetchStatus, setLastFetchStatus] = useState<string>('idle');
-
-    const fetchDetails = async (isManual = false) => {
+    const fetchDetails = React.useCallback(async () => {
         setIsLoading(true);
-        setLastFetchStatus('fetching');
         try {
-            console.log(`[DIAGNOSTIC] ${isManual ? 'MANUAL' : 'AUTO'} - Initiating API call for featureId:`, featureId);
             const data = await aiFeatureService.getFeatureById(featureId);
-            console.log('[DIAGNOSTIC] API response received:', data);
 
             if (data) {
-                // Normalize data
+                // Robust Data Normalization
                 setFeature({
                     feature_id: data.feature_id || featureId,
-                    order: data.order ?? 1,
-                    name: data.name || '',
-                    status: data.status || 'active',
-                    show_in_dashboard: data.show_in_dashboard ?? true,
-                    linked_flow: data.linked_flow || '',
-                    description: data.description || '',
-                    starter_prompt: data.starter_prompt || '',
-                    usage_30d: data.usage_30d ?? 0,
-                    requires_ielts: data.requires_ielts ?? false,
-                    requires_country: data.requires_country ?? false,
-                    requires_profile: data.requires_profile ?? false,
-                    category: data.category || 'academic',
+                    order: Number(data.order ?? 1),
+                    name: String(data.name || ''),
+                    status: (data.status as 'active' | 'disabled') || 'active',
+                    show_in_dashboard: Boolean(data.show_in_dashboard ?? true),
+                    linked_flow: String(data.linked_flow || ''),
+                    description: String(data.description || ''),
+                    starter_prompt: String(data.starter_prompt || ''),
+                    usage_30d: Number(data.usage_30d ?? 0),
+                    requires_ielts: Boolean(data.requires_ielts ?? false),
+                    requires_country: Boolean(data.requires_country ?? false),
+                    requires_profile: Boolean(data.requires_profile ?? false),
+                    category: String(data.category || 'academic'),
                     updated_at: data.updated_at
                 });
-                setLastFetchStatus('success');
-                console.log('[DIAGNOSTIC] Feature state updated successfully');
             } else {
-                setLastFetchStatus('not_found');
-                console.warn('[DIAGNOSTIC] No data returned for featureId:', featureId);
                 toast.error('Feature not found');
                 onBack();
             }
         } catch (error) {
-            setLastFetchStatus('error');
-            console.error('[DIAGNOSTIC] Error fetching feature details:', error);
             toast.error('Failed to load feature details');
             onBack();
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [featureId, onBack]);
 
     useEffect(() => {
-        console.log('[DIAGNOSTIC] FeatureDetail mounted/updated with featureId:', featureId);
-        if (featureId === 'new') {
-            console.log('[DIAGNOSTIC] New feature mode - skipping fetch');
+        // Using a more unique marker for 'Add Mode' to avoid collisions with actual database IDs
+        if (featureId === '__new_feature__' || !featureId) {
             setIsLoading(false);
             return;
         }
-        fetchDetails(false);
-    }, [featureId, onBack]);
+        fetchDetails();
+    }, [featureId, fetchDetails]);
 
     if (isLoading && featureId !== 'new') {
         return (
@@ -194,7 +184,7 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
 
     const handleSave = async () => {
         try {
-            if (featureId === 'new') {
+            if (featureId === '__new_feature__' || !featureId) {
                 await aiFeatureService.createFeature(feature);
                 toast.success('Feature created successfully');
             } else {
@@ -203,16 +193,16 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
             }
             setHasUnsavedChanges(false);
             setModifiedSections([]);
-            if (featureId === 'new') onBack();
+            if (featureId === '__new_feature__' || !featureId) onBack();
         } catch (error) {
-            toast.error(featureId === 'new' ? 'Failed to create feature' : 'Failed to save changes');
+            toast.error((featureId === '__new_feature__' || !featureId) ? 'Failed to create feature' : 'Failed to save changes');
         }
     };
 
     const handlePublish = async () => {
         try {
             const updated: AiFeature = { ...feature, status: 'active' };
-            if (featureId === 'new') {
+            if (featureId === '__new_feature__' || !featureId) {
                 await aiFeatureService.createFeature(updated);
                 toast.success('Feature created and published');
                 onBack();
@@ -228,23 +218,33 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
         }
     };
 
-    const handleDisable = async () => {
-        if (window.confirm('Are you sure you want to disable this feature? It will be hidden from all students.')) {
+    const handleToggleStatus = async () => {
+        const isEnabling = feature.status === 'disabled';
+        const actionText = isEnabling ? 'enable' : 'disable';
+        const confirmMessage = isEnabling
+            ? 'Are you sure you want to enable this feature? It will be visible to students.'
+            : 'Are you sure you want to disable this feature? It will be hidden from all students.';
+
+        if (window.confirm(confirmMessage)) {
             try {
-                const updated: AiFeature = { ...feature, status: 'disabled' };
-                if (featureId === 'new') {
+                const updated: AiFeature = { ...feature, status: isEnabling ? 'active' : 'disabled' };
+                if (featureId === '__new_feature__' || !featureId) {
                     await aiFeatureService.createFeature(updated);
-                    toast.success('Feature created (Disabled)');
+                    toast.success(`Feature created (${isEnabling ? 'Active' : 'Disabled'})`);
                     onBack();
                 } else {
                     await aiFeatureService.updateFeature(featureId, updated);
                     setFeature(updated);
-                    toast.warning('Feature disabled');
+                    if (isEnabling) {
+                        toast.success('Feature enabled');
+                    } else {
+                        toast.warning('Feature disabled');
+                    }
                 }
                 setHasUnsavedChanges(false);
                 setModifiedSections([]);
             } catch (error) {
-                toast.error('Failed to disable feature');
+                toast.error(`Failed to ${actionText} feature`);
             }
         }
     };
@@ -344,11 +344,22 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
                             {/* Disable Feature */}
                             <Button
                                 variant="outline"
-                                className="h-10 border-red-200 text-red-600 hover:bg-red-50"
-                                onClick={handleDisable}
+                                className={`h-10 ${feature.status === 'disabled'
+                                    ? 'border-green-200 text-green-600 hover:bg-green-50'
+                                    : 'border-red-200 text-red-600 hover:bg-red-50'}`}
+                                onClick={handleToggleStatus}
                             >
-                                <XCircle size={16} className="mr-2" />
-                                Disable Feature
+                                {feature.status === 'disabled' ? (
+                                    <>
+                                        <CheckCircle2 size={16} className="mr-2" />
+                                        Enable Feature
+                                    </>
+                                ) : (
+                                    <>
+                                        <XCircle size={16} className="mr-2" />
+                                        Disable Feature
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </div>
@@ -356,42 +367,12 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
             </div>
 
             <div className="max-w-[1800px] mx-auto px-8 py-8">
-                {/* Diagnostic Panel - Ultra Visible for Debugging */}
-                <div className="mb-6 p-4 bg-black text-lime-400 font-mono text-xs rounded-xl border-2 border-lime-500/30 shadow-2xl flex flex-wrap items-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <span className="text-white bg-lime-900 px-2 py-0.5 rounded uppercase">FeatureID:</span>
-                        <span className="text-lg font-bold">{featureId || 'NULL'}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-white bg-lime-900 px-2 py-0.5 rounded uppercase">Status:</span>
-                        <span className={`font-bold ${lastFetchStatus === 'success' ? 'text-lime-400' : 'text-orange-400'}`}>{lastFetchStatus}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <span className="text-white bg-lime-900 px-2 py-0.5 rounded uppercase">Loading:</span>
-                        <span className="font-bold">{isLoading ? 'TRUE' : 'FALSE'}</span>
-                    </div>
-                    <div className="flex-1" />
-                    <button
-                        onClick={() => fetchDetails(true)}
-                        className="flex items-center gap-2 bg-lime-600 hover:bg-lime-500 text-black px-4 py-2 rounded-lg font-bold transition-all active:scale-95 shadow-lg"
-                    >
-                        <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-                        MANUAL RETRY FETCH
-                    </button>
-                    <button
-                        onClick={() => window.alert(`Current Feature State:\n${JSON.stringify(feature, null, 2)}`)}
-                        className="bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-bold transition-all"
-                    >
-                        INSPECT STATE
-                    </button>
-                </div>
-
                 {/* Main Layout: Two-Column Split */}
                 <div className="flex gap-8">
                     {/* LEFT: Configuration Workspace (65%) */}
                     <div className="flex-1 w-[65%] space-y-6">
                         {/* ========== LAYER 1: FEATURE IDENTITY & VISIBILITY ========== */}
-                        <div className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${modifiedSections.includes('identity') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
+                        <div className={`bg-white rounded-xl border shadow-sm transition-all ${modifiedSections.includes('identity') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
                             }`}>
                             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">
                                 <div className="flex items-center justify-between">
@@ -535,7 +516,7 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
                         </div>
 
                         {/* ========== LAYER 2: FLOW & EXECUTION MAPPING ========== */}
-                        <div className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${modifiedSections.includes('flow') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
+                        <div className={`bg-white rounded-xl border shadow-sm transition-all ${modifiedSections.includes('flow') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
                             }`}>
                             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-cyan-50">
                                 <div className="flex items-center justify-between">
@@ -616,7 +597,7 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
                         </div>
 
                         {/* ========== LAYER 3: STARTER PROMPT & TRIGGER BEHAVIOR ========== */}
-                        <div className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${modifiedSections.includes('prompt') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
+                        <div className={`bg-white rounded-xl border shadow-sm transition-all ${modifiedSections.includes('prompt') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
                             }`}>
                             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
                                 <div className="flex items-center justify-between">
@@ -692,7 +673,7 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
                         </div>
 
                         {/* ========== LAYER 4: ENTRY CONDITIONS & RULES ========== */}
-                        <div className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${modifiedSections.includes('conditions') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
+                        <div className={`bg-white rounded-xl border shadow-sm transition-all ${modifiedSections.includes('conditions') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
                             }`}>
                             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-amber-50 to-orange-50">
                                 <div className="flex items-center justify-between">
@@ -750,7 +731,7 @@ export const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack 
                         </div>
 
                         {/* ========== LAYER 5: ORDERING & DISPLAY LOGIC ========== */}
-                        <div className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-all ${modifiedSections.includes('ordering') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
+                        <div className={`bg-white rounded-xl border shadow-sm transition-all ${modifiedSections.includes('ordering') ? 'border-amber-300 ring-2 ring-amber-100' : 'border-gray-200'
                             }`}>
                             <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
                                 <div className="flex items-center justify-between">

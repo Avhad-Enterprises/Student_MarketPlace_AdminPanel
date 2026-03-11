@@ -41,19 +41,11 @@ export const aiFeatureService = {
             console.error('getFeatureById called with empty featureId');
             throw new Error('Feature ID is required');
         }
-        if (featureId === 'new') {
-            throw new Error('Cannot fetch details for a "new" feature placeholder');
+        if (featureId === '__new_feature__') {
+            throw new Error('Cannot fetch details for a new feature placeholder');
         }
 
         const url = `${API_BASE_URL}/api/ai-features/${featureId}`;
-        console.log('[DIAGNOSTIC] Fetching feature details from:', url);
-
-        // Final sanity check before the fetch
-        if (typeof window !== 'undefined') {
-            console.log(`[NETWORK_TRACE] Initiating fetch for featureId: ${featureId}`);
-            // This alert will confirm the code reached the final fetch state
-            window.alert(`[TEST] Fetching: ${featureId}`);
-        }
 
         const response = await fetch(url, {
             headers: {
@@ -62,12 +54,10 @@ export const aiFeatureService = {
         });
 
         if (!response.ok) {
-            console.error(`Failed to fetch feature details: ${response.status} ${response.statusText}`);
             throw new Error('Failed to fetch feature details');
         }
 
         const json = await response.json();
-        console.log('Successfully fetched feature details:', json.data);
         return json.data;
     },
 

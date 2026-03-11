@@ -33,6 +33,8 @@ import {
     X,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { aiTestPlansService } from '../../services/aiTestPlansService';
+import { useEffect } from 'react';
 
 type IntensityMode = 'light' | 'normal' | 'intense';
 type MockFrequency = 'conservative' | 'balanced' | 'aggressive';
@@ -83,6 +85,38 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [showSimulation, setShowSimulation] = useState(false);
 
+    // Fetch settings on mount
+    useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const settings = await aiTestPlansService.getSettings();
+                if (settings) {
+                    setWeakSkillBoost(settings.weak_skill_boost);
+                    setEnsureMinSkills(settings.ensure_min_skills);
+                    setPreventOverload(settings.prevent_overload);
+                    setIntensityMode(settings.intensity_mode);
+                    setCustomIntensity(settings.custom_intensity);
+                    setMockFrequency(settings.mock_frequency);
+                    setExamCountdownBoost(settings.exam_countdown_boost);
+                    setBoostDaysBefore(settings.boost_days_before);
+                    setAutoExamReady(settings.auto_exam_ready);
+                    setReadyBandThreshold(settings.ready_band_threshold);
+                    setReadyConsistency(settings.ready_consistency);
+                    setReadinessWeights(settings.readiness_weights);
+                    setEnableStreak(settings.enable_streak);
+                    setMinDailyActivity(settings.min_daily_activity);
+                    setGraceDays(settings.grace_days);
+                    setStreakMilestone(settings.streak_milestone);
+                    setShowNudges(settings.show_nudges);
+                }
+            } catch (error) {
+                console.error('Failed to fetch settings:', error);
+                toast.error('Failed to load settings');
+            }
+        };
+        fetchSettings();
+    }, []);
+
     // Calculations
     const readinessTotalWeight = Object.values(readinessWeights).reduce((sum, val) => sum + val, 0);
     const isReadinessValid = readinessTotalWeight === 100;
@@ -108,7 +142,25 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
 
         setIsSaving(true);
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await aiTestPlansService.updateSettings({
+                weak_skill_boost: weakSkillBoost,
+                ensure_min_skills: ensureMinSkills,
+                prevent_overload: preventOverload,
+                intensity_mode: intensityMode,
+                custom_intensity: customIntensity,
+                mock_frequency: mockFrequency,
+                exam_countdown_boost: examCountdownBoost,
+                boost_days_before: boostDaysBefore,
+                auto_exam_ready: autoExamReady,
+                ready_band_threshold: readyBandThreshold,
+                ready_consistency: readyConsistency,
+                readiness_weights: readinessWeights,
+                enable_streak: enableStreak,
+                min_daily_activity: minDailyActivity,
+                grace_days: graceDays,
+                streak_milestone: streakMilestone,
+                show_nudges: showNudges,
+            });
             toast.success('Plans configuration saved', {
                 description: 'AI coaching system updated successfully'
             });

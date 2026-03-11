@@ -19,7 +19,7 @@ export default function ApplicationsPage() {
     };
 
     return (
-        <AdminLayout activePage="students-applications" onNavigate={handleNavigate}>
+        <AdminLayout activePage="students-applications">
             <ApplicationsOverviewPage />
         </AdminLayout>
     );

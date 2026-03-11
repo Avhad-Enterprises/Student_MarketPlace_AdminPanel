@@ -19,7 +19,7 @@ export default function StatusTrackingPage() {
     };
 
     return (
-        <AdminLayout activePage="students-status" onNavigate={handleNavigate}>
+        <AdminLayout activePage="students-status">
             <StatusTrackingOverviewPage />
         </AdminLayout>
     );

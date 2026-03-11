@@ -19,7 +19,7 @@ export default function StudentProfilesPage() {
     };
 
     return (
-        <AdminLayout activePage="students-profiles" onNavigate={handleNavigate}>
+        <AdminLayout activePage="students-profiles">
             <StudentProfilesOverviewPage />
         </AdminLayout>
     );

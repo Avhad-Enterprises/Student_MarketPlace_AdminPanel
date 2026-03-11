@@ -41,6 +41,7 @@ import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { CustomSelect } from './common/CustomSelect';
 import { toast } from 'sonner';
+import { aiTestReportService, AITestReport } from '../../services/aiTestReportService';
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -63,8 +64,8 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
             aria-label={ariaLabel}
             onClick={() => onChange(!checked)}
             className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${checked || partial
-                    ? 'bg-[#0e042f] border-[#0e042f]'
-                    : 'bg-white border-gray-300 hover:border-gray-400'
+                ? 'bg-[#0e042f] border-[#0e042f]'
+                : 'bg-white border-gray-300 hover:border-gray-400'
                 }`}
         >
             {checked && (
@@ -162,9 +163,28 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
 
     const [rowsPerPage, setRowsPerPage] = useState<number>(10);
     const [currentPage, setCurrentPage] = useState<number>(1);
-    const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
+    const [selectedIssues, setSelectedIssues] = useState<number[]>([]);
     const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [reports, setReports] = useState<AITestReport[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    const fetchReports = async () => {
+        setIsLoading(true);
+        try {
+            const data = await aiTestReportService.getReports();
+            setReports(data);
+        } catch (error) {
+            console.error('Failed to fetch reports:', error);
+            toast.error('Failed to load reports');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchReports();
+    }, []);
 
     // Scroll to issue logs on mount if filter is applied
     useEffect(() => {
@@ -178,116 +198,13 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
         }
     }, [initialFilter]);
 
-    // Mock data - Issue logs
-    const issueLogsData: IssueLog[] = [
-        {
-            id: 'ISS-001',
-            type: 'transcription',
-            severity: 'critical',
-            student: 'John Smith',
-            studentId: 'STU-1234',
-            skill: 'Speaking',
-            examType: 'IELTS Academic',
-            timestamp: '2024-02-17 14:23:45',
-            description: 'Audio transcription failed with error code 503',
-            status: 'open',
-        },
-        {
-            id: 'ISS-002',
-            type: 'transcription',
-            severity: 'critical',
-            student: 'Emma Wilson',
-            studentId: 'STU-2345',
-            skill: 'Speaking',
-            examType: 'IELTS Academic',
-            timestamp: '2024-02-17 13:45:12',
-            description: 'Unable to process audio file - format not supported',
-            status: 'investigating',
-            assignedTo: 'Tech Team',
-        },
-        {
-            id: 'ISS-003',
-            type: 'evaluation-failure',
-            severity: 'warning',
-            student: 'Michael Chen',
-            studentId: 'STU-3456',
-            skill: 'Writing',
-            examType: 'TOEFL',
-            timestamp: '2024-02-17 12:15:30',
-            description: 'Writing evaluation timed out after 30 seconds',
-            status: 'resolved',
-            assignedTo: 'AI Team',
-        },
-        {
-            id: 'ISS-004',
-            type: 'audio-error',
-            severity: 'warning',
-            student: 'Sarah Johnson',
-            studentId: 'STU-4567',
-            skill: 'Listening',
-            examType: 'IELTS General',
-            timestamp: '2024-02-17 11:30:00',
-            description: 'Audio playback failed - network timeout',
-            status: 'open',
-        },
-        {
-            id: 'ISS-005',
-            type: 'performance-warning',
-            severity: 'info',
-            student: 'David Lee',
-            studentId: 'STU-5678',
-            skill: 'Reading',
-            examType: 'IELTS Academic',
-            timestamp: '2024-02-17 10:45:20',
-            description: 'Response time exceeded 5 seconds',
-            status: 'investigating',
-            assignedTo: 'DevOps',
-        },
-        {
-            id: 'ISS-006',
-            type: 'transcription',
-            severity: 'critical',
-            student: 'Lisa Anderson',
-            studentId: 'STU-6789',
-            skill: 'Speaking',
-            examType: 'IELTS Academic',
-            timestamp: '2024-02-17 09:20:15',
-            description: 'Transcription quality below 60% accuracy',
-            status: 'open',
-        },
-        {
-            id: 'ISS-007',
-            type: 'evaluation-failure',
-            severity: 'warning',
-            student: 'James Brown',
-            studentId: 'STU-7890',
-            skill: 'Writing',
-            examType: 'IELTS Academic',
-            timestamp: '2024-02-17 08:10:45',
-            description: 'AI evaluation service unavailable',
-            status: 'resolved',
-            assignedTo: 'AI Team',
-        },
-        {
-            id: 'ISS-008',
-            type: 'audio-error',
-            severity: 'warning',
-            student: 'Maria Garcia',
-            studentId: 'STU-8901',
-            skill: 'Listening',
-            examType: 'TOEFL',
-            timestamp: '2024-02-16 18:55:30',
-            description: 'Audio file corrupted or incomplete',
-            status: 'open',
-        },
-    ];
 
     // Filter and search logic
-    const filteredIssues = issueLogsData.filter((issue) => {
+    const filteredIssues = reports.filter((issue) => {
         const matchesSearch =
             searchQuery === '' ||
-            issue.student.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            issue.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            issue.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            issue.student_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             issue.description.toLowerCase().includes(searchQuery.toLowerCase());
         return matchesSearch;
     });
@@ -299,13 +216,13 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
     const displayedIssues = filteredIssues.slice(startIndex, endIndex);
 
     // Summary stats
-    const totalIssues = issueLogsData.length;
-    const criticalIssues = issueLogsData.filter((i) => i.severity === 'critical').length;
-    const openIssues = issueLogsData.filter((i) => i.status === 'open').length;
-    const resolvedToday = issueLogsData.filter((i) => i.status === 'resolved').length;
+    const totalIssues = reports.length;
+    const criticalIssues = reports.filter((i) => i.severity === 'critical').length;
+    const openIssues = reports.filter((i) => i.status === 'open').length;
+    const resolvedToday = reports.filter((i) => i.status === 'resolved').length;
 
     // Selection handlers
-    const toggleIssueSelection = (id: string) => {
+    const toggleIssueSelection = (id: number) => {
         setSelectedIssues(prev =>
             prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
         );
@@ -330,14 +247,26 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
         }
     };
 
-    const handleAssignIssue = (issueId: string) => {
+    const handleAssignIssue = async (id: number, reportId: string) => {
         setOpenActionMenuId(null);
-        toast.success(`Assigned issue ${issueId}`);
+        try {
+            await aiTestReportService.updateReportStatus(id, 'investigating', 'Tech Team');
+            toast.success(`Assigned issue ${reportId} to Tech Team`);
+            fetchReports();
+        } catch (error) {
+            toast.error('Failed to assign issue');
+        }
     };
 
-    const handleResolveIssue = (issueId: string) => {
+    const handleResolveIssue = async (id: number, reportId: string) => {
         setOpenActionMenuId(null);
-        toast.success(`Marked issue ${issueId} as resolved`);
+        try {
+            await aiTestReportService.updateReportStatus(id, 'resolved');
+            toast.success(`Marked issue ${reportId} as resolved`);
+            fetchReports();
+        } catch (error) {
+            toast.error('Failed to resolve issue');
+        }
     };
 
     const getSeverityBadge = (severity: string) => {
@@ -555,7 +484,7 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
                                 {displayedIssues.map((issue) => (
                                     <tr
                                         key={issue.id}
-                                        onClick={() => handleViewIssue(issue.id)}
+                                        onClick={() => handleViewIssue(issue.report_id)}
                                         className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer"
                                     >
                                         <td
@@ -565,11 +494,11 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
                                             <CustomCheckbox
                                                 checked={selectedIssues.includes(issue.id)}
                                                 onChange={() => toggleIssueSelection(issue.id)}
-                                                ariaLabel={`Select issue ${issue.id}`}
+                                                ariaLabel={`Select issue ${issue.report_id}`}
                                             />
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-medium text-[#253154]">{issue.id}</span>
+                                            <span className="text-sm font-medium text-[#253154]">{issue.report_id}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
@@ -582,7 +511,7 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className="text-sm font-medium text-[#253154]">
-                                                {issue.student}
+                                                {issue.student_name}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
@@ -600,7 +529,7 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
                                             className="px-6 py-4"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <Popover open={openActionMenuId === issue.id} onOpenChange={(open) => setOpenActionMenuId(open ? issue.id : null)}>
+                                            <Popover open={openActionMenuId === issue.report_id} onOpenChange={(open) => setOpenActionMenuId(open ? issue.report_id : null)}>
                                                 <PopoverTrigger asChild>
                                                     <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                                                         <MoreHorizontal size={18} className="text-gray-600" />
@@ -609,21 +538,21 @@ export const AITestReports: React.FC<AITestReportsProps> = ({ initialFilter, onN
                                                 <PopoverContent className="w-56 p-2 bg-white" align="end">
                                                     <div className="flex flex-col gap-1">
                                                         <button
-                                                            onClick={() => handleViewIssue(issue.id)}
+                                                            onClick={() => handleViewIssue(issue.report_id)}
                                                             className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
                                                         >
                                                             <Eye size={16} />
                                                             <span>View Issue</span>
                                                         </button>
                                                         <button
-                                                            onClick={() => handleAssignIssue(issue.id)}
+                                                            onClick={() => handleAssignIssue(issue.id, issue.report_id)}
                                                             className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
                                                         >
                                                             <UserPlus size={16} />
                                                             <span>Assign</span>
                                                         </button>
                                                         <button
-                                                            onClick={() => handleResolveIssue(issue.id)}
+                                                            onClick={() => handleResolveIssue(issue.id, issue.report_id)}
                                                             className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
                                                         >
                                                             <CheckCircle2 size={16} />

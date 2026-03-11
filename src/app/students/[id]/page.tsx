@@ -23,7 +23,7 @@ export default function StudentDetailRoute({ params, searchParams }: { params: {
     };
 
     return (
-        <AdminLayout activePage="students-all" onNavigate={handleNavigate}>
+        <AdminLayout activePage="students-all">
             <StudentDetail
                 studentId={id}
                 onBack={() => router.back()}

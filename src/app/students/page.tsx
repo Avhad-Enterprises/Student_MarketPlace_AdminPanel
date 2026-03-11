@@ -20,7 +20,7 @@ export default function StudentsPage() {
     };
 
     return (
-        <AdminLayout activePage="students-all" onNavigate={handleNavigate}>
+        <AdminLayout activePage="students-all">
             <StudentsOverviewPage onNavigate={handleNavigate} />
         </AdminLayout>
     );

@@ -137,6 +137,9 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
     const [showFilterMenu, setShowFilterMenu] = useState(false);
     const [showSortMenu, setShowSortMenu] = useState(false);
     const [reorderMode, setReorderMode] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'order', direction: 'asc' });
+    const [filterConfig, setFilterConfig] = useState({ status: 'all', category: 'all' });
 
     const [features, setFeatures] = useState<AiFeature[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -192,11 +195,11 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
     };
 
     const handleSelectAll = () => {
-        if (selectedFeatures.length === features.length) {
+        if (selectedFeatures.length === filteredFeatures.length && filteredFeatures.length > 0) {
             setSelectedFeatures([]);
             setSelectAllStore(false);
         } else {
-            setSelectedFeatures(features.map(f => f.feature_id));
+            setSelectedFeatures(filteredFeatures.map(f => f.feature_id));
             setSelectAllStore(false);
         }
     };
@@ -219,6 +222,36 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
             { breakpoint: 640, settings: { slidesToShow: 1 } }
         ]
     };
+
+    // Derived Data: Filtered and Sorted Features
+    const filteredFeatures = features
+        .filter(feature => {
+            const matchesSearch = feature.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                feature.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                feature.linked_flow?.toLowerCase().includes(searchQuery.toLowerCase());
+
+            const matchesStatus = filterConfig.status === 'all' || feature.status === filterConfig.status;
+            const matchesCategory = filterConfig.category === 'all' || feature.category === filterConfig.category;
+
+            return matchesSearch && matchesStatus && matchesCategory;
+        })
+        .sort((a, b) => {
+            const { key, direction } = sortConfig;
+            let valA: any = a[key as keyof AiFeature];
+            let valB: any = b[key as keyof AiFeature];
+
+            // Handle specific keys that might not be direct properties or need special handling
+            if (key === 'updated') {
+                valA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+                valB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+            }
+
+            if (valA < valB) return direction === 'asc' ? -1 : 1;
+            if (valA > valB) return direction === 'asc' ? 1 : -1;
+            return 0;
+        });
+
+    const categories = Array.from(new Set(features.map(f => f.category).filter(Boolean)));
 
     return (
         <div className="w-full px-4 sm:px-8 lg:px-10 py-6 md:py-10 bg-gray-50 min-h-screen">
@@ -261,7 +294,7 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
                             <Download size={20} strokeWidth={1.5} />Export
                         </button>
                         <button
-                            onClick={() => onNavigate('feature-detail', 'new')}
+                            onClick={() => onNavigate('feature-detail', '__new_feature__')}
                             className="flex items-center gap-2 bg-[#253154] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a2340] transition-all text-[16px] font-bold"
                         >
                             <Plus size={20} strokeWidth={2.5} />
@@ -272,14 +305,21 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
 
                 {/* Mobile Action Bar - EXACT from Bookings */}
                 <div className="flex md:hidden flex-col gap-4 mb-6">
-                    <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-                        <div className="flex items-center gap-3">
-                            <CalendarIcon size={18} className="text-[#253154]" />
-                            <span className="text-sm font-medium text-[#253154]">{date?.from && date?.to ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}` : 'Select range'}</span>
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1 h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
+                            <div className="flex items-center gap-3">
+                                <CalendarIcon size={18} className="text-[#253154]" />
+                                <span className="text-sm font-medium text-[#253154]">{date?.from && date?.to ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}` : 'Select range'}</span>
+                            </div>
+                            <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500">
+                                <RefreshCw size={18} className="text-[#253154]" />
+                            </button>
                         </div>
-                        <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500">
-                            <RefreshCw size={18} className="text-[#253154]" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setShowFilterMenu(!showFilterMenu)} className="w-[50px] h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center text-[#253154]">
+                                <Filter size={18} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -300,25 +340,152 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
                 <div className="hidden md:flex justify-between items-center gap-4 mb-6">
                     <div className="relative flex-1">
                         <Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" />
-                        <input type="text" placeholder="Search features..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" />
+                        <input
+                            type="text"
+                            placeholder="Search features..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none"
+                        />
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                        <button onClick={() => { setShowFilterMenu(!showFilterMenu); setShowSortMenu(false); setShowColumnMenu(false); }} className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-                            <Filter size={20} strokeWidth={1.5} />
-                        </button>
-                        <button onClick={() => { setShowSortMenu(!showSortMenu); setShowFilterMenu(false); setShowColumnMenu(false); }} className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-                            <ArrowUpDown size={20} strokeWidth={1.5} />
-                        </button>
-                        <button onClick={() => { setShowColumnMenu(!showColumnMenu); setShowFilterMenu(false); setShowSortMenu(false); }} className="h-[50px] min-w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
-                            <Columns size={20} strokeWidth={1.5} />
-                        </button>
+                        {/* Filter Menu */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className={`h-[50px] min-w-[150px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-between px-4 ${filterConfig.status !== 'all' || filterConfig.category !== 'all' ? 'ring-2 ring-purple-100' : ''}`}>
+                                    <div className="flex items-center gap-2">
+                                        <Filter size={20} strokeWidth={1.5} />
+                                        <span className="font-medium text-[14px]">Filter</span>
+                                    </div>
+                                    <ChevronDown size={16} />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[200px] p-2 bg-white rounded-xl shadow-xl border border-gray-100" align="end">
+                                <div className="space-y-4 p-2">
+                                    <div>
+                                        <p className="text-[11px] font-bold text-gray-400 uppercase mb-2">Status</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['all', 'active', 'disabled'].map((s) => (
+                                                <button
+                                                    key={s}
+                                                    onClick={() => setFilterConfig(prev => ({ ...prev, status: s }))}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterConfig.status === s ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    {s.charAt(0).toUpperCase() + s.slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-bold text-gray-400 uppercase mb-2">Category</p>
+                                        <div className="flex flex-col gap-1">
+                                            <button
+                                                onClick={() => setFilterConfig(prev => ({ ...prev, category: 'all' }))}
+                                                className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition-all ${filterConfig.category === 'all' ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                            >
+                                                All Categories
+                                            </button>
+                                            {categories.map((c) => (
+                                                <button
+                                                    key={c}
+                                                    onClick={() => setFilterConfig(prev => ({ ...prev, category: String(c) }))}
+                                                    className={`px-3 py-2 rounded-lg text-xs font-medium text-left transition-all ${filterConfig.category === c ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                                >
+                                                    {String(c).charAt(0).toUpperCase() + String(c).slice(1)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setFilterConfig({ status: 'all', category: 'all' })} className="w-full mt-2 py-2 text-[11px] font-bold text-red-500 hover:bg-red-50 rounded-lg uppercase transition-all">Reset Filters</button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
+                        {/* Sort Menu */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className={`h-[50px] min-w-[150px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-between px-4`}>
+                                    <div className="flex items-center gap-2">
+                                        <ArrowUpDown size={20} strokeWidth={1.5} />
+                                        <span className="font-medium text-[14px]">Sort</span>
+                                    </div>
+                                    <ChevronDown size={16} />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[180px] p-2 bg-white rounded-xl shadow-xl border border-gray-100" align="end">
+                                <div className="space-y-1">
+                                    {[
+                                        { key: 'order', label: 'Order' },
+                                        { key: 'name', label: 'Name' },
+                                        { key: 'usage_30d', label: 'Usage' },
+                                        { key: 'updated', label: 'Updated' }
+                                    ].map((s) => (
+                                        <button
+                                            key={s.key}
+                                            onClick={() => setSortConfig(prev => ({
+                                                key: s.key,
+                                                direction: prev.key === s.key && prev.direction === 'asc' ? 'desc' : 'asc'
+                                            }))}
+                                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${sortConfig.key === s.key ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                        >
+                                            {s.label}
+                                            {sortConfig.key === s.key && (
+                                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
+                        {/* Column Menu */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className="h-[50px] w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                                    <Columns size={20} strokeWidth={1.5} />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[200px] p-2 bg-white rounded-xl shadow-xl border border-gray-100" align="end">
+                                <div className="p-2">
+                                    <p className="text-[11px] font-bold text-gray-400 uppercase mb-3">Visible Columns</p>
+                                    <div className="space-y-2">
+                                        {[
+                                            { id: 'order', label: 'Order' },
+                                            { id: 'name', label: 'Feature Name' },
+                                            { id: 'status', label: 'Status' },
+                                            { id: 'linkedFlow', label: 'Linked Flow' },
+                                            { id: 'starterPrompt', label: 'Starter Prompt' },
+                                            { id: 'usage', label: 'Usage' },
+                                            { id: 'updated', label: 'Updated' }
+                                        ].map((col) => (
+                                            <div
+                                                key={col.id}
+                                                onClick={() => setVisibleColumns(prev => prev.includes(col.id) ? prev.filter(id => id !== col.id) : [...prev, col.id])}
+                                                className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 rounded-lg cursor-pointer group transition-all"
+                                            >
+                                                <div className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${visibleColumns.includes(col.id) ? 'bg-purple-600 border-purple-600' : 'border-gray-300 group-hover:border-purple-400'}`}>
+                                                    {visibleColumns.includes(col.id) && <Check size={10} className="text-white" strokeWidth={4} />}
+                                                </div>
+                                                <span className={`text-[13px] font-medium transition-colors ${visibleColumns.includes(col.id) ? 'text-gray-900' : 'text-gray-400'}`}>{col.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
 
                 <div className="flex md:hidden mb-4">
                     <div className="relative flex-1">
                         <Search size={18} className="absolute inset-y-0 left-4 my-auto text-[#253154]" />
-                        <input type="text" placeholder="Search features..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-sm font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" />
+                        <input
+                            type="text"
+                            placeholder="Search features..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-sm font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none"
+                        />
                     </div>
                 </div>
 
@@ -339,7 +506,7 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
                             <thead className="bg-gray-50/50 border-b border-gray-100">
                                 <tr>
                                     <th className="w-12 px-6 py-4 text-left">
-                                        <CustomCheckbox checked={selectedFeatures.length === features.length} partial={selectedFeatures.length > 0 && selectedFeatures.length < features.length} onChange={handleSelectAll} />
+                                        <CustomCheckbox checked={filteredFeatures.length > 0 && selectedFeatures.length === filteredFeatures.length} partial={selectedFeatures.length > 0 && selectedFeatures.length < filteredFeatures.length} onChange={handleSelectAll} />
                                     </th>
                                     {visibleColumns.includes('order') && <th className="w-24 px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Order</th>}
                                     {visibleColumns.includes('name') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Feature Name</th>}
@@ -352,7 +519,7 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-100">
-                                {features.map((feature) => (
+                                {filteredFeatures.map((feature) => (
                                     <tr
                                         key={feature.feature_id}
                                         onClick={() => {
@@ -418,10 +585,6 @@ export const FeaturesManager: React.FC<FeaturesManagerProps> = ({ onNavigate }) 
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    console.log('[DEBUG_UI] Edit button clicked for:', feature.feature_id);
-                                                                    if (typeof window !== 'undefined') {
-                                                                        window.alert(`[Child Trace] Clicked Edit for ID: ${feature.feature_id}`);
-                                                                    }
                                                                     onNavigate('feature-detail', feature.feature_id);
                                                                 }}
                                                                 className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"

@@ -12,6 +12,7 @@ import {
     ArrowUpDown,
     ChevronLeft,
     ChevronRight,
+    ChevronDown,
     Search,
     Archive,
     Edit,
@@ -26,6 +27,7 @@ import {
     Copy,
     TrendingUp,
     TrendingDown,
+    Trash2,
     Headphones,
     PenTool,
     Mic,
@@ -34,14 +36,25 @@ import {
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { format } from "date-fns";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
 import { SlickStyles } from './SlickStyles';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { CustomSelect } from './common/CustomSelect';
+import {
+    getAllLibraryItems,
+    createLibraryItem,
+    updateLibraryItem,
+    deleteLibraryItem,
+    LibraryItem as APILibraryItem
+} from '../services/libraryItemService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -376,6 +389,40 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
     const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<TabType>('Reading');
+    const [libraryItems, setLibraryItems] = useState<APILibraryItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [editingItem, setEditingItem] = useState<APILibraryItem | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Table Features State
+    const [searchTerm, setSearchTerm] = useState('');
+    const [sortConfig, setSortConfig] = useState<{ key: keyof APILibraryItem; direction: 'asc' | 'desc' } | null>(null);
+    const [statusFilter, setStatusFilter] = useState<string>('All Status');
+    const [difficultyFilter, setDifficultyFilter] = useState<string>('All Difficulty');
+    const [visibleColumns, setVisibleColumns] = useState<string[]>([
+        'item_id', 'title', 'exam', 'difficulty', 'topic', 'status', 'updated_at', 'usage_30d'
+    ]);
+
+    // Fetch data from API
+    const fetchLibraryItems = async () => {
+        setIsLoading(true);
+        try {
+            const data = await getAllLibraryItems();
+            setLibraryItems(data);
+        } catch (error) {
+            toast.error("Failed to load library items");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        setIsMounted(true);
+        fetchLibraryItems();
+    }, []);
+
+    if (!isMounted) return null;
 
     const handleMetricClick = (metricTitle: string) => {
         if (activeFilter === metricTitle) {
@@ -385,17 +432,136 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
         }
     };
 
+    const handleSort = (key: keyof APILibraryItem) => {
+        let direction: 'asc' | 'desc' = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const SortableHeader = ({ label, sortKey, className }: { label: string, sortKey: keyof APILibraryItem, className?: string }) => {
+        if (!visibleColumns.includes(sortKey as string)) return null;
+
+        const isSorted = sortConfig?.key === sortKey;
+
+        return (
+            <th className={`px-6 py-4 text-left ${className}`}>
+                <button
+                    onClick={() => handleSort(sortKey)}
+                    className="flex items-center gap-2 text-[11px] font-bold text-gray-400 uppercase tracking-wider hover:text-[#253154] transition-colors group"
+                >
+                    {label}
+                    <div className={`p-0.5 rounded transition-colors ${isSorted ? 'bg-purple-50 text-purple-600' : 'text-gray-300 group-hover:text-gray-400'}`}>
+                        {isSorted ? (
+                            sortConfig.direction === 'asc' ? <TrendingUp size={10} /> : <TrendingDown size={10} />
+                        ) : (
+                            <ArrowUpDown size={10} />
+                        )}
+                    </div>
+                </button>
+            </th>
+        );
+    };
+
     // Navigate to detail page
     const handleNavigateToDetail = (itemId: string, itemType: TabType) => {
         const typeSlug = itemType.toLowerCase().replace(/ /g, '-');
         onNavigate(`library-detail-${typeSlug}-${itemId}`);
     };
 
+    // CRUD Handlers
+    const handleSaveItem = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingItem) return;
+
+        try {
+            if (editingItem.id) {
+                await updateLibraryItem(editingItem.id, editingItem);
+                toast.success("Item updated successfully");
+            } else {
+                await createLibraryItem(editingItem);
+                toast.success("Item created successfully");
+            }
+            setIsFormOpen(false);
+            fetchLibraryItems();
+        } catch (error) {
+            toast.error("Failed to save item");
+        }
+    };
+
+    const handleArchiveItem = async (id: string | number) => {
+        if (window.confirm('Are you sure you want to archive this item?')) {
+            try {
+                const item = libraryItems.find(i => i.id === id || i.item_id === id);
+                if (item && item.id) {
+                    await updateLibraryItem(item.id, { status: 'Archived' });
+                    toast.success("Item archived successfully");
+                    fetchLibraryItems();
+                }
+            } catch (error) {
+                toast.error("Failed to archive item");
+            }
+        }
+    };
+
+    const handleDeleteItem = async (id: string | number) => {
+        if (window.confirm('Are you sure you want to delete this item?')) {
+            try {
+                const item = libraryItems.find(i => i.id === id || i.item_id === id);
+                if (item && item.id) {
+                    await deleteLibraryItem(item.id);
+                    toast.success("Item deleted successfully");
+                    fetchLibraryItems();
+                }
+            } catch (error) {
+                toast.error("Failed to delete item");
+            }
+        }
+    };
+
+    const openCreateForm = () => {
+        const typePrefix = activeTab === 'Reading' ? 'R' : activeTab === 'Listening' ? 'L' : activeTab === 'Writing' ? 'W' : activeTab === 'Speaking' ? 'SP' : 'MT';
+        const newId = `${typePrefix}${Math.floor(1000 + Math.random() * 9000)}`;
+
+        setEditingItem({
+            item_id: newId,
+            title: '',
+            exam: 'IELTS Academic',
+            status: 'Draft',
+            usage_30d: 0,
+            difficulty: 'Medium',
+            topic: '',
+            type: activeTab === 'Writing' ? 'Task 2' : '',
+            transcript: false,
+            sections_included: [],
+            duration: ''
+        } as any);
+        setIsFormOpen(true);
+    };
+
+    const openEditForm = (item: APILibraryItem) => {
+        setEditingItem(item);
+        setIsFormOpen(true);
+    };
+
+    // Metrics calculations
+    const totalItems = libraryItems.length;
+    const publishedCount = libraryItems.filter(item => item.status === 'Published').length;
+    const draftCount = libraryItems.filter(item => item.status === 'Draft').length;
+    const archivedCount = libraryItems.filter(item => item.status === 'Archived').length;
+    const recentlyAddedCount = libraryItems.filter(item => {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const updatedDate = new Date(item.updated_at || '');
+        return updatedDate >= thirtyDaysAgo;
+    }).length;
+
     // Metrics data
     const metrics = [
         {
             title: 'Total Items',
-            value: '465',
+            value: totalItems.toString(),
             icon: BookOpen,
             bgClass: 'bg-purple-50',
             colorClass: 'text-purple-600',
@@ -403,7 +569,7 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
         },
         {
             title: 'Published',
-            value: '420',
+            value: publishedCount.toString(),
             icon: CheckCircle,
             bgClass: 'bg-green-50',
             colorClass: 'text-green-600',
@@ -411,7 +577,7 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
         },
         {
             title: 'Draft',
-            value: '37',
+            value: draftCount.toString(),
             icon: FileText,
             bgClass: 'bg-orange-50',
             colorClass: 'text-orange-600',
@@ -419,7 +585,7 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
         },
         {
             title: 'Archived',
-            value: '8',
+            value: archivedCount.toString(),
             icon: Archive,
             bgClass: 'bg-red-50',
             colorClass: 'text-red-700',
@@ -427,7 +593,7 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
         },
         {
             title: 'Recently Added',
-            value: '23',
+            value: recentlyAddedCount.toString(),
             icon: CalendarPlus,
             bgClass: 'bg-blue-50',
             colorClass: 'text-blue-600',
@@ -435,51 +601,61 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
         },
     ];
 
-    // Mock library data
-    const getMockData = (): LibraryItem[] => {
-        switch (activeTab) {
-            case 'Reading':
-                return [
-                    { id: 'R001', title: 'Academic Reading - Climate Change Impact', exam: 'IELTS Academic', difficulty: 'Hard', topic: 'Environment', status: 'Published', lastUpdated: '2024-02-15', usage30d: 234 },
-                    { id: 'R002', title: 'General Training - Workplace Communication', exam: 'IELTS General', difficulty: 'Medium', topic: 'Work', status: 'Published', lastUpdated: '2024-02-14', usage30d: 189 },
-                    { id: 'R003', title: 'Academic Reading - Artificial Intelligence Ethics', exam: 'IELTS Academic', difficulty: 'Hard', topic: 'Technology', status: 'Published', lastUpdated: '2024-02-13', usage30d: 267 },
-                    { id: 'R004', title: 'TOEFL Reading - Ancient Civilizations', exam: 'TOEFL', difficulty: 'Medium', topic: 'History', status: 'Published', lastUpdated: '2024-02-12', usage30d: 156 },
-                    { id: 'R005', title: 'Academic Reading - Medical Breakthroughs', exam: 'IELTS Academic', difficulty: 'Hard', topic: 'Health', status: 'Draft', lastUpdated: '2024-02-11', usage30d: 0 },
-                    { id: 'R006', title: 'General Training - Community Services', exam: 'IELTS General', difficulty: 'Easy', topic: 'Society', status: 'Published', lastUpdated: '2024-02-10', usage30d: 198 },
-                    { id: 'R007', title: 'Academic Reading - Space Exploration', exam: 'IELTS Academic', difficulty: 'Medium', topic: 'Science', status: 'In Review', lastUpdated: '2024-02-09', usage30d: 112 },
-                    { id: 'R008', title: 'TOEFL Reading - Economic Systems', exam: 'TOEFL', difficulty: 'Hard', topic: 'Economics', status: 'Published', lastUpdated: '2024-02-08', usage30d: 143 },
-                ];
-            case 'Listening':
-                return [
-                    { id: 'L001', title: 'Academic Lecture - Renewable Energy', exam: 'IELTS Academic', difficulty: 'Medium', topic: 'Science', transcript: true, status: 'Published', lastUpdated: '2024-02-15', usage30d: 287 },
-                    { id: 'L002', title: 'General Conversation - Job Interview', exam: 'IELTS General', difficulty: 'Easy', topic: 'Work', transcript: true, status: 'Published', lastUpdated: '2024-02-14', usage30d: 312 },
-                    { id: 'L003', title: 'Academic Discussion - Climate Policy', exam: 'IELTS Academic', difficulty: 'Hard', topic: 'Environment', transcript: true, status: 'Published', lastUpdated: '2024-02-13', usage30d: 198 },
-                    { id: 'L004', title: 'TOEFL Lecture - Art History', exam: 'TOEFL', difficulty: 'Medium', topic: 'Arts', transcript: false, status: 'Draft', lastUpdated: '2024-02-12', usage30d: 0 },
-                ];
-            case 'Writing':
-                return [
-                    { id: 'W001', title: 'Task 2 - Technology Impact on Society', type: 'Task 2', exam: 'IELTS Academic', status: 'Published', lastUpdated: '2024-02-15', usage30d: 412 },
-                    { id: 'W002', title: 'Task 1 - Data Analysis Chart', type: 'Task 1', exam: 'IELTS Academic', status: 'Published', lastUpdated: '2024-02-14', usage30d: 298 },
-                    { id: 'W003', title: 'SOP - Computer Science Masters', type: 'SOP', exam: 'Visa', status: 'Published', lastUpdated: '2024-02-13', usage30d: 156 },
-                ];
-            case 'Speaking':
-                return [
-                    { id: 'SP001', title: 'Part 1 - Personal Information', type: 'Part 1', exam: 'IELTS Academic', topic: 'Introduction', status: 'Published', lastUpdated: '2024-02-15', usage30d: 456 },
-                    { id: 'SP002', title: 'Part 2 - Describe a Memorable Event', type: 'Part 2', exam: 'IELTS Academic', topic: 'Experience', status: 'Published', lastUpdated: '2024-02-14', usage30d: 389 },
-                ];
-            case 'Mock Tests':
-                return [
-                    { id: 'MT001', title: 'IELTS Academic Full Mock Test - Series 1', exam: 'IELTS Academic', sectionsIncluded: ['R', 'L', 'W', 'S'], duration: '2h 45m', status: 'Published', lastUpdated: '2024-02-15', usage30d: 189 },
-                    { id: 'MT002', title: 'IELTS General Training Mock Test - Series 1', exam: 'IELTS General', sectionsIncluded: ['R', 'L', 'W', 'S'], duration: '2h 45m', status: 'Published', lastUpdated: '2024-02-14', usage30d: 156 },
-                ];
-            default:
-                return [];
-        }
-    };
+    // Library data filtered by active tab, search, and dropdowns
+    const filteredData = libraryItems
+        .filter(item => {
+            // Tab Filter (Always applied)
+            const matchesTab =
+                (activeTab === 'Mock Tests' && (item.type === 'Mock Test' || item.item_id?.startsWith('MT'))) ||
+                (activeTab === 'Reading' && item.item_id?.startsWith('R')) ||
+                (activeTab === 'Listening' && item.item_id?.startsWith('L')) ||
+                (activeTab === 'Writing' && item.item_id?.startsWith('W')) ||
+                (activeTab === 'Speaking' && item.item_id?.startsWith('SP'));
 
-    const mockData = getMockData();
-    const totalPages = Math.ceil(mockData.length / rowsPerPage);
-    const displayedItems = mockData.slice(
+            if (!matchesTab) return false;
+
+            // Search Filter
+            const searchLower = searchTerm.toLowerCase();
+            const matchesSearch =
+                (item.title?.toLowerCase() || '').includes(searchLower) ||
+                (item.item_id?.toLowerCase() || '').includes(searchLower) ||
+                (item.topic?.toLowerCase() || '').includes(searchLower) ||
+                (item.exam?.toLowerCase() || '').includes(searchLower);
+
+            if (!matchesSearch) return false;
+
+            // Status Filter
+            if (statusFilter !== 'All Status' && item.status !== statusFilter) return false;
+
+            // Difficulty Filter
+            if (difficultyFilter !== 'All Difficulty' && item.difficulty !== difficultyFilter) return false;
+
+            // Metric Filter
+            if (activeFilter === 'Published' && item.status !== 'Published') return false;
+            if (activeFilter === 'Draft' && item.status !== 'Draft') return false;
+            if (activeFilter === 'Archived' && item.status !== 'Archived') return false;
+            if (activeFilter === 'Recently Added') {
+                const thirtyDaysAgo = new Date();
+                thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                const updatedDate = new Date(item.updated_at || '');
+                if (updatedDate < thirtyDaysAgo) return false;
+            }
+
+            return true;
+        })
+        .sort((a: any, b: any) => {
+            if (!sortConfig) return 0;
+            const { key, direction } = sortConfig;
+            const valA = a[key] ?? '';
+            const valB = b[key] ?? '';
+
+            if (valA === valB) return 0;
+            const comparison = valA < valB ? -1 : 1;
+            return direction === 'asc' ? comparison : -comparison;
+        });
+
+    const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+    const displayedItems = filteredData.slice(
         (currentPage - 1) * rowsPerPage,
         currentPage * rowsPerPage
     );
@@ -491,15 +667,15 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
     };
 
     const toggleAllItems = () => {
-        if (selectedItems.length === mockData.length) {
+        if (selectedItems.length === filteredData.length) {
             setSelectedItems([]);
         } else {
-            setSelectedItems(mockData.map(s => s.id));
+            setSelectedItems(filteredData.map(s => s.id?.toString() || ''));
         }
     };
 
-    const allSelected = selectedItems.length === mockData.length && mockData.length > 0;
-    const someSelected = selectedItems.length > 0 && selectedItems.length < mockData.length;
+    const allSelected = selectedItems.length === filteredData.length && filteredData.length > 0;
+    const someSelected = selectedItems.length > 0 && selectedItems.length < filteredData.length;
 
     const getStatusConfig = (status: LibraryItem['status']) => {
         switch (status) {
@@ -508,28 +684,6 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
             case 'In Review': return { label: 'In Review', bgColor: 'bg-blue-50', textColor: 'text-blue-700' };
             case 'Archived': return { label: 'Archived', bgColor: 'bg-red-50', textColor: 'text-red-700' };
             default: return { label: status, bgColor: 'bg-gray-50', textColor: 'text-gray-700' };
-        }
-    };
-
-    const handleViewItem = (id: string) => {
-        setOpenActionMenuId(null);
-        handleNavigateToDetail(id, activeTab);
-    };
-
-    const handleEditItem = (id: string) => {
-        setOpenActionMenuId(null);
-        handleNavigateToDetail(id, activeTab);
-    };
-
-    const handleDuplicate = (id: string) => {
-        setOpenActionMenuId(null);
-        toast.success(`Duplicated item: ${id}`);
-    };
-
-    const handleArchiveItem = (id: string) => {
-        setOpenActionMenuId(null);
-        if (window.confirm('Are you sure you want to archive this item?')) {
-            toast.success(`Archived item: ${id}`);
         }
     };
 
@@ -609,7 +763,7 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                             <span className="text-sm text-[#253154] font-medium">Import</span>
                         </button>
                         <button
-                            onClick={() => toast.success('Create Item clicked')}
+                            onClick={openCreateForm}
                             className="flex items-center gap-2 px-5 py-3 bg-[#0e042f] rounded-xl hover:bg-[#1a0c4a] transition-colors shadow-lg"
                         >
                             <Plus size={18} className="text-white" />
@@ -684,24 +838,143 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                         <input
                             type="text"
                             placeholder="Search by title, topic, exam..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border-0 shadow-sm focus:ring-2 focus:ring-purple-100 outline-none text-[#253154] placeholder:text-gray-400"
                         />
                     </div>
 
                     {/* Filter Buttons */}
                     <div className="flex items-center gap-3">
-                        <button className="p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                            <Filter size={20} className="text-[#253154]" />
-                        </button>
-                        <button className="p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                            <ArrowUpDown size={20} className="text-[#253154]" />
-                        </button>
-                        <button className="p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                            <Columns size={20} className="text-[#253154]" />
-                        </button>
-                        <button className="p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                            <MoreHorizontal size={20} className="text-[#253154]" />
-                        </button>
+                        {/* Filter Popover */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className={`p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2 ${statusFilter !== 'All Status' || difficultyFilter !== 'All Difficulty' ? 'bg-purple-50 border-purple-200' : ''}`}>
+                                    <Filter size={20} className="text-[#253154]" />
+                                    {(statusFilter !== 'All Status' || difficultyFilter !== 'All Difficulty') && (
+                                        <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                                    )}
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[280px] p-4 bg-white rounded-xl shadow-xl border border-gray-100" align="end">
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-[11px] font-bold text-gray-400 uppercase mb-2">Status</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['All Status', 'Published', 'Draft', 'In Review', 'Archived'].map((s) => (
+                                                <button
+                                                    key={s}
+                                                    onClick={() => setStatusFilter(s)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${statusFilter === s ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    {s}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-bold text-gray-400 uppercase mb-2">Difficulty</p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['All Difficulty', 'Low', 'Medium', 'High'].map((d) => (
+                                                <button
+                                                    key={d}
+                                                    onClick={() => setDifficultyFilter(d)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${difficultyFilter === d ? 'bg-purple-600 text-white shadow-md shadow-purple-200' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}
+                                                >
+                                                    {d}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setStatusFilter('All Status');
+                                            setDifficultyFilter('All Difficulty');
+                                        }}
+                                        className="w-full mt-2 py-2 text-[11px] font-bold text-red-500 hover:bg-red-50 rounded-lg uppercase transition-all"
+                                    >
+                                        Reset Filters
+                                    </button>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
+                        {/* Sort Menu */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className={`h-[50px] min-w-[150px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-between px-4 ${sortConfig ? 'ring-2 ring-purple-100' : ''}`}>
+                                    <div className="flex items-center gap-2">
+                                        <ArrowUpDown size={20} strokeWidth={1.5} />
+                                        <span className="font-medium text-[14px]">Sort</span>
+                                    </div>
+                                    <ChevronDown size={16} />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[180px] p-2 bg-white rounded-xl shadow-xl border border-gray-100" align="end">
+                                <div className="space-y-1">
+                                    {[
+                                        { key: 'title', label: 'Title' },
+                                        { key: 'item_id', label: 'Item ID' },
+                                        { key: 'exam', label: 'Exam' },
+                                        { key: 'status', label: 'Status' },
+                                        { key: 'usage_30d', label: 'Usage' },
+                                        { key: 'updated_at', label: 'Updated' }
+                                    ].map((s) => (
+                                        <button
+                                            key={s.key}
+                                            onClick={() => handleSort(s.key as keyof APILibraryItem)}
+                                            className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all ${sortConfig?.key === s.key ? 'bg-purple-50 text-purple-700' : 'text-gray-600 hover:bg-gray-50'}`}
+                                        >
+                                            {s.label}
+                                            {sortConfig?.key === s.key && (
+                                                <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
+                        {/* Column Visibility Popover */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <button className="h-[50px] w-[50px] bg-white border border-gray-200 rounded-xl text-[#253154] hover:bg-gray-50 hover:border-gray-300 shadow-sm transition-colors flex items-center justify-center">
+                                    <Columns size={20} strokeWidth={1.5} />
+                                </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[200px] p-2 bg-white rounded-xl shadow-xl border border-gray-100" align="end">
+                                <div className="p-2">
+                                    <p className="text-[11px] font-bold text-gray-400 uppercase mb-3">Visible Columns</p>
+                                    <div className="space-y-2">
+                                        {[
+                                            { id: 'item_id', label: 'Item ID' },
+                                            { id: 'title', label: 'Title' },
+                                            { id: 'exam', label: 'Exam' },
+                                            { id: 'difficulty', label: 'Difficulty' },
+                                            { id: 'topic', label: 'Topic' },
+                                            { id: 'status', label: 'Status' },
+                                            { id: 'updated_at', label: 'Last Updated' },
+                                            { id: 'usage_30d', label: 'Usage (30d)' },
+                                        ].map(col => (
+                                            <div
+                                                key={col.id}
+                                                onClick={() => {
+                                                    setVisibleColumns(prev =>
+                                                        prev.includes(col.id) ? prev.filter(c => c !== col.id) : [...prev, col.id]
+                                                    );
+                                                }}
+                                                className="flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 rounded-lg cursor-pointer group transition-all"
+                                            >
+                                                <div className={`w-4 h-4 rounded border transition-all flex items-center justify-center ${visibleColumns.includes(col.id) ? 'bg-purple-600 border-purple-600' : 'border-gray-300 group-hover:border-purple-400'}`}>
+                                                    {visibleColumns.includes(col.id) && <Check size={10} className="text-white" strokeWidth={4} />}
+                                                </div>
+                                                <span className={`text-[13px] font-medium transition-colors ${visibleColumns.includes(col.id) ? 'text-gray-900' : 'text-gray-400'}`}>{col.label}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                 </div>
 
@@ -711,7 +984,7 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                         <table className="w-full">
                             <thead className="bg-white sticky top-0 z-10">
                                 <tr className="border-b border-gray-200">
-                                    <th className="px-6 py-4 text-left">
+                                    <th className="px-6 py-4 text-left w-12">
                                         <CustomCheckbox
                                             checked={allSelected}
                                             partial={someSelected}
@@ -719,218 +992,247 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                                             ariaLabel="Select all items"
                                         />
                                     </th>
-                                    <th className="px-6 py-4 text-left">
-                                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Item ID</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-left">
-                                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Title</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-left">
-                                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Exam</span>
-                                    </th>
+                                    <SortableHeader label="Item ID" sortKey="item_id" />
+                                    <SortableHeader label="Title" sortKey="title" />
+                                    <SortableHeader label="Exam" sortKey="exam" />
+
                                     {activeTab === 'Reading' && (
                                         <>
-                                            <th className="px-6 py-4 text-left">
-                                                <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Difficulty</span>
-                                            </th>
-                                            <th className="px-6 py-4 text-left">
-                                                <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Topic</span>
-                                            </th>
+                                            <SortableHeader label="Difficulty" sortKey="difficulty" />
+                                            <SortableHeader label="Topic" sortKey="topic" />
                                         </>
                                     )}
                                     {activeTab === 'Listening' && (
                                         <>
-                                            <th className="px-6 py-4 text-left">
-                                                <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Topic</span>
-                                            </th>
-                                            <th className="px-6 py-4 text-left">
-                                                <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Transcript</span>
-                                            </th>
+                                            <SortableHeader label="Topic" sortKey="topic" />
+                                            {visibleColumns.includes('transcript') && (
+                                                <th className="px-6 py-4 text-left">
+                                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Transcript</span>
+                                                </th>
+                                            )}
                                         </>
                                     )}
                                     {activeTab === 'Writing' && (
-                                        <th className="px-6 py-4 text-left">
-                                            <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Type</span>
-                                        </th>
+                                        <SortableHeader label="Type" sortKey="type" />
                                     )}
                                     {activeTab === 'Speaking' && (
                                         <>
-                                            <th className="px-6 py-4 text-left">
-                                                <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Type</span>
-                                            </th>
-                                            <th className="px-6 py-4 text-left">
-                                                <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Topic</span>
-                                            </th>
+                                            <SortableHeader label="Type" sortKey="type" />
+                                            <SortableHeader label="Topic" sortKey="topic" />
                                         </>
                                     )}
                                     {activeTab === 'Mock Tests' && (
                                         <>
                                             <th className="px-6 py-4 text-left">
-                                                <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Sections</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Sections</span>
                                             </th>
                                             <th className="px-6 py-4 text-left">
-                                                <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Duration</span>
+                                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Duration</span>
                                             </th>
                                         </>
                                     )}
+
+                                    <SortableHeader label="Status" sortKey="status" />
+                                    <SortableHeader label="Last Updated" sortKey="updated_at" />
+                                    <SortableHeader label="Usage (30d)" sortKey="usage_30d" />
+
                                     <th className="px-6 py-4 text-left">
-                                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Status</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-left">
-                                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Last Updated</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-left">
-                                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Usage (30d)</span>
-                                    </th>
-                                    <th className="px-6 py-4 text-left">
-                                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Actions</span>
+                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Actions</span>
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {displayedItems.map((item) => {
-                                    const statusConfig = getStatusConfig(item.status);
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={10} className="px-6 py-10 text-center text-gray-500">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className="w-4 h-4 border-2 border-[#253154] border-t-transparent rounded-full animate-spin" />
+                                                Loading library items...
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : displayedItems.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={10} className="px-6 py-10 text-center text-gray-500">
+                                            No library items found.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    displayedItems.map((item) => {
+                                        const statusConfig = getStatusConfig(item.status);
+                                        const itemId = item.id || item.item_id;
 
-                                    return (
-                                        <tr
-                                            key={item.id}
-                                            onClick={() => handleEditItem(item.id)}
-                                            className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer"
-                                        >
-                                            <td
-                                                className="px-6 py-4"
-                                                onClick={(e) => e.stopPropagation()}
+                                        return (
+                                            <tr
+                                                key={itemId}
+                                                onClick={() => openEditForm(item)}
+                                                className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer"
                                             >
-                                                <CustomCheckbox
-                                                    checked={selectedItems.includes(item.id)}
-                                                    onChange={() => toggleItemSelection(item.id)}
-                                                    ariaLabel={`Select ${item.title}`}
-                                                />
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm font-medium text-[#253154]">{item.id}</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm font-medium text-[#253154]">
-                                                    {item.title}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm text-gray-600">{item.exam}</span>
-                                            </td>
-                                            {activeTab === 'Reading' && (
-                                                <>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-gray-600">{item.difficulty}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-gray-600">{item.topic}</span>
-                                                    </td>
-                                                </>
-                                            )}
-                                            {activeTab === 'Listening' && (
-                                                <>
-                                                    <td className="px-6 py-4">
-                                                        <span className="text-sm text-gray-600">{item.topic}</span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className={`inline-flex px-3 py-1.5 rounded-lg text-xs font-medium ${item.transcript ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-700'
-                                                            }`}>
-                                                            {item.transcript ? 'Yes' : 'No'}
-                                                        </div>
-                                                    </td>
-                                                </>
-                                            )}
-                                            {activeTab === 'Writing' && (
-                                                <td className="px-6 py-4">
-                                                    <span className="text-sm text-gray-600">{item.type}</span>
+                                                <td
+                                                    className="px-6 py-4"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <CustomCheckbox
+                                                        checked={selectedItems.includes(item.id?.toString() || item.item_id)}
+                                                        onChange={() => toggleItemSelection(item.id?.toString() || item.item_id)}
+                                                        ariaLabel={`Select ${item.title}`}
+                                                    />
                                                 </td>
-                                            )}
-                                            {activeTab === 'Speaking' && (
-                                                <>
+                                                {visibleColumns.includes('item_id') && (
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm font-medium text-[#253154]">{item.item_id || item.id}</span>
+                                                    </td>
+                                                )}
+                                                {visibleColumns.includes('title') && (
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm font-medium text-[#253154]">
+                                                            {item.title}
+                                                        </span>
+                                                    </td>
+                                                )}
+                                                {visibleColumns.includes('exam') && (
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm text-gray-600">{item.exam}</span>
+                                                    </td>
+                                                )}
+
+                                                {activeTab === 'Reading' && (
+                                                    <>
+                                                        {visibleColumns.includes('difficulty') && (
+                                                            <td className="px-6 py-4">
+                                                                <span className="text-sm text-gray-600">{item.difficulty}</span>
+                                                            </td>
+                                                        )}
+                                                        {visibleColumns.includes('topic') && (
+                                                            <td className="px-6 py-4">
+                                                                <span className="text-sm text-gray-600">{item.topic}</span>
+                                                            </td>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {activeTab === 'Listening' && (
+                                                    <>
+                                                        {visibleColumns.includes('topic') && (
+                                                            <td className="px-6 py-4">
+                                                                <span className="text-sm text-gray-600">{item.topic}</span>
+                                                            </td>
+                                                        )}
+                                                        {visibleColumns.includes('transcript') && (
+                                                            <td className="px-6 py-4">
+                                                                <div className={`p-1 rounded-full w-fit ${item.transcript ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
+                                                                    {item.transcript ? <CheckCircle size={14} /> : <Clock size={14} />}
+                                                                </div>
+                                                            </td>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {activeTab === 'Writing' && visibleColumns.includes('type') && (
                                                     <td className="px-6 py-4">
                                                         <span className="text-sm text-gray-600">{item.type}</span>
                                                     </td>
+                                                )}
+                                                {activeTab === 'Speaking' && (
+                                                    <>
+                                                        {visibleColumns.includes('type') && (
+                                                            <td className="px-6 py-4">
+                                                                <span className="text-sm text-gray-600">{item.type}</span>
+                                                            </td>
+                                                        )}
+                                                        {visibleColumns.includes('topic') && (
+                                                            <td className="px-6 py-4">
+                                                                <span className="text-sm text-gray-600">{item.topic}</span>
+                                                            </td>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {activeTab === 'Mock Tests' && (
+                                                    <>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {((item.sections_included as string[]) || []).map((section, idx) => (
+                                                                    <span key={idx} className="px-2 py-0.5 bg-gray-100 rounded text-[10px] text-gray-600">
+                                                                        {section}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <span className="text-sm text-gray-600">{item.duration}</span>
+                                                        </td>
+                                                    </>
+                                                )}
+
+                                                {visibleColumns.includes('status') && (
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-gray-600">{item.topic}</span>
+                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor}`}>
+                                                            {statusConfig.label}
+                                                        </span>
                                                     </td>
-                                                </>
-                                            )}
-                                            {activeTab === 'Mock Tests' && (
-                                                <>
+                                                )}
+                                                {visibleColumns.includes('updated_at') && (
                                                     <td className="px-6 py-4">
-                                                        <div className="flex gap-1">
-                                                            {item.sectionsIncluded?.map((section) => (
-                                                                <span key={section} className="inline-flex px-2 py-1 rounded bg-purple-50 text-purple-700 text-xs font-medium">
-                                                                    {section}
-                                                                </span>
-                                                            ))}
-                                                        </div>
+                                                        <span className="text-sm text-gray-600">
+                                                            {item.updated_at ? format(new Date(item.updated_at), 'MMM dd, yyyy') : '-'}
+                                                        </span>
                                                     </td>
+                                                )}
+                                                {visibleColumns.includes('usage_30d') && (
                                                     <td className="px-6 py-4">
-                                                        <span className="text-sm text-gray-600">{item.duration}</span>
+                                                        <span className="text-sm font-medium text-[#253154]">{item.usage_30d || 0}</span>
                                                     </td>
-                                                </>
-                                            )}
-                                            <td className="px-6 py-4">
-                                                <div className={`inline-flex px-3 py-1.5 rounded-lg text-xs font-medium ${statusConfig.bgColor} ${statusConfig.textColor}`}>
-                                                    {statusConfig.label}
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm text-gray-600">{item.lastUpdated}</span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className="text-sm font-medium text-[#253154]">{item.usage30d}</span>
-                                            </td>
-                                            <td
-                                                className="px-6 py-4"
-                                                onClick={(e) => e.stopPropagation()}
-                                            >
-                                                <Popover open={openActionMenuId === item.id} onOpenChange={(open) => setOpenActionMenuId(open ? item.id : null)}>
-                                                    <PopoverTrigger asChild>
-                                                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                                            <MoreHorizontal size={18} className="text-gray-600" />
-                                                        </button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-56 p-2 bg-white" align="end">
-                                                        <div className="flex flex-col gap-1">
-                                                            <button
-                                                                onClick={() => handleViewItem(item.id)}
-                                                                className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
-                                                            >
-                                                                <Eye size={16} />
-                                                                <span>View</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleEditItem(item.id)}
-                                                                className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
-                                                            >
-                                                                <Edit size={16} />
-                                                                <span>Edit</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDuplicate(item.id)}
-                                                                className="flex items-center gap-3 px-3 py-2 text-sm text-[#253154] hover:bg-gray-50 rounded-lg transition-colors text-left"
-                                                            >
-                                                                <Copy size={16} />
-                                                                <span>Duplicate</span>
-                                                            </button>
-                                                            <div className="h-px bg-gray-200 my-1" />
-                                                            <button
-                                                                onClick={() => handleArchiveItem(item.id)}
-                                                                className="flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors text-left"
-                                                            >
-                                                                <Archive size={16} />
-                                                                <span>Archive</span>
-                                                            </button>
-                                                        </div>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                                )}
+                                                <td
+                                                    className="px-6 py-4"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <div className="flex items-center gap-1">
+                                                        <TooltipProvider delayDuration={200}>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        onClick={() => handleNavigateToDetail(item.item_id, activeTab)}
+                                                                        className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                                                                    >
+                                                                        <Eye size={16} className="text-gray-500 group-hover:text-blue-600" />
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">View Item</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+
+                                                        <TooltipProvider delayDuration={200}>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        onClick={() => openEditForm(item)}
+                                                                        className="p-2 hover:bg-purple-50 rounded-lg transition-colors group"
+                                                                    >
+                                                                        <Edit size={16} className="text-gray-500 group-hover:text-purple-600" />
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">Edit Item</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+
+                                                        <TooltipProvider delayDuration={200}>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        onClick={() => handleArchiveItem(itemId)}
+                                                                        className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                                                                    >
+                                                                        <Trash2 size={16} className="text-gray-500 group-hover:text-red-600" />
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">Archive Item</TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
                             </tbody>
                         </table>
                     </div>
@@ -985,7 +1287,7 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                 open={showExportDialog}
                 onOpenChange={setShowExportDialog}
                 moduleName="Library Items"
-                totalCount={mockData.length}
+                totalCount={filteredData.length}
                 columns={exportColumns}
                 supportsDateRange={true}
                 onExport={async (options) => {
@@ -1003,6 +1305,134 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                     toast.success(`Importing ${data.length} items...`);
                 }}
             />
+
+            {/* Item Form Dialog */}
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogContent className="sm:max-w-[600px] bg-white">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold text-[#253154]">
+                            {editingItem?.id ? 'Edit Library Item' : 'Create New Library Item'}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleSaveItem} className="space-y-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="item_id">Item ID</Label>
+                                <Input
+                                    id="item_id"
+                                    value={editingItem?.item_id || ''}
+                                    onChange={(e) => setEditingItem(prev => prev ? { ...prev, item_id: e.target.value } : null)}
+                                    placeholder="e.g. R101"
+                                    required
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="exam">Exam</Label>
+                                <CustomSelect
+                                    value={editingItem?.exam || 'IELTS Academic'}
+                                    onChange={(val) => setEditingItem(prev => prev ? { ...prev, exam: val } : null)}
+                                    options={[
+                                        { value: 'IELTS Academic', label: 'IELTS Academic' },
+                                        { value: 'IELTS General', label: 'IELTS General' },
+                                        { value: 'TOEFL', label: 'TOEFL' },
+                                        { value: 'PTE', label: 'PTE' },
+                                        { value: 'Visa', label: 'Visa' },
+                                    ]}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="title">Title</Label>
+                            <Input
+                                id="title"
+                                value={editingItem?.title || ''}
+                                onChange={(e) => setEditingItem(prev => prev ? { ...prev, title: e.target.value } : null)}
+                                placeholder="Enter item title"
+                                required
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="status">Status</Label>
+                                <CustomSelect
+                                    value={editingItem?.status || 'Draft'}
+                                    onChange={(val: any) => setEditingItem(prev => prev ? { ...prev, status: val } : null)}
+                                    options={[
+                                        { value: 'Draft', label: 'Draft' },
+                                        { value: 'In Review', label: 'In Review' },
+                                        { value: 'Published', label: 'Published' },
+                                        { value: 'Archived', label: 'Archived' },
+                                    ]}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="difficulty">Difficulty</Label>
+                                <CustomSelect
+                                    value={editingItem?.difficulty || 'Medium'}
+                                    onChange={(val) => setEditingItem(prev => prev ? { ...prev, difficulty: val } : null)}
+                                    options={[
+                                        { value: 'Easy', label: 'Easy' },
+                                        { value: 'Medium', label: 'Medium' },
+                                        { value: 'Hard', label: 'Hard' },
+                                    ]}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="topic">Topic</Label>
+                                <Input
+                                    id="topic"
+                                    value={editingItem?.topic || ''}
+                                    onChange={(e) => setEditingItem(prev => prev ? { ...prev, topic: e.target.value } : null)}
+                                    placeholder="e.g. Science, Health"
+                                />
+                            </div>
+                            {activeTab === 'Writing' || activeTab === 'Speaking' ? (
+                                <div className="space-y-2">
+                                    <Label htmlFor="type">Type</Label>
+                                    <Input
+                                        id="type"
+                                        value={editingItem?.type || ''}
+                                        onChange={(e) => setEditingItem(prev => prev ? { ...prev, type: e.target.value } : null)}
+                                        placeholder="e.g. Task 2, Part 1"
+                                    />
+                                </div>
+                            ) : null}
+                        </div>
+
+                        {activeTab === 'Listening' && (
+                            <div className="flex items-center space-x-2 py-2">
+                                <Checkbox
+                                    id="transcript"
+                                    checked={editingItem?.transcript || false}
+                                    onCheckedChange={(checked) => setEditingItem(prev => prev ? { ...prev, transcript: !!checked } : null)}
+                                />
+                                <Label htmlFor="transcript" className="font-normal">Include Transcript</Label>
+                            </div>
+                        )}
+
+                        <DialogFooter className="pt-4">
+                            <button
+                                type="button"
+                                onClick={() => setIsFormOpen(false)}
+                                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-4 py-2 text-sm font-medium text-white bg-[#0e042f] hover:bg-[#1a0c4a] rounded-lg transition-colors"
+                            >
+                                {editingItem?.id ? 'Update Item' : 'Create Item'}
+                            </button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
