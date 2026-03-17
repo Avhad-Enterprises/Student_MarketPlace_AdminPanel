@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, CornerDownLeft, Users, Database, Key, Activity, Shield, ChartBar, FileText, Settings, ListFilter } from 'lucide-react';
+import { Search, CornerDownLeft, Users, Database, Key, Activity, Shield, ChartBar, FileText, Settings, ListFilter, House, Grid3x3, Globe, Sparkles, Calendar } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 
 interface SearchRecord {
@@ -16,93 +16,46 @@ interface SearchRecord {
 
 // Sample admin search data
 const GLOBAL_INDEX: SearchRecord[] = [
-  {
-    id: '1',
-    module: 'Users',
-    title: 'User Management',
-    subtitle: '1,247 active users',
-    status: 'Active',
-    path: ['Admin', 'Users'],
-    tags: ['users', 'manage', 'accounts']
-  },
-  {
-    id: '2',
-    module: 'Users',
-    title: 'Roles & Permissions',
-    subtitle: '12 roles configured',
-    path: ['Admin', 'Users', 'Roles'],
-    tags: ['roles', 'permissions', 'access']
-  },
-  {
-    id: '3',
-    module: 'Database',
-    title: 'Data Management',
-    subtitle: 'Manage database records',
-    status: 'Connected',
-    path: ['Admin', 'Database'],
-    tags: ['database', 'data', 'records']
-  },
-  {
-    id: '4',
-    module: 'API',
-    title: 'API Keys',
-    subtitle: '8 active keys',
-    path: ['Admin', 'API'],
-    tags: ['api', 'keys', 'tokens']
-  },
-  {
-    id: '5',
-    module: 'Logs',
-    title: 'System Logs',
-    subtitle: 'View audit trail',
-    path: ['Admin', 'Logs'],
-    tags: ['logs', 'audit', 'system']
-  },
-  {
-    id: '6',
-    module: 'Analytics',
-    title: 'Analytics Dashboard',
-    subtitle: 'Performance metrics',
-    status: 'Updated',
-    path: ['Admin', 'Analytics'],
-    tags: ['analytics', 'metrics', 'reports']
-  },
-  {
-    id: '7',
-    module: 'Reports',
-    title: 'Custom Reports',
-    subtitle: '24 reports created',
-    path: ['Admin', 'Reports'],
-    tags: ['reports', 'custom', 'data']
-  },
-  {
-    id: '8',
-    module: 'Settings',
-    title: 'System Settings',
-    subtitle: 'Configure system',
-    path: ['Admin', 'Settings'],
-    tags: ['settings', 'config', 'system']
-  }
+  { id: 'dashboard', module: 'Navigation', title: 'Dashboard', path: ['Dashboard'], tags: ['home', 'index', 'overview'] },
+  { id: 'students-all', module: 'Students', title: 'All Students', path: ['Students', 'All Students'], tags: ['students', 'manage', 'list'] },
+  { id: 'students-profiles', module: 'Students', title: 'Student Profiles', path: ['Students', 'Profiles'], tags: ['profiles', 'details', 'data'] },
+  { id: 'students-applications', module: 'Students', title: 'Applications', path: ['Students', 'Applications'], tags: ['apps', 'admissions', 'apply'] },
+  { id: 'students-status', module: 'Students', title: 'Status Tracking', path: ['Students', 'Status Tracking'], tags: ['tracking', 'status', 'stages'] },
+  { id: 'services-sim-cards', module: 'Services', title: 'SIM Cards', path: ['Services', 'SIM Cards'], tags: ['telecom', 'plans', 'mobile'] },
+  { id: 'services-banks', module: 'Services', title: 'Banks', path: ['Services', 'Banks'], tags: ['finance', 'accounts', 'cards'] },
+  { id: 'services-insurance', module: 'Services', title: 'Insurance', path: ['Services', 'Insurance'], tags: ['health', 'travel', 'insurance'] },
+  { id: 'services-visa', module: 'Services', title: 'Visa', path: ['Services', 'Visa Assistance'], tags: ['visa', 'embassy', 'applications'] },
+  { id: 'services-taxes', module: 'Services', title: 'Taxes', path: ['Services', 'Taxes'], tags: ['finance', 'tax', 'returns'] },
+  { id: 'services-loans', module: 'Services', title: 'Loans', path: ['Services', 'Loans'], tags: ['finance', 'funding', 'study'] },
+  { id: 'services-credit', module: 'Services', title: 'Build Credit', path: ['Services', 'Build Credit'], tags: ['credit', 'score', 'history'] },
+  { id: 'services-housing', module: 'Services', title: 'Housing', path: ['Services', 'Housing'], tags: ['accommodation', 'rent', 'stay'] },
+  { id: 'services-forex', module: 'Services', title: 'Forex', path: ['Services', 'Forex'], tags: ['currency', 'exchange', 'transfer'] },
+  { id: 'services-employment', module: 'Services', title: 'Employment', path: ['Services', 'Employment'], tags: ['jobs', 'careers', 'work'] },
+  { id: 'services-food', module: 'Services', title: 'Food', path: ['Services', 'Food'], tags: ['dining', 'meals', 'plans'] },
+  { id: 'services-courses', module: 'Services', title: 'Courses', path: ['Services', 'Courses'], tags: ['study', 'programs', 'subjects'] },
+  { id: 'countries-list', module: 'Countries', title: 'Countries', path: ['Countries & Universities', 'Countries'], tags: ['locations', 'nations', 'map'] },
+  { id: 'universities-list', module: 'Countries', title: 'Universities', path: ['Countries & Universities', 'Universities'], tags: ['institutes', 'colleges', 'study'] },
+  { id: 'ai-test-overview', module: 'AI', title: 'AI Test Overview', path: ['AI Assistant', 'Overview'], tags: ['ai', 'scoring', 'metrics'] },
+  { id: 'ai-test-library', module: 'AI', title: 'AI Test Library', path: ['AI Assistant', 'Library'], tags: ['ai', 'tests', 'questions'] },
+  { id: 'bookings-list', module: 'Bookings', title: 'Bookings', path: ['Bookings & Leads', 'Bookings'], tags: ['appointments', 'leads', 'schedules'] }
 ];
 
 const MODULE_ICONS: { [key: string]: React.ReactNode } = {
-  Users: <Users size={20} />,
-  Database: <Database size={20} />,
-  API: <Key size={20} />,
-  Logs: <Activity size={20} />,
-  Analytics: <ChartBar size={20} />,
-  Reports: <FileText size={20} />,
-  Settings: <Settings size={20} />
+  Navigation: <House size={20} />,
+  Students: <Users size={20} />,
+  Services: <Grid3x3 size={20} />,
+  Countries: <Globe size={20} />,
+  AI: <Sparkles size={20} />,
+  Bookings: <Calendar size={20} />
 };
 
 const MODULE_COLORS: { [key: string]: string } = {
-  Users: 'text-blue-600',
-  Database: 'text-green-600',
-  API: 'text-purple-600',
-  Logs: 'text-orange-600',
-  Analytics: 'text-pink-600',
-  Reports: 'text-indigo-600',
-  Settings: 'text-gray-600'
+  Navigation: 'text-blue-600',
+  Students: 'text-green-600',
+  Services: 'text-purple-600',
+  Countries: 'text-orange-600',
+  AI: 'text-pink-600',
+  Bookings: 'text-indigo-600'
 };
 
 interface GlobalSearchProps {
@@ -186,7 +139,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = ({ onNavigate }) => {
     setIsOpen(false);
     setQuery('');
     setSelectedIndex(0);
-    onNavigate?.(result.module.toLowerCase());
+    onNavigate?.(result.id);
   };
 
   return (

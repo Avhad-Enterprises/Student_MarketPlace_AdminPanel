@@ -441,7 +441,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
 
             {/* Center: Search */}
             <div className="flex-1 max-w-[448px] mx-auto">
-              <GlobalSearch onNavigate={onNavigate} />
+              <GlobalSearch onNavigate={handleNav} />
             </div>
 
             {/* Right: Notifications + Profile */}
