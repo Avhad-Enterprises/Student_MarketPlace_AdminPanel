@@ -289,9 +289,9 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
     try {
       setIsLoading(true);
       const filters = {
-        q: debouncedSearch,
+        search: debouncedSearch,
         region: selectedRegion === 'All Regions' ? undefined : selectedRegion,
-        status: selectedStatus === 'All Status' ? undefined : selectedStatus,
+        status: selectedStatus === 'All Status' ? undefined : selectedStatus.toLowerCase(),
         sort: selectedSort,
         order: sortOrder,
       };
@@ -693,7 +693,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   };
 
   const handleAddCountry = () => {
-    setShowAddCountryModal(true);
+    onNavigate?.('add-country');
   };
 
   const handleEditCountry = async (countryId: string) => {
@@ -859,7 +859,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
               <Upload size={20} strokeWidth={1.5} />
               Import
             </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium" onClick={() => setShowAddCountryModal(true)}>
+            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium" onClick={handleAddCountry}>
               <Plus size={20} strokeWidth={1.5} />
               Add Country
             </button>
@@ -903,7 +903,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
               <span className="text-[10px] font-medium text-[#253154]">Import</span>
             </button>
             <button
-              onClick={() => setShowAddCountryModal(true)}
+              onClick={handleAddCountry}
               className="flex flex-col items-center justify-center gap-1 bg-[#0e042f] h-[60px] rounded-xl shadow-lg active:scale-95 transition-transform"
             >
               <Plus size={18} className="text-white" />
@@ -1470,18 +1470,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
 
       </div>
 
-      {/* Add Country Dialog */}
-      <Dialog open={showAddCountryModal} onOpenChange={setShowAddCountryModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Country</DialogTitle>
-          </DialogHeader>
-          <CountryForm
-            onSuccess={handleCountrySaved}
-            onCancel={() => setShowAddCountryModal(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Add Country Dialog Removed */}
 
       {/* Edit Country Dialog */}
       <Dialog open={!!editingCountry || isFetchingEdit} onOpenChange={(open) => {

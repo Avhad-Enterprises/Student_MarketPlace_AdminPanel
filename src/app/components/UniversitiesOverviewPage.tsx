@@ -398,8 +398,11 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   };
 
   const handleAddUniversity = () => {
-    setEditingUniversity(null);
-    setShowAddUniversityDialog(true);
+    if (onNavigate) {
+      onNavigate('add-university');
+    } else {
+      router.push('/universities/add');
+    }
   };
 
   const handleEditUniversity = (id: string) => {
