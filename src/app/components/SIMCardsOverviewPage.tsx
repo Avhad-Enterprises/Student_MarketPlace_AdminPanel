@@ -372,9 +372,13 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
   };
 
   const handleAddSIM = () => {
-    setDialogMode('add');
-    setEditingSIM(null);
-    setShowAddDialog(true);
+    if (onNavigate) {
+      onNavigate('/services/sim-cards/add');
+    } else {
+      setDialogMode('add');
+      setEditingSIM(null);
+      setShowAddDialog(true);
+    }
   };
 
   const handleEditSIM = (sim: SimCardType) => {

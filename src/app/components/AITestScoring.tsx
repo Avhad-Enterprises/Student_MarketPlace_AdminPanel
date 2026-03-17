@@ -24,6 +24,7 @@ import {
     HelpCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getScoringSettings, updateScoringSettings } from '../services/aiTestScoringService';
 
 // Types
 type BandMapping = { range: string; band: string };
@@ -100,10 +101,55 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
     // UI State
     const [expandedSections, setExpandedSections] = useState<string[]>(['reading-listening']);
     const [isSaving, setIsSaving] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch initial settings
+    React.useEffect(() => {
+        const fetchSettings = async () => {
+            try {
+                const result = await getScoringSettings();
+
+                if (result.data) {
+                    const d = result.data;
+                    setReadingMapping(d.reading_mapping);
+                    setListeningMapping(d.listening_mapping);
+                    setReadingTotalQuestions(d.reading_total_questions);
+                    setListeningTotalQuestions(d.listening_total_questions);
+                    setReadingNegativeMarking(d.reading_negative_marking);
+                    setListeningNegativeMarking(d.listening_negative_marking);
+                    setWritingWeights(d.writing_weights);
+                    setWritingStrictness(d.writing_strictness);
+                    setApplyWordCountPenalty(d.apply_word_count_penalty);
+                    setMinWordCount(d.min_word_count);
+                    setWordCountPenalty(d.word_count_penalty || '-0.5');
+                    setEnableOffTopicDetection(d.enable_off_topic_detection);
+                    setOffTopicSensitivity(d.off_topic_sensitivity);
+                    setSpeakingWeights(d.speaking_weights);
+                    setMinSpeakingDuration(d.min_speaking_duration);
+                    setIdealRangeMin(d.ideal_range_min);
+                    setIdealRangeMax(d.ideal_range_max);
+                    setApplyDurationPenalty(d.apply_duration_penalty);
+                    setFillerSensitivity(d.filler_sensitivity);
+                    setWritingModel(d.writing_model);
+                    setSpeechModel(d.speech_model);
+                    setRetryAttempts(d.retry_attempts);
+                    setTimeoutDuration(d.timeout_duration);
+                    setConfidenceThreshold(d.confidence_threshold);
+                }
+            } catch (error) {
+                console.error('Failed to fetch settings:', error);
+                toast.error('Failed to load settings', { description: 'Using default configuration' });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSettings();
+    }, []);
 
     // Calculations
-    const writingTotalWeight = Object.values(writingWeights).reduce((sum, val) => sum + val, 0);
-    const speakingTotalWeight = Object.values(speakingWeights).reduce((sum, val) => sum + val, 0);
+    const writingTotalWeight = Object.values(writingWeights).reduce((sum: number, val: number) => sum + val, 0);
+    const speakingTotalWeight = Object.values(speakingWeights).reduce((sum: number, val: number) => sum + val, 0);
     const isWritingWeightValid = writingTotalWeight === 100;
     const isSpeakingWeightValid = speakingTotalWeight === 100;
     const isFormValid = isWritingWeightValid && isSpeakingWeightValid;
@@ -115,12 +161,34 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
         );
     };
 
+    const balanceWeights = (prev: Record<string, number>, changedKey: string, newValue: number) => {
+        const newWeights = { ...prev, [changedKey]: newValue };
+        const otherKeys = Object.keys(newWeights).filter(k => k !== changedKey);
+        const othersSum = otherKeys.reduce((sum, k) => sum + prev[k], 0);
+        const remaining = 100 - newValue;
+
+        if (othersSum === 0) {
+            const share = Math.floor(remaining / otherKeys.length);
+            otherKeys.forEach(k => newWeights[k] = share);
+        } else {
+            otherKeys.forEach(k => {
+                newWeights[k] = Math.round((prev[k] / othersSum) * remaining);
+            });
+        }
+
+        const total = Object.values(newWeights).reduce((a, b) => a + b, 0);
+        if (total !== 100) {
+            newWeights[otherKeys[0]] += 100 - total;
+        }
+        return newWeights;
+    };
+
     const handleWritingWeightChange = (key: string, value: number) => {
-        setWritingWeights(prev => ({ ...prev, [key]: value }));
+        setWritingWeights(prev => balanceWeights(prev, key, value || 0) as typeof writingWeights);
     };
 
     const handleSpeakingWeightChange = (key: string, value: number) => {
-        setSpeakingWeights(prev => ({ ...prev, [key]: value }));
+        setSpeakingWeights(prev => balanceWeights(prev, key, value || 0) as typeof speakingWeights);
     };
 
     const handleSave = async () => {
@@ -133,8 +201,34 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
 
         setIsSaving(true);
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const settingsData = {
+                reading_mapping: readingMapping,
+                listening_mapping: listeningMapping,
+                reading_total_questions: readingTotalQuestions,
+                listening_total_questions: listeningTotalQuestions,
+                reading_negative_marking: readingNegativeMarking,
+                listening_negative_marking: listeningNegativeMarking,
+                writing_weights: writingWeights,
+                writing_strictness: writingStrictness,
+                apply_word_count_penalty: applyWordCountPenalty,
+                min_word_count: minWordCount,
+                word_count_penalty: wordCountPenalty,
+                enable_off_topic_detection: enableOffTopicDetection,
+                off_topic_sensitivity: offTopicSensitivity,
+                speaking_weights: speakingWeights,
+                min_speaking_duration: minSpeakingDuration,
+                ideal_range_min: idealRangeMin,
+                ideal_range_max: idealRangeMax,
+                apply_duration_penalty: applyDurationPenalty,
+                filler_sensitivity: fillerSensitivity,
+                writing_model: writingModel,
+                speech_model: speechModel,
+                retry_attempts: retryAttempts,
+                timeout_duration: timeoutDuration,
+                confidence_threshold: confidenceThreshold,
+            };
+
+            await updateScoringSettings(settingsData);
 
             toast.success('Scoring configuration saved', {
                 description: 'Changes will apply to new test evaluations'
@@ -145,6 +239,17 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
             setIsSaving(false);
         }
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
+                    <p className="text-sm text-gray-600 font-medium">Loading settings...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-[#faf7ff] via-white to-[#f8faff]">
@@ -214,7 +319,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                     <input
                                         type="number"
                                         value={readingTotalQuestions}
-                                        onChange={(e) => setReadingTotalQuestions(parseInt(e.target.value))}
+                                        onChange={(e) => setReadingTotalQuestions(parseInt(e.target.value) || 0)}
                                         className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
                                     />
                                 </div>
@@ -281,7 +386,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                     <input
                                         type="number"
                                         value={listeningTotalQuestions}
-                                        onChange={(e) => setListeningTotalQuestions(parseInt(e.target.value))}
+                                        onChange={(e) => setListeningTotalQuestions(parseInt(e.target.value) || 0)}
                                         className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
                                     />
                                 </div>
@@ -438,7 +543,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                                 <input
                                                     type="number"
                                                     value={minWordCount}
-                                                    onChange={(e) => setMinWordCount(parseInt(e.target.value))}
+                                                    onChange={(e) => setMinWordCount(parseInt(e.target.value) || 0)}
                                                     className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                                                 />
                                             </div>
@@ -550,7 +655,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                     <input
                                         type="number"
                                         value={minSpeakingDuration}
-                                        onChange={(e) => setMinSpeakingDuration(parseInt(e.target.value))}
+                                        onChange={(e) => setMinSpeakingDuration(parseInt(e.target.value) || 0)}
                                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                                     />
                                 </div>
@@ -559,7 +664,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                     <input
                                         type="number"
                                         value={idealRangeMin}
-                                        onChange={(e) => setIdealRangeMin(parseInt(e.target.value))}
+                                        onChange={(e) => setIdealRangeMin(parseInt(e.target.value) || 0)}
                                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                                     />
                                 </div>
@@ -568,7 +673,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                     <input
                                         type="number"
                                         value={idealRangeMax}
-                                        onChange={(e) => setIdealRangeMax(parseInt(e.target.value))}
+                                        onChange={(e) => setIdealRangeMax(parseInt(e.target.value) || 0)}
                                         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                                     />
                                 </div>
@@ -651,7 +756,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                 <input
                                     type="number"
                                     value={retryAttempts}
-                                    onChange={(e) => setRetryAttempts(parseInt(e.target.value))}
+                                    onChange={(e) => setRetryAttempts(parseInt(e.target.value) || 0)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                             </div>
@@ -661,7 +766,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                 <input
                                     type="number"
                                     value={timeoutDuration}
-                                    onChange={(e) => setTimeoutDuration(parseInt(e.target.value))}
+                                    onChange={(e) => setTimeoutDuration(parseInt(e.target.value) || 0)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                             </div>
@@ -671,7 +776,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                 <input
                                     type="number"
                                     value={confidenceThreshold}
-                                    onChange={(e) => setConfidenceThreshold(parseInt(e.target.value))}
+                                    onChange={(e) => setConfidenceThreshold(parseInt(e.target.value) || 0)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 />
                             </div>

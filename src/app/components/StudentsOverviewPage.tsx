@@ -933,10 +933,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
               <span className="text-sm text-[#253154] font-medium">Import</span>
             </button>
             <button
-              onClick={() => {
-                setStudentToEdit(null);
-                setIsAddStudentModalOpen(true);
-              }}
+              onClick={() => onNavigate('add-student')}
               className="flex items-center gap-2 px-5 py-3 bg-[#0e042f] rounded-xl hover:bg-[#1a0c4a] transition-colors shadow-lg"
             >
               <Plus size={18} className="text-white" />
@@ -1065,9 +1062,51 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                 </div>
               </PopoverContent>
             </Popover>
-            <button className="p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-              <ArrowUpDown size={20} className="text-[#253154]" />
-            </button>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <button className="flex items-center justify-between px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm gap-2 text-sm font-medium text-[#253154] min-w-[150px]">
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown size={16} className="text-gray-400" />
+                    <span>Sort: {
+                      sortConfig.key === 'first_name' ? 'Name' :
+                        sortConfig.key === 'email' ? 'Email' :
+                          sortConfig.key === 'account_status' ? 'Status' :
+                            sortConfig.key === 'student_id' ? 'Student ID' :
+                              'Date Created'
+                    }</span>
+                  </div>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-2 bg-white" align="end">
+                <div className="space-y-1">
+                  <div className="text-xs font-semibold text-gray-400 px-3 py-2 uppercase tracking-wider">Sort By</div>
+                  {[
+                    { label: 'Name (A-Z)', key: 'first_name' },
+                    { label: 'Email', key: 'email' },
+                    { label: 'Date Created', key: 'created_at' },
+                    { label: 'Status', key: 'account_status' },
+                    { label: 'Student ID', key: 'student_id' }
+                  ].map(option => (
+                    <button
+                      key={option.key}
+                      onClick={() => handleSort(option.key)}
+                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors flex items-center justify-between ${sortConfig.key === option.key
+                          ? 'bg-purple-50 text-purple-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                    >
+                      <span>{option.label}</span>
+                      {sortConfig.key === option.key && (
+                        sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <Popover open={openColumnsPopover} onOpenChange={setOpenColumnsPopover}>
               <PopoverTrigger asChild>
                 <button className={`p-3 bg-white rounded-xl border transition-colors shadow-sm ${Object.values(visibleColumns).some(v => !v)
@@ -1104,9 +1143,6 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                 </div>
               </PopoverContent>
             </Popover>
-            <button className="p-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-              <MoreHorizontal size={20} className="text-[#253154]" />
-            </button>
           </div>
         </div>
 
@@ -1125,27 +1161,18 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                     />
                   </th>
                   {visibleColumns.studentId && (
-                    <th className="px-6 py-4 text-left cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => handleSort('student_id')}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Student ID</span>
-                        <ArrowUpDown size={14} className={`text-gray-400 ${sortConfig.key === 'student_id' ? 'text-[#0e042f]' : ''}`} />
-                      </div>
+                    <th className="px-6 py-4 text-left">
+                      <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Student ID</span>
                     </th>
                   )}
                   {visibleColumns.firstName && (
-                    <th className="px-6 py-4 text-left cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => handleSort('first_name')}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Student Name</span>
-                        <ArrowUpDown size={14} className={`text-gray-400 ${sortConfig.key === 'first_name' ? 'text-[#0e042f]' : ''}`} />
-                      </div>
+                    <th className="px-6 py-4 text-left">
+                      <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Student Name</span>
                     </th>
                   )}
                   {visibleColumns.email && (
-                    <th className="px-6 py-4 text-left cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => handleSort('email')}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Email</span>
-                        <ArrowUpDown size={14} className={`text-gray-400 ${sortConfig.key === 'email' ? 'text-[#0e042f]' : ''}`} />
-                      </div>
+                    <th className="px-6 py-4 text-left">
+                      <span className="text-xs font-bold text-[#253154] uppercase tracking-wider">Email</span>
                     </th>
                   )}
                   {visibleColumns.status && (

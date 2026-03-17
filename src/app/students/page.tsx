@@ -10,6 +10,7 @@ export default function StudentsPage() {
     const handleNavigate = (page: string) => {
         // Translate the page ID to Next.js route
         if (page === 'dashboard') router.push('/dashboard');
+        else if (page === 'add-student') router.push('/students/add');
         else if (page.startsWith('students-')) {
             const sub = page.replace('students-', '');
             if (sub === 'all') router.push('/students');

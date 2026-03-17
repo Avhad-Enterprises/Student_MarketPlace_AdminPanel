@@ -658,7 +658,10 @@ export const StudentProfilesOverviewPage: React.FC = () => {
               <Upload size={20} strokeWidth={1.5} />
               Import
             </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+            <button
+              onClick={() => router.push('/students/add')}
+              className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+            >
               <Plus size={20} strokeWidth={1.5} />
               Add New
             </button>
@@ -687,7 +690,10 @@ export const StudentProfilesOverviewPage: React.FC = () => {
 
           {/* Button Row */}
           <div className="flex gap-3">
-            <button className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium">
+            <button
+              onClick={() => router.push('/students/add')}
+              className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium"
+            >
               <Plus size={20} />
               Add New
             </button>

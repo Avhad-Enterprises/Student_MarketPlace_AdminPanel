@@ -597,9 +597,13 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
             </button>
             <button
               onClick={() => {
-                setEditingBank(null);
-                setDialogMode('add');
-                setShowAddDialog(true);
+                if (onNavigate) {
+                  onNavigate('/services/banks/add');
+                } else {
+                  setEditingBank(null);
+                  setDialogMode('add');
+                  setShowAddDialog(true);
+                }
               }}
               className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
             >
@@ -627,9 +631,13 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
           <div className="flex gap-3">
             <button
               onClick={() => {
-                setEditingBank(null);
-                setDialogMode('add');
-                setShowAddDialog(true);
+                if (onNavigate) {
+                  onNavigate('/services/banks/add');
+                } else {
+                  setEditingBank(null);
+                  setDialogMode('add');
+                  setShowAddDialog(true);
+                }
               }}
               className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium"
             >

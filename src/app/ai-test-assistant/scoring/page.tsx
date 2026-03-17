@@ -1,3 +1,5 @@
+'use client';
+
 import { useRouter } from 'next/navigation';
 import { AdminLayout } from '../../components/AdminLayout';
 import { AITestScoring } from '../../components/AITestScoring';
