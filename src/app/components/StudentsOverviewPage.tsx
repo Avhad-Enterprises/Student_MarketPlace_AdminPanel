@@ -1237,7 +1237,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                     return (
                       <tr
                         key={student.id}
-                        onClick={() => onNavigate('student-detail')}
+                        onClick={() => handleViewStudent(student.id)}
                         className="border-b border-gray-100 hover:bg-gray-50/50 transition-colors cursor-pointer"
                       >
                         <td
@@ -1301,21 +1301,61 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                             className="px-6 py-4"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleEditStudent(student.id); }}
-                                className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
-                                title="Edit Student"
-                              >
-                                <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleArchiveStudent(student); }}
-                                className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
-                                title="Archive Student"
-                              >
-                                <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
-                              </button>
+                            <div className="flex items-center justify-end">
+                              <Popover open={openActionMenuId === student.id} onOpenChange={(open) => setOpenActionMenuId(open ? student.id : null)}>
+                                <PopoverTrigger asChild>
+                                  <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                    <MoreHorizontal size={18} className="text-gray-400" />
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-48 p-2 bg-white rounded-xl shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200" align="end">
+                                  <div className="space-y-1">
+                                    <button
+                                      onClick={() => handleViewStudent(student.id)}
+                                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                    >
+                                      <Eye size={16} />
+                                      <span>View Student</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleEditStudent(student.id)}
+                                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                    >
+                                      <Edit size={16} />
+                                      <span>Edit Student</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleAddNote(student.id)}
+                                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                    >
+                                      <StickyNote size={16} />
+                                      <span>Add Note</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleViewDocuments(student.id)}
+                                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                    >
+                                      <FileText size={16} />
+                                      <span>View Documents</span>
+                                    </button>
+                                    <button
+                                      onClick={() => handleViewApplications(student.id)}
+                                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                    >
+                                      <FileText size={16} />
+                                      <span>View Applications</span>
+                                    </button>
+                                    <div className="h-px bg-gray-100 my-1" />
+                                    <button
+                                      onClick={() => handleArchiveStudent(student)}
+                                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-red-50 flex items-center gap-2 text-red-600"
+                                    >
+                                      <Archive size={16} />
+                                      <span>Archive Student</span>
+                                    </button>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             </div>
                           </td>
                         )}
@@ -1378,7 +1418,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
               student={student}
               onSelect={toggleStudentSelection}
               isSelected={selectedStudents.includes(student.id)}
-              onNavigate={onNavigate}
+              onNavigate={() => handleViewStudent(student.id)}
               onEdit={handleEditStudent}
               onArchive={handleArchiveStudent}
             />

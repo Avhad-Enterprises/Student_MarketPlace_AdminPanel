@@ -271,6 +271,7 @@ export const StudentProfilesOverviewPage: React.FC = () => {
   const [exportScope, setExportScope] = useState<'all' | 'selected'>('all');
 
   const [studentToEdit, setStudentToEdit] = useState<BackendStudent | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [studentToArchive, setStudentToArchive] = useState<{ id: string, name: string } | null>(null);
   const [selectedIndividualStudent, setSelectedIndividualStudent] = useState<BackendStudent | null>(null);
 
@@ -658,13 +659,7 @@ export const StudentProfilesOverviewPage: React.FC = () => {
               <Upload size={20} strokeWidth={1.5} />
               Import
             </button>
-            <button
-              onClick={() => router.push('/students/add')}
-              className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
-            >
-              <Plus size={20} strokeWidth={1.5} />
-              Add New
-            </button>
+
           </div>
         </div>
 
@@ -690,13 +685,7 @@ export const StudentProfilesOverviewPage: React.FC = () => {
 
           {/* Button Row */}
           <div className="flex gap-3">
-            <button
-              onClick={() => router.push('/students/add')}
-              className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium"
-            >
-              <Plus size={20} />
-              Add New
-            </button>
+
             <button
               onClick={() => setActiveMobileMenu(activeMobileMenu === 'import' ? 'none' : 'import')}
               className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center"
@@ -1147,21 +1136,61 @@ export const StudentProfilesOverviewPage: React.FC = () => {
                       {visibleColumns.includes('updated') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{student.lastUpdated}</td>}
                       {visibleColumns.includes('created') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{student.createdOn}</td>}
                       <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); student.raw && handleActionEditProfile(student.raw); }}
-                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
-                            title="Edit Profile"
-                          >
-                            <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleActionArchiveStudent(student.dbId, student.name); }}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/archive"
-                            title="Archive Student"
-                          >
-                            <Trash2 size={18} className="text-gray-400 group-hover/archive:text-red-600" />
-                          </button>
+                        <div className="flex items-center justify-end">
+                          <Popover open={openActionMenuId === student.id} onOpenChange={(open) => setOpenActionMenuId(open ? student.id : null)}>
+                            <PopoverTrigger asChild>
+                              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                <MoreHorizontal size={18} className="text-gray-400" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 p-2 bg-white rounded-xl shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200" align="end">
+                              <div className="space-y-1">
+                                <button
+                                  onClick={() => handleActionViewProfile(student.dbId)}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <Eye size={16} />
+                                  <span>View Profile</span>
+                                </button>
+                                <button
+                                  onClick={() => student.raw && handleActionEditProfile(student.raw)}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <Edit size={16} />
+                                  <span>Edit Profile</span>
+                                </button>
+                                <button
+                                  onClick={() => handleActionViewApplications(student.dbId)}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <Copy size={16} />
+                                  <span>View Applications</span>
+                                </button>
+                                <button
+                                  onClick={() => student.raw && handleActionAssignCounselor(student.raw)}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <UserCog size={16} />
+                                  <span>Assign Counselor</span>
+                                </button>
+                                <button
+                                  onClick={() => handleActionViewTimeline(student.dbId)}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <Clock size={16} />
+                                  <span>View Timeline</span>
+                                </button>
+                                <div className="h-px bg-gray-100 my-1" />
+                                <button
+                                  onClick={() => handleActionArchiveStudent(student.dbId, student.name)}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-red-50 flex items-center gap-2 text-red-600"
+                                >
+                                  <Archive size={16} />
+                                  <span>Archive Student</span>
+                                </button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </td>
                     </tr>

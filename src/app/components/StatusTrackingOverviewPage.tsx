@@ -381,6 +381,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [showApplicationsModal, setShowApplicationsModal] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentStatus | null>(null);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
 
   // Form states for modals
   const [updateForm, setUpdateForm] = useState({
@@ -782,10 +783,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
               <Upload size={20} strokeWidth={1.5} />
               Import
             </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
-              <Plus size={20} strokeWidth={1.5} />
-              Add New
-            </button>
+
           </div>
         </div>
 
@@ -1262,28 +1260,53 @@ export const StatusTrackingOverviewPage: React.FC = () => {
                       {visibleColumns.includes('lastChange') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{status.lastStatusChange}</td>}
                       {visibleColumns.includes('appRef') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{status.applicationRef}</td>}
                       <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenTimeline(status); }}
-                            className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
-                            title="View Timeline"
-                          >
-                            <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleOpenStatusUpdate(status); }}
-                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
-                            title="Update Status"
-                          >
-                            <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toast.info('Delete functionality coming soon'); }}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
-                            title="Delete Status"
-                          >
-                            <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
-                          </button>
+                        <div className="flex items-center justify-end">
+                          <Popover open={openActionMenuId === status.id} onOpenChange={(open) => setOpenActionMenuId(open ? status.id : null)}>
+                            <PopoverTrigger asChild>
+                              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                                <MoreHorizontal size={18} className="text-gray-400" />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-56 p-2 bg-white rounded-xl shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200" align="end">
+                              <div className="space-y-1">
+                                <button
+                                  onClick={() => { handleOpenTimeline(status); setOpenActionMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <Eye size={16} />
+                                  <span>View Student Timeline</span>
+                                </button>
+                                <button
+                                  onClick={() => { handleOpenStatusUpdate(status); setOpenActionMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <Edit size={16} />
+                                  <span>Update Status</span>
+                                </button>
+                                <button
+                                  onClick={() => { setSelectedStudent(status); setShowNoteModal(true); setOpenActionMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <StickyNote size={16} />
+                                  <span>Add Internal Note</span>
+                                </button>
+                                <button
+                                  onClick={() => { toast.info('Flag for Review functionality is coming soon'); setOpenActionMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <Flag size={16} />
+                                  <span>Flag for Review</span>
+                                </button>
+                                <button
+                                  onClick={() => { setSelectedStudent(status); setShowApplicationsModal(true); setOpenActionMenuId(null); }}
+                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                >
+                                  <Copy size={16} />
+                                  <span>View Linked Applications</span>
+                                </button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                       </td>
                     </tr>

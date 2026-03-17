@@ -40,6 +40,8 @@ import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
+import { useRouter } from 'next/navigation';
+
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import {
   getAllApplications,
@@ -294,7 +296,9 @@ const MobileApplicationCard: React.FC<MobileApplicationCardProps> = ({ applicati
 
 // --- Main Component ---
 export const ApplicationsOverviewPage: React.FC = () => {
+  const router = useRouter();
   // State management
+
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
     to: new Date(2024, 11, 31)
@@ -878,127 +882,13 @@ export const ApplicationsOverviewPage: React.FC = () => {
               <Upload size={20} strokeWidth={1.5} />
               Import
             </button>
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-              <DialogTrigger asChild>
-                <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
-                  <Plus size={20} strokeWidth={1.5} />
-                  Add New
-                </button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px] bg-white">
-                <DialogHeader>
-                  <DialogTitle>Add New Application</DialogTitle>
-                  <DialogDescription>
-                    Create a new application record for a student.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="student" className="text-right">
-                      Student
-                    </Label>
-                    <div className="col-span-3">
-                      <Select
-                        value={newApplication.studentDbId}
-                        onValueChange={(value) => setNewApplication({ ...newApplication, studentDbId: value })}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a student" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {students.map((student) => (
-                            <SelectItem key={student.id} value={student.id}>
-                              {student.first_name} {student.last_name} ({student.student_id})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="university" className="text-right">
-                      University
-                    </Label>
-                    <div className="col-span-3">
-                      <Select
-                        value={newApplication.universityName}
-                        onValueChange={(value) => handleUniversityChange(value)}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select a university" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {universities.map((univ) => (
-                            <SelectItem key={univ.id} value={univ.name}>
-                              {univ.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="country" className="text-right">
-                      Country
-                    </Label>
-                    <Input
-                      id="country"
-                      value={newApplication.country}
-                      readOnly
-                      className="col-span-3 bg-gray-50 text-gray-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="intake" className="text-right">
-                      Intake
-                    </Label>
-                    <Input
-                      id="intake"
-                      placeholder="e.g. Sep 2024"
-                      value={newApplication.intake}
-                      onChange={(e) => setNewApplication({ ...newApplication, intake: e.target.value })}
-                      className="col-span-3"
-                    />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="status" className="text-right">
-                      Status
-                    </Label>
-                    <div className="col-span-3">
-                      <Select
-                        value={newApplication.status}
-                        onValueChange={(value) => setNewApplication({ ...newApplication, status: value })}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="in-progress">In Progress</SelectItem>
-                          <SelectItem value="submitted">Submitted</SelectItem>
-                          <SelectItem value="decision-received">Decision Received</SelectItem>
-                          <SelectItem value="pending-docs">Pending Docs</SelectItem>
-                          <SelectItem value="closed">Closed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="counselor" className="text-right">
-                      Counselor
-                    </Label>
-                    <Input
-                      id="counselor"
-                      value={newApplication.counselor}
-                      onChange={(e) => setNewApplication({ ...newApplication, counselor: e.target.value })}
-                      className="col-span-3"
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" onClick={handleAddApplication}>Save Application</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            <button
+              onClick={() => router.push('/students/applications/add')}
+              className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+            >
+              <Plus size={20} strokeWidth={1.5} />
+              Add New
+            </button>
           </div>
         </div>
 
@@ -1025,7 +915,7 @@ export const ApplicationsOverviewPage: React.FC = () => {
           {/* Button Row */}
           <div className="flex gap-3">
             <button
-              onClick={() => setShowAddDialog(true)}
+              onClick={() => router.push('/students/applications/add')}
               className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium"
             >
               <Plus size={20} />
@@ -1484,28 +1374,68 @@ export const ApplicationsOverviewPage: React.FC = () => {
                     {visibleColumns.includes('decision') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{application.decisionDate}</td>}
                     {visibleColumns.includes('updated') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{application.lastUpdated}</td>}
                     <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleViewApplication(application); }}
-                          className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
-                          title="View Application"
-                        >
-                          <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditApplication(application); }}
-                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
-                          title="Edit Application"
-                        >
-                          <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleCloseApplication(application); }}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
-                          title="Delete Application"
-                        >
-                          <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
-                        </button>
+                      <div className="flex items-center justify-end">
+                        <Popover open={activeMenuId === application.id} onOpenChange={(open) => setActiveMenuId(open ? application.id : null)}>
+                          <PopoverTrigger asChild>
+                            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                              <MoreHorizontal size={18} className="text-gray-400" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-48 p-2 bg-white rounded-xl shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200" align="end">
+                            <div className="space-y-1">
+                              <button
+                                onClick={() => { handleViewApplication(application); setActiveMenuId(null); }}
+                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                              >
+                                <Eye size={16} />
+                                <span>View Application</span>
+                              </button>
+                              <button
+                                onClick={() => { handleEditApplication(application); setActiveMenuId(null); }}
+                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                              >
+                                <Edit size={16} />
+                                <span>Edit Application</span>
+                              </button>
+                              <button
+                                onClick={() => { toast.info('Upload Documents is coming soon'); setActiveMenuId(null); }}
+                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                              >
+                                <FileUp size={16} />
+                                <span>Upload Documents</span>
+                              </button>
+                              <button
+                                onClick={() => { handleRowChangeStatus(application); setActiveMenuId(null); }}
+                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                              >
+                                <Edit size={16} />
+                                <span>Change Status</span>
+                              </button>
+                              <button
+                                onClick={() => { handleRowAssignCounselor(application); setActiveMenuId(null); }}
+                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                              >
+                                <UserCog size={16} />
+                                <span>Assign Counselor</span>
+                              </button>
+                              <button
+                                onClick={() => { handleViewTimeline(application); setActiveMenuId(null); }}
+                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                              >
+                                <Clock size={16} />
+                                <span>View Timeline</span>
+                              </button>
+                              <div className="h-px bg-gray-100 my-1" />
+                              <button
+                                onClick={() => { handleCloseApplication(application); setActiveMenuId(null); }}
+                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-red-50 flex items-center gap-2 text-red-600"
+                              >
+                                <XCircle size={16} />
+                                <span>Close Application</span>
+                              </button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </td>
                   </tr>
