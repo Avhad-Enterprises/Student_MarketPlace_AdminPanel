@@ -179,6 +179,31 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const profileButtonRef = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotifications();
+  const [userName, setUserName] = useState('Admin User');
+  const [userInitials, setUserInitials] = useState('AU');
+
+  useEffect(() => {
+    try {
+      const userJson = localStorage.getItem('auth_user');
+      if (userJson) {
+        const user = JSON.parse(userJson);
+        const name = user.full_name || user.name || 'Admin User';
+        setUserName(name);
+        
+        // Calculate initials
+        const initials = name
+          .split(' ')
+          .filter(Boolean)
+          .map((n: string) => n[0])
+          .join('')
+          .toUpperCase()
+          .substring(0, 2);
+        setUserInitials(initials || 'AU');
+      }
+    } catch (e) {
+      console.error('Error reading auth_user', e);
+    }
+  }, []);
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
   const navTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -243,6 +268,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
           'bookings-enquiries': '/bookings/enquiries',
           'bookings-status': '/bookings/status',
           'bookings-experts': '/bookings/experts',
+          'profile': '/profile',
         };
 
         const targetRoute = routeMap[page];
@@ -481,12 +507,12 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
                   className="flex items-center gap-2 md:gap-3 hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <div className="hidden sm:block text-right">
-                    <div className="text-sm font-normal text-[#d1d5dc]">Admin User</div>
+                    <div className="text-sm font-normal text-[#d1d5dc]">{userName}</div>
                   </div>
                   <div className="relative">
                     <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#c27aff] to-[#fb64b6] p-[2px]">
                       <div className="w-full h-full flex items-center justify-center rounded-full bg-app-sidebar-bg border-2 border-app-sidebar-bg text-white">
-                        AU
+                        {userInitials}
                       </div>
                     </div>
                   </div>
@@ -525,7 +551,13 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
                         className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-3"
                         onClick={() => {
                           setShowProfileMenu(false);
-                          onLogout?.();
+                          if (onLogout) {
+                            onLogout();
+                          } else {
+                            localStorage.removeItem('auth_token');
+                            localStorage.removeItem('auth_user');
+                            router.push('/login');
+                          }
                         }}
                       >
                         <LogOut size={16} />

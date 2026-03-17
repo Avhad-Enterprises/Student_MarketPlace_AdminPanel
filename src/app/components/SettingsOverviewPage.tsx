@@ -18,10 +18,12 @@ import { AssistantSetup } from './AssistantSetup';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
 import { systemSettingsService, SystemSettings, NotificationSetting } from '@/services/systemSettingsService';
+import { authService } from '@/services/authService';
 
 type SettingsTab = 'general' | 'ai' | 'security' | 'notifications';
 
 export const SettingsOverviewPage: React.FC = () => {
+
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -31,6 +33,13 @@ export const SettingsOverviewPage: React.FC = () => {
         primary_currency: 'USD'
     });
     const [notificationSettings, setNotificationSettings] = useState<NotificationSetting[]>([]);
+    
+    // Password state
+    const [currentPassword, setCurrentPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
 
     useEffect(() => {
         fetchSettings();
@@ -76,6 +85,36 @@ export const SettingsOverviewPage: React.FC = () => {
             toast.error('Failed to update notification setting');
         }
     };
+
+    const handlePasswordChange = async () => {
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            toast.error('Please fill all fields');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast.error('New passwords do not match');
+            return;
+        }
+        if (newPassword.length < 6) {
+            toast.error('Password must be at least 6 characters');
+            return;
+        }
+        
+        setIsUpdatingPassword(true);
+        try {
+            await authService.changePassword(currentPassword, newPassword);
+            toast.success('Password updated successfully');
+            setCurrentPassword('');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error: any) {
+            const errorMsg = error.response?.data?.message || 'Failed to update password';
+            toast.error(errorMsg);
+        } finally {
+            setIsUpdatingPassword(false);
+        }
+    };
+
 
     const tabs = [
         { id: 'general', label: 'General Settings', icon: Globe },
@@ -180,20 +219,48 @@ export const SettingsOverviewPage: React.FC = () => {
                                         <label className="block text-[xs] font-medium text-gray-500 mb-1.5 ml-1">Current Password</label>
                                         <input
                                             type="password"
+                                            value={currentPassword}
+                                            onChange={(e) => setCurrentPassword(e.target.value)}
                                             className="w-full h-11 px-4 rounded-xl border border-gray-200 focus:border-[#0f172b] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                                            placeholder="••••••••"
                                         />
                                     </div>
                                     <div>
                                         <label className="block text-[xs] font-medium text-gray-500 mb-1.5 ml-1">New Password</label>
                                         <input
                                             type="password"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
                                             className="w-full h-11 px-4 rounded-xl border border-gray-200 focus:border-[#0f172b] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                                            placeholder="••••••••"
                                         />
                                     </div>
-                                    <Button className="bg-[#0f172b] hover:bg-[#1a2340] text-white px-8 rounded-xl h-11 mt-2">
-                                        Update Password
+                                    <div>
+                                        <label className="block text-[xs] font-medium text-gray-500 mb-1.5 ml-1">Confirm New Password</label>
+                                        <input
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            className="w-full h-11 px-4 rounded-xl border border-gray-200 focus:border-[#0f172b] focus:ring-2 focus:ring-purple-100 outline-none transition-all"
+                                            placeholder="••••••••"
+                                        />
+                                    </div>
+                                    <Button 
+                                        onClick={handlePasswordChange}
+                                        disabled={isUpdatingPassword}
+                                        className="bg-[#0f172b] hover:bg-[#1a2340] text-white px-8 rounded-xl h-11 mt-2 flex items-center justify-center"
+                                    >
+                                        {isUpdatingPassword ? (
+                                            <>
+                                                <Loader2 size={16} className="mr-2 animate-spin" />
+                                                Updating...
+                                            </>
+                                        ) : (
+                                            'Update Password'
+                                        )}
                                     </Button>
                                 </div>
+
                             </div>
                         </div>
                     </div>

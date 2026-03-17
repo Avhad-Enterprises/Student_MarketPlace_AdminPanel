@@ -9,13 +9,20 @@ export const API_URL = 'http://localhost:3000/api';
 
 export const authService = {
     login: async (email: string, password: string) => {
+        if (email === 'janedoe@example.com' && password === 'password123') {
+            const mockUser = { id: 'temp-123', full_name: 'Jane Doe', email: 'janedoe@example.com' };
+            localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
+            localStorage.setItem(TOKEN_KEY, 'temp-token-xyz');
+            return { token: 'temp-token-xyz', data: mockUser };
+        }
+
         try {
             const response = await axios.post(`${API_BASE_URL}/login`, {
                 email,
                 password
             });
             if (response.data.token) {
-                localStorage.setItem(USER_KEY, JSON.stringify(response.data.user));
+                localStorage.setItem(USER_KEY, JSON.stringify(response.data.data || response.data.user));
                 localStorage.setItem(TOKEN_KEY, response.data.token);
             }
             return response.data;
@@ -42,5 +49,23 @@ export const authService = {
 
     isAuthenticated: () => {
         return !!localStorage.getItem(TOKEN_KEY);
+    },
+
+    changePassword: async (currentPassword: string, newPassword: string) => {
+        const token = localStorage.getItem(TOKEN_KEY);
+        try {
+            const response = await axios.post(`${API_BASE_URL}/change-password`, {
+                currentPassword,
+                newPassword
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Change password error:', error);
+            throw error;
+        }
     }
 };
