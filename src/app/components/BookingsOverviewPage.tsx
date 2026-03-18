@@ -118,7 +118,7 @@ interface MobileBookingCardProps {
   onDelete?: () => void;
 }
 
-const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelected, onToggleSelect, onNavigateToDetail }) => {
+const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelected, onToggleSelect, onNavigateToDetail, onEdit, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (

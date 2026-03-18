@@ -1,4 +1,4 @@
-﻿/**
+/**
  * PART 8: COLLABORATION & ACCESS CONTROL - UI STATE MODELING
  * 
  * Visual representation of:
@@ -30,16 +30,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 // TYPES
 // ============================================
 
-export type UserRole = 'owner' | 'admin' | 'editor' | 'viewer';
-
-export interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  avatar?: string;
-  status?: 'active' | 'pending';
-}
+import type { TeamMember, UserRole } from './types';
+export type { TeamMember, UserRole };
 
 // ============================================
 // 1️⃣ ROLE BADGE COMPONENT
@@ -78,6 +70,14 @@ export const RoleBadge: React.FC<RoleBadgeProps> = ({ role, size = 'sm' }) => {
           border: 'border-green-200'
         };
       case 'viewer':
+        return {
+          label: 'Viewer',
+          icon: Eye,
+          bg: 'bg-gray-100',
+          text: 'text-gray-600',
+          border: 'border-gray-200'
+        };
+      default:
         return {
           label: 'Viewer',
           icon: Eye,

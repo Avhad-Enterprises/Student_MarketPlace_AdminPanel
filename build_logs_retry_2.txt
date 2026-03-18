@@ -1,0 +1,74 @@
+
+> student_marketplace_frontend@0.1.0 build
+> next build
+
+   ▲ Next.js 14.0.0
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+
+./src/app/components/ApplicationsOverviewPage.tsx
+509:6  Warning: React Hook React.useEffect has a missing dependency: 'loadApplications'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/AssistantSetup.tsx
+187:8  Warning: React Hook useEffect has a missing dependency: 'chatMessages.length'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/BanksOverviewPage.tsx
+312:6  Warning: React Hook React.useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/BookingsOverviewPage.tsx
+304:6  Warning: React Hook React.useMemo has missing dependencies: 'date.from' and 'date.to'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/GlobalSearch.tsx
+152:11  Warning: The attribute aria-expanded is not supported by the role textbox. This role is implicit on the element input.  jsx-a11y/role-supports-aria-props
+
+./src/app/components/HousingOverviewPage.tsx
+223:6  Warning: React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/SIMCardsOverviewPage.tsx
+315:6  Warning: React Hook useEffect has a missing dependency: 'fetchData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/StatusTrackingOverviewPage.tsx
+480:6  Warning: React Hook React.useEffect has missing dependencies: 'fetchStatuses', 'riskFilter', and 'stageFilter'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+486:6  Warning: React Hook React.useEffect has missing dependencies: 'fetchStatuses' and 'searchQuery'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/StudentsOverviewPage.tsx
+535:6  Warning: React Hook React.useEffect has a missing dependency: 'fetchStudents'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/ui/form/FileUpload.tsx
+196:6  Warning: React Hook useCallback has a missing dependency: 'uploadFiles'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/ui/form/NumberInput.tsx
+62:6  Warning: React Hook useEffect has a missing dependency: 'formatValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/ui/modals/ConfirmDialog.tsx
+139:6  Warning: React Hook useEffect has missing dependencies: 'handleCancel' and 'handleConfirm'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/UniversitiesOverviewPage.tsx
+323:6  Warning: React Hook React.useEffect has a missing dependency: 'fetchUniversities'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./src/app/components/WebsiteBuilderEditor.tsx
+760:6  Warning: React Hook React.useEffect has a missing dependency: 'triggerAutoSave'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+5837:25  Warning: Elements with the ARIA role "option" must have the following attributes defined: aria-selected  jsx-a11y/role-has-required-aria-props
+
+./src/services/invoiceService.ts
+330:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+./src/services/rbacService.ts
+292:1  Warning: Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/basic-features/eslint#disabling-rules
+Failed to compile.
+
+./src/app/components/website-builder/Part9ActivityHistoryUI.tsx:494:11
+Type error: This comparison appears to be unintentional because the types '"added" | "modified" | "removed"' and '"style"' have no overlap.
+
+[0m [90m 492 |[39m       [36mconst[39m description [33m=[39m [32m`${change.sectionName || change.target}`[39m[33m;[39m[0m
+[0m [90m 493 |[39m       [36mif[39m (change[33m.[39mtype [33m===[39m [32m'modified'[39m) groups[33m.[39mcontent[33m.[39mpush(description)[33m;[39m[0m
+[0m[31m[1m>[22m[39m[90m 494 |[39m       [36mif[39m (change[33m.[39mtype [33m===[39m [32m'style'[39m) groups[33m.[39mstyle[33m.[39mpush(description)[33m;[39m[0m
+[0m [90m     |[39m           [31m[1m^[22m[39m[0m
+[0m [90m 495 |[39m       [36mif[39m (change[33m.[39mtype [33m===[39m [32m'visibility'[39m) groups[33m.[39mvisibility[33m.[39mpush(description)[33m;[39m[0m
+[0m [90m 496 |[39m     })[33m;[39m[0m
+[0m [90m 497 |[39m[0m

@@ -312,7 +312,7 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                             <MessageCircle size={18} className="text-blue-600 mt-0.5 shrink-0" />
                                             <div>
                                                 <p className="text-xs font-bold text-blue-900 mb-1">PRO TIP: Structured Reasoning</p>
-                                                <p className="text-xs text-blue-700/80 leading-relaxed font-medium">Use structured blocks like "[Objective]", "[Context]", and "[Constraints]" in your prompt to improve the AI&apos;s adherence to complex SOP review rules.</p>
+                                                <p className="text-xs text-blue-700/80 leading-relaxed font-medium">Use structured blocks like &quot;[Objective]&quot;, &quot;[Context]&quot;, and &quot;[Constraints]&quot; in your prompt to improve the AI&apos;s adherence to complex SOP review rules.</p>
                                             </div>
                                         </div>
                                     </div>

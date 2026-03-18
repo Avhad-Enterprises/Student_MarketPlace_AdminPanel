@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   Save,
   Eye,
@@ -216,7 +216,7 @@ export const WebsiteBuilderEditor: React.FC<{ onBack?: () => void }> = ({ onBack
   // PUBLISHING & ENVIRONMENT STATE
   // ============================================
   const [environment, setEnvironment] = useState<'draft' | 'preview' | 'live'>('draft');
-  const [autoSaveStatus, setAutoSaveStatus] = useState<'saving' | 'saved' | 'error'>('saved');
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'saving' | 'saved' | 'failed'>('saved');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
@@ -795,7 +795,7 @@ export const WebsiteBuilderEditor: React.FC<{ onBack?: () => void }> = ({ onBack
           // Auto-retry silently
           setTimeout(() => triggerAutoSave(), 2000);
         } else {
-          setAutoSaveStatus('error');
+          setAutoSaveStatus('failed');
           setSystemHealth('warning');
           setShowSaveFailed(true);
           setShowNonBlockingError(false);
@@ -867,11 +867,11 @@ export const WebsiteBuilderEditor: React.FC<{ onBack?: () => void }> = ({ onBack
   };
 
   // Get selected section object
-  const selectedSectionObj = selectedSection ? sections.find(s => s.id === selectedSection) : null;
+  const selectedSectionObj = selectedSection ? (sections.find(s => s.id === selectedSection) ?? null) : null;
 
   // Get selected block object
   const selectedBlockObj = selectedBlock
-    ? sections.find(s => s.id === selectedBlock.sectionId)?.blocks.find(b => b.id === selectedBlock.blockId)
+    ? (sections.find(s => s.id === selectedBlock.sectionId)?.blocks.find(b => b.id === selectedBlock.blockId) ?? null)
     : null;
 
   // ============================================
@@ -1932,7 +1932,7 @@ export const WebsiteBuilderEditor: React.FC<{ onBack?: () => void }> = ({ onBack
 
       {/* PART 10: Auto-Save Indicator */}
       <AutoSaveIndicator
-        status={autoSaveStatus === 'error' ? 'failed' : autoSaveStatus}
+        status={autoSaveStatus}
         lastSaveTime={autoSaveStatus === 'saved' ? lastSaveTime : undefined}
       />
 
@@ -4426,8 +4426,8 @@ const BlockPresetSelector: React.FC<{ blockType: string }> = ({ blockType }) => 
       { id: 'caption', name: 'Caption', variant: 'Small', icon: Type },
     ],
     image: [
-      { id: 'default', name: 'Standard Image', variant: 'Responsive', icon: Image },
-      { id: 'rounded', name: 'Rounded Image', variant: 'Styled', icon: Image },
+      { id: 'default', name: 'Standard Image', variant: 'Responsive', icon: ImageIcon },
+      { id: 'rounded', name: 'Rounded Image', variant: 'Styled', icon: ImageIcon },
     ]
   };
 
@@ -6091,7 +6091,7 @@ const AppsIntegrationsPanel: React.FC<{
                         </h3>
                       </div>
                       <div className="space-y-2">
-                        {apps.map((app) => (
+                        {(apps as any[]).map((app) => (
                           <button
                             key={app.id}
                             onClick={() => onSelectApp(app.id)}

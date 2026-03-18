@@ -39,7 +39,7 @@ export interface SectionType {
 
 // Collaboration Types
 export type UserRole = 'owner' | 'admin' | 'editor' | 'viewer';
-export type UserStatus = 'active' | 'invited';
+export type UserStatus = 'active' | 'invited' | 'pending';
 
 export interface TeamMember {
   id: string;
@@ -66,7 +66,7 @@ export interface ActivityItem {
   action: ActivityAction;
   actionLabel: string;
   target: string;
-  targetType: 'page' | 'section' | 'block' | 'setting' | 'theme' | 'user';
+  targetType: 'page' | 'section' | 'block' | 'setting' | 'theme' | 'user' | 'app';
   timestamp: Date;
   page?: string;
 }
@@ -83,7 +83,7 @@ export interface PageVersion {
 }
 
 export interface VersionChange {
-  type: 'added' | 'modified' | 'removed';
+  type: 'added' | 'modified' | 'removed' | 'style' | 'visibility';
   target: string;
   sectionName?: string;
   before?: any;
