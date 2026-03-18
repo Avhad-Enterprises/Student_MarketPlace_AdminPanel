@@ -1,9 +1,7 @@
-import { defineConfig } from "@opennextjs/cloudflare";
-
-export default defineConfig({
+export default {
   default: {
     override: {
       wrapper: "cloudflare-node",
     },
   },
-});
+};
