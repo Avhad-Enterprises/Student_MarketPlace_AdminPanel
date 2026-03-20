@@ -223,10 +223,12 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
   ];
 
   const importFields: ImportField[] = [
-    { id: 'blogId', label: 'Blog ID', required: true, type: 'text' },
+    { id: 'blogId', label: 'Blog ID', required: false, type: 'text' },
     { id: 'title', label: 'Blog Title', required: true, type: 'text' },
     { id: 'author', label: 'Author', required: true, type: 'text' },
     { id: 'category', label: 'Category', required: true, type: 'select', options: ['Visa Guides', 'University Rankings', 'Application Tips', 'Financial Aid', 'Student Stories', 'Internal Updates'] },
+    { id: 'content', label: 'Content', required: true, type: 'text' },
+    { id: 'tags', label: 'Tags (comma separated)', required: false, type: 'text' },
     { id: 'status', label: 'Status', required: true, type: 'select', options: ['draft', 'published', 'scheduled', 'archived'] },
     { id: 'publishDate', label: 'Publish Date', required: false, type: 'date' },
     { id: 'visibility', label: 'Visibility', required: true, type: 'select', options: ['public', 'restricted'] }
@@ -236,8 +238,22 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
     toast.success(`Exporting ${options.scope} blogs as ${options.format}...`);
   };
 
-  const handleImport = async (data: any) => {
-    toast.success(`Importing ${data.length} blogs...`);
+  const handleImport = async (data: any[]) => {
+    try {
+      const transformedData = data.map(blog => {
+        if (blog.tags && typeof blog.tags === 'string') {
+          blog.tags = blog.tags.split(',').map((t: string) => t.trim()).filter(Boolean);
+        }
+        return blog;
+      });
+      await blogService.importBlogs(transformedData);
+      toast.success(`Successfully imported ${data.length} blogs`);
+      fetchBlogs();
+    } catch (error) {
+      console.error('Error importing blogs:', error);
+      toast.error('Failed to import blogs');
+      throw error;
+    }
   };
 
   return (

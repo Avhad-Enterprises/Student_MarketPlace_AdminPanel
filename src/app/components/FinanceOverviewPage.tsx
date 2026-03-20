@@ -11,7 +11,7 @@ import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
-import { ImportDialog, ImportField } from './common/ImportDialog';
+import { ImportDialog, ImportField, ImportMode } from './common/ImportDialog';
 import { financeService, Payment } from '@/services/financeService';
 import { FinanceModal } from './FinanceModal';
 
@@ -419,6 +419,71 @@ export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavi
         ]}
         supportsDateRange={true}
         onExport={async () => { toast.success("Exporting..."); }}
+      />
+
+      <ImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        moduleName="Transactions"
+        fields={[
+          { id: 'student_db_id', label: 'Student DB ID', required: true, type: 'number' },
+          { id: 'invoice_number', label: 'Invoice Number', required: true, type: 'text' },
+          { id: 'amount', label: 'Amount', required: true, type: 'number' },
+          { id: 'currency', label: 'Currency', required: true, type: 'text' },
+          { id: 'status', label: 'Status', required: true, type: 'select', options: ['paid', 'pending', 'overdue', 'refunded'] },
+          { id: 'payment_method', label: 'Method', required: true, type: 'text' },
+          { id: 'due_date', label: 'Due Date', required: true, type: 'date' },
+          { id: 'description', label: 'Description', required: true, type: 'text' },
+          { id: 'payment_id', label: 'Payment ID', required: false, type: 'text' },
+          { id: 'notes', label: 'Notes', required: false, type: 'text' }
+        ]}
+        templateUrl="/templates/finance-import-template.xlsx"
+        onImport={async (data: any[], mode: ImportMode) => {
+          let successCount = 0;
+          let failCount = 0;
+
+          const loadingToast = toast.loading(`Importing invoices (0/${data.length})...`);
+
+          for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            try {
+              if (!row.student_db_id || Number(row.student_db_id) <= 0) {
+                throw new Error("Invalid or missing Student DB ID");
+              }
+
+              const payload: any = {
+                student_db_id: Number(row.student_db_id),
+                invoice_number: row.invoice_number || `INV-IMP-${Date.now()}-${i}`,
+                payment_id: row.payment_id || `PAY-IMP-${Date.now()}-${i}`,
+                amount: Number(row.amount),
+                currency: row.currency || 'USD',
+                status: row.status || 'pending',
+                payment_method: row.payment_method || 'Other',
+                due_date: row.due_date || new Date().toISOString().split('T')[0],
+                description: row.description || 'Imported Invoice',
+                notes: row.notes || undefined
+              };
+
+              await financeService.createPayment(payload);
+              successCount++;
+            } catch (error: any) {
+              const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || "Unknown error";
+              console.error(`Failed to import invoice row ${i + 1}:`, error);
+              toast.error(`Row ${i + 1} (${row.invoice_number || 'No Invoice'}): ${errorMessage}`, { duration: 5000 });
+              failCount++;
+            }
+            toast.loading(`Importing invoices (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+          }
+
+          toast.dismiss(loadingToast);
+          if (successCount > 0) {
+            toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+          } else {
+            toast.error(`Import failed! All ${failCount} rows failed.`);
+          }
+          fetchPayments();
+          setShowImportDialog(false);
+        }}
       />
     </div>
   );

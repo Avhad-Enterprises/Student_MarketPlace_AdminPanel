@@ -586,11 +586,56 @@ const CommunicationsOverviewPage: React.FC<CommunicationsOverviewPageProps> = ({
         onOpenChange={setShowImportDialog}
         moduleName="Communications"
         fields={[
+          { id: 'student_db_id', label: 'Student DB ID', required: true, type: 'number' },
           { id: 'sender', label: 'Sender', required: true, type: 'text' },
-          { id: 'type', label: 'Channel', required: true, type: 'text' },
-          { id: 'status', label: 'Status', required: true, type: 'text' }
+          { id: 'type', label: 'Channel', required: true, type: 'select', options: ['Email', 'SMS', 'WhatsApp', 'Push'] },
+          { id: 'status', label: 'Status', required: true, type: 'select', options: ['sent', 'delivered', 'read', 'failed'] },
+          { id: 'subject', label: 'Subject', required: false, type: 'text' },
+          { id: 'content', label: 'Content', required: true, type: 'text' }
         ]}
-        onImport={async (data: any[], mode: ImportMode) => { toast.success(`Importing ${data.length} logs using ${mode} mode...`); }}
+        templateUrl="/templates/communications-import-template.xlsx"
+        onImport={async (data: any[], mode: ImportMode) => {
+          let successCount = 0;
+          let failCount = 0;
+
+          const loadingToast = toast.loading(`Importing communications (0/${data.length})...`);
+
+          for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            try {
+              if (!row.student_db_id || Number(row.student_db_id) <= 0) {
+                throw new Error("Invalid or missing Student DB ID");
+              }
+
+              const payload: any = {
+                student_db_id: Number(row.student_db_id),
+                type: row.type || 'Email',
+                status: row.status || 'sent',
+                content: row.content || '',
+                sender: row.sender || '',
+                subject: row.subject || undefined
+              };
+
+              await communicationService.createCommunication(payload);
+              successCount++;
+            } catch (error: any) {
+              const errorMessage = error.message || "Unknown error";
+              console.error(`Failed to import communication row ${i + 1}:`, error);
+              toast.error(`Row ${i + 1} (${row.subject || 'No Subject'}): ${errorMessage}`, { duration: 5000 });
+              failCount++;
+            }
+            toast.loading(`Importing communications (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+          }
+
+          toast.dismiss(loadingToast);
+          if (successCount > 0) {
+            toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+          } else {
+            toast.error(`Import failed! All ${failCount} rows failed.`);
+          }
+          fetchCommunications();
+          setShowImportDialog(false);
+        }}
       />
 
       <CommunicationModal

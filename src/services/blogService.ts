@@ -35,6 +35,13 @@ const getAuthHeader = () => {
 };
 
 export const blogService = {
+    importBlogs: async (data: any[]) => {
+        const response = await axios.post(`${BLOGS_API_URL}/import`, data, {
+            headers: getAuthHeader()
+        });
+        return response.data;
+    },
+
     getAllBlogs: async () => {
         const response = await axios.get<Blog[]>(BLOGS_API_URL, {
             headers: getAuthHeader()

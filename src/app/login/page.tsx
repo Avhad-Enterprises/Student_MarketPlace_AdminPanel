@@ -184,9 +184,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={handleEmailChange}
                   placeholder="Enter your email"
-                  className="w-full h-12 pl-12 pr-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 
-                    focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-white/10
-                    transition-all duration-300 text-[15px]"
+                  className="w-full h-12 pl-12 pr-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-white/10 transition-all duration-300 text-[15px]"
                 />
                 {emailTouched && email && (
                   <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -216,9 +214,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={handlePasswordChange}
                   placeholder="Enter your password"
-                  className="w-full h-12 pl-12 pr-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 
-                    focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-white/10
-                    transition-all duration-300 text-[15px]"
+                  className="w-full h-12 pl-12 pr-12 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:bg-white/10 transition-all duration-300 text-[15px]"
                 />
                 <button
                   type="button"
@@ -273,13 +269,9 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl
-                shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] active:scale-[0.98]
-                transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden
-                disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 group"
+              className="w-full h-12 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex items-center justify-center gap-2 relative overflow-hidden disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 group"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/0 via-white/20 to-purple-400/0 
-                translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/0 via-white/20 to-purple-400/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
 
               {isLoading ? (
                 <>
@@ -305,9 +297,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full h-12 bg-white/5 border border-white/10 text-white font-medium rounded-xl
-                hover:bg-white/10 hover:border-white/20 transition-all duration-300 flex items-center justify-center gap-3
-                group"
+              className="w-full h-12 bg-white/5 border border-white/10 text-white font-medium rounded-xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 flex items-center justify-center gap-3 group"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115Z" />
