@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/status-tracking';
+const API_URL = 'https://smapi.test-zone.xyz/api/status-tracking';
 
 export interface BackendStatusItem {
     db_id: number;

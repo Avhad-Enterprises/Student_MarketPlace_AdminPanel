@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/sim-cards';
+const API_URL = 'https://smapi.test-zone.xyz/api/sim-cards';
 
 export interface SimCard {
     id: string;

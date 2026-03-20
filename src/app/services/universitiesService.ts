@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/universities';
+const API_URL = 'https://smapi.test-zone.xyz/api/universities';
 
 export interface University {
     id: string;

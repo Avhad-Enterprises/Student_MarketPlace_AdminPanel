@@ -5,7 +5,7 @@ import { API_BASE_URL } from '../config/api';
 const USER_KEY = 'auth_user';
 const TOKEN_KEY = 'auth_token'; // Added missing constant
 
-export const API_URL = 'http://localhost:3000/api';
+export const API_URL = 'https://smapi.test-zone.xyz:3000/api';
 
 export const authService = {
     login: async (email: string, password: string) => {

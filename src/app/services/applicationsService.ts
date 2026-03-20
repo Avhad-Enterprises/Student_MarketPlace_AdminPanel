@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api/applications';
+const API_URL = 'https://smapi.test-zone.xyz/api/applications';
 
 export interface Application {
     id: string; // Database ID

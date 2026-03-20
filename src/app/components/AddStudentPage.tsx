@@ -5,6 +5,7 @@ import { ArrowLeft, AlertCircle, Save, TrendingUp, Globe, Calendar, User, Gradua
 import { CustomSelect } from './common/CustomSelect';
 import { DateInput } from './ui/date-input';
 import { toast } from 'sonner';
+import { createStudent } from '../services/studentsService';
 
 interface AddStudentPageProps {
   onNavigate?: (page: string) => void;
@@ -69,12 +70,23 @@ export const AddStudentPage: React.FC<AddStudentPageProps> = ({ onNavigate }) =>
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      const payload = {
+        ...formData,
+        riskLevel: formData.riskLevel,
+        accountStatus: accountStatus,
+      };
 
-    toast.success('Student created successfully');
-    setIsSubmitting(false);
-    onNavigate?.('students-all');
+      await createStudent(payload);
+      toast.success('Student created successfully');
+      setIsSubmitting(false);
+      onNavigate?.('students-all');
+    } catch (error: any) {
+      console.error('Failed to create student:', error);
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to create student';
+      toast.error(`Failed to create student: ${errorMsg}`);
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {

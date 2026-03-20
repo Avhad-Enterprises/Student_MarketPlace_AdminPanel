@@ -47,7 +47,7 @@ import { ImportDialog, ImportField } from './common/ImportDialog';
 import { CustomSelect } from './common/CustomSelect';
 import { ConfirmDialog } from './ui/modals/ConfirmDialog';
 import { AddStudentModal } from './AddStudentModal';
-import { getAllStudents, Student, PaginationData, deleteStudent, getStudentMetrics, StudentMetrics } from '../services/studentsService';
+import { getAllStudents, Student, PaginationData, deleteStudent, getStudentMetrics, StudentMetrics, createStudent, updateStudent } from '../services/studentsService';
 import { useRouter } from 'next/navigation';
 
 // --- CustomCheckbox Component ---
@@ -877,11 +877,15 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
   ];
 
   const importFields: ImportField[] = [
-    { id: 'StudentID', label: 'Student ID', type: 'text', required: true },
-    { id: 'FullName', label: 'Full Name', type: 'text', required: true },
-    { id: 'EmailAddress', label: 'Email Address', type: 'email', required: true },
-    { id: 'Status', label: 'Status', type: 'text', required: true },
-    { id: 'RiskLevel', label: 'Risk Level', type: 'text', required: false },
+    { id: 'firstName', label: 'First Name', type: 'text', required: true },
+    { id: 'lastName', label: 'Last Name', type: 'text', required: true },
+    { id: 'email', label: 'Email', type: 'email', required: true },
+    { id: 'phoneNumber', label: 'Phone Number', type: 'text', required: false },
+    { id: 'country', label: 'Country', type: 'text', required: false },
+    { id: 'passportNumber', label: 'Passport Number', type: 'text', required: false },
+    { id: 'dateOfBirth', label: 'Date of Birth', type: 'text', required: false },
+    { id: 'gender', label: 'Gender', type: 'select', required: false, options: ['Male', 'Female', 'Other'] },
+    { id: 'riskLevel', label: 'Risk Level', type: 'select', required: false, options: ['low', 'medium', 'high'] }
   ];
 
   return (
@@ -1470,8 +1474,45 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
         fields={importFields}
         onImport={async (data, mode) => {
           console.log('Importing data:', data, 'mode:', mode);
-          toast.success(`Processing import for students...`);
+          let successCount = 0;
+          let failCount = 0;
+
+          const loadingToast = toast.loading(`Importing students (0/${data.length})...`);
+
+          for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            try {
+              const payload = {
+                ...row,
+                riskLevel: row.riskLevel || 'low',
+                accountStatus: true
+              };
+
+              if (mode === 'update' && row.id) {
+                // Wait, type casting if needed? data is `any`
+                await updateStudent(row.id, payload);
+              } else {
+                await createStudent(payload);
+              }
+              successCount++;
+            } catch (error) {
+              console.error(`Failed to import row ${i + 1}:`, error);
+              failCount++;
+            }
+            toast.loading(`Importing students (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+          }
+
+          toast.dismiss(loadingToast);
+          if (successCount > 0) {
+            toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+          } else {
+            toast.error(`Import failed! All ${failCount} rows failed.`);
+          }
+
           setShowImportDialog(false);
+          if (typeof fetchStudents === 'function') {
+            fetchStudents();
+          }
         }}
       />
 

@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import {
   X, Upload, FileSpreadsheet, AlertCircle, CheckCircle,
@@ -409,7 +409,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                 </AlertDescription>
               </Alert>
 
-              <div className="border border-slate-200 rounded-lg overflow-hidden flex-1">
+              <div className="border border-slate-200 rounded-lg overflow-hidden flex-1 mx-1">
                 <Table>
                   <TableHeader className="bg-slate-50 sticky top-0 z-10">
                     <TableRow>
@@ -427,11 +427,11 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                         const isMapped = !!mappings[col];
                         return (
                           <TableRow key={idx} className="hover:bg-slate-50/50">
-                            <TableCell className="font-medium text-slate-700">{col}</TableCell>
-                            <TableCell className="text-center text-slate-400">
+                            <TableCell className="font-medium text-slate-700 w-[40%]">{col}</TableCell>
+                            <TableCell className="text-center text-slate-400 w-[10%]">
                               <ChevronRight size={16} />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="w-[40%]">
                               <Select
                                 value={mappings[col] || "ignore"}
                                 onValueChange={(val) => setMappings({ ...mappings, [col]: val === "ignore" ? "" : val })}
@@ -449,7 +449,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                                 </SelectContent>
                               </Select>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right w-[10%]">
                               {isMapped ? (
                                 <Badge className="bg-emerald-50 text-emerald-600 border-none hover:bg-emerald-100">
                                   <CheckCircle size={12} className="mr-1" /> Mapped

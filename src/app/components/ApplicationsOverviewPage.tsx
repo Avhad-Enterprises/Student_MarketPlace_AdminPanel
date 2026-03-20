@@ -49,7 +49,8 @@ import {
   Application as ServiceApplication,
   ApplicationMetrics,
   createApplication,
-  CreateApplicationData
+  CreateApplicationData,
+  updateApplication
 } from '../services/applicationsService';
 import { getAllStudents, Student } from '../services/studentsService';
 import { getAllUniversities, University } from '../services/universitiesService';
@@ -823,7 +824,58 @@ export const ApplicationsOverviewPage: React.FC = () => {
 
   const handleImport = async (data: any[], mode: any) => {
     console.log('Importing:', data, 'Mode:', mode);
-    toast.success(`Successfully imported ${data.length} applications`);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing applications (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const student = students.find(s => 
+          `${s.first_name} ${s.last_name}`.toLowerCase() === row.studentName.toLowerCase() ||
+          s.email.toLowerCase() === row.studentName.toLowerCase()
+        );
+
+        if (!student) {
+          console.error(`Row ${i + 1}: Student not found for name ${row.studentName}`);
+          failCount++;
+          continue;
+        }
+
+        const payload: CreateApplicationData = {
+          studentDbId: student.id,
+          universityName: row.university,
+          country: row.country,
+          intake: row.intake || '',
+          status: row.status ? row.status.toLowerCase().replace(' ', '-') : 'in-progress',
+          counselor: row.counselor || '',
+          notes: row.notes || ''
+        };
+
+        if (mode === 'update' && row.id) {
+          await updateApplication(row.id, payload as any);
+        } else {
+          await createApplication(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import Application row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing applications (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed to find matching students.`);
+    }
+
+    setShowImportDialog(false);
+    loadApplications();
+    loadMetrics();
   };
 
   return (
