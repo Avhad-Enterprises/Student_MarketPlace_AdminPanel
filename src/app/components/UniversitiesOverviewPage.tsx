@@ -486,6 +486,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
 
   // Export/Import configuration
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'name', label: 'University Name', defaultSelected: true },
     { id: 'universityId', label: 'University ID', defaultSelected: true },
     { id: 'city', label: 'City', defaultSelected: true },
@@ -499,6 +500,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   ];
 
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'universityName', label: 'University Name', required: true, type: 'text' },
     { id: 'universityId', label: 'University ID', required: false, type: 'text' },
     { id: 'city', label: 'City', required: true, type: 'text' },
@@ -532,16 +534,60 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   };
 
   const handleImport = async (data: any[], mode: any) => {
-    try {
-      console.log('Importing:', data, 'Mode:', mode);
-      const result = await universityService.import(data);
-      toast.success(result.message || `Successfully imported ${data.length} universities`);
-      fetchUniversities(); // Refresh list
-    } catch (error) {
-      console.error("Import failed:", error);
-      toast.error("Failed to import universities");
-      throw error; // Re-throw to let dialog know it failed
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing universities (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          name: row.universityName,
+          city: row.city,
+          country: row.country,
+          tuition: row.tuitionFees,
+          acceptanceRate: String(row.acceptanceRate || ''),
+          type: row.universityType || 'Public',
+          applicationStatus: (row.applicationStatus || 'open').toLowerCase(),
+          status: (row.status || 'active').toLowerCase()
+        };
+
+        let targetId = row.id;
+        if (!targetId && row.universityName && (mode === 'update' || mode === 'merge')) {
+          const searchResult = await universityService.getAll({ search: row.universityName, limit: 10 });
+          const rawList = Array.isArray(searchResult) ? searchResult : (searchResult?.data || []);
+          const existingItem = rawList.find((i: any) => 
+            i.name?.trim().toLowerCase() === row.universityName.trim().toLowerCase()
+          );
+          if (existingItem) {
+            targetId = existingItem.id;
+          }
+        }
+
+        if ((mode === 'update' || mode === 'merge') && targetId) {
+          await universityService.update(targetId, payload);
+        } else {
+          await universityService.create(payload);
+        }
+        successCount++;
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Unknown error";
+        console.error(`Failed to import university row ${i + 1}:`, error);
+        toast.error(`Row ${i + 1} (${row.universityName || 'Unknown'}): ${errorMessage}`, { duration: 5000 });
+        failCount++;
+      }
+      toast.loading(`Importing universities (${successCount + failCount}/${data.length})...`, { id: loadingToast });
     }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+    fetchUniversities();
+    setShowImportDialog(false);
   };
 
   const handleSaveUniversity = async (data: any) => {

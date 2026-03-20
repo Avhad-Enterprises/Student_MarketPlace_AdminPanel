@@ -462,6 +462,7 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
 
   // Export/Import configuration
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'referenceId', label: 'Reference ID', defaultSelected: true },
     { id: 'providerName', label: 'Provider Name', defaultSelected: true },
     { id: 'serviceName', label: 'Service Name', defaultSelected: true },
@@ -474,7 +475,9 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
     { id: 'popularity', label: 'Popularity', defaultSelected: false }
   ];
 
+
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'referenceId', label: 'Reference ID', required: false, type: 'text' },
     { id: 'providerName', label: 'Provider Name', required: true, type: 'text' },
     { id: 'serviceName', label: 'Service Name', required: true, type: 'text' },
@@ -485,6 +488,7 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
     { id: 'validity', label: 'Validity Period', required: false, type: 'text' },
     { id: 'studentVisible', label: 'Student Visibility', required: false, type: 'select', options: ['Yes', 'No'] }
   ];
+
 
   const handleExport = async (options: any) => {
     try {
@@ -513,6 +517,7 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
         const row: any = {};
         options.selectedColumns.forEach((colId: string) => {
           switch (colId) {
+            case 'id': row['Database ID'] = sim.id; break;
             case 'referenceId': row['Reference ID'] = sim.sim_id; break;
             case 'providerName': row['Provider Name'] = sim.provider_name; break;
             case 'serviceName': row['Service Name'] = sim.service_name; break;
@@ -526,6 +531,7 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
             default: break;
           }
         });
+
         return row;
       });
 
@@ -566,9 +572,54 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
   };
 
   const handleImport = async (data: any[], mode: any) => {
-    console.log('Importing:', data, 'Mode:', mode);
-    toast.success(`Successfully imported ${data.length} SIM cards`);
+    console.log('Importing data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing SIM cards (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          sim_id: row.referenceId || '',
+          provider_name: row.providerName,
+          service_name: row.serviceName,
+          countries_covered: Number(row.countries) || 0,
+          status: (row.status || 'Active').toLowerCase() as 'active' | 'inactive',
+          network_type: row.networkType || '4G/5G',
+          data_allowance: row.dataAllowance || '',
+          validity: row.validity || '',
+          student_visible: row.studentVisible === 'Yes' ? true : false,
+          popularity: 0
+        };
+
+        if (mode === 'update' && row.id) {
+          await updateSimCard(row.id, payload);
+        } else {
+          await createSimCard(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing SIM cards (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    if (typeof fetchData === 'function') {
+      fetchData();
+    }
   };
+
 
   return (
     <TooltipProvider>

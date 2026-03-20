@@ -291,6 +291,7 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
   const slickSettings = { dots: true, infinite: false, speed: 500, slidesToShow: 1.1, slidesToScroll: 1, arrows: false, centerMode: true, centerPadding: '20px' };
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'referenceId', label: 'Reference ID', defaultSelected: true }, { id: 'providerName', label: 'Provider Name', defaultSelected: true },
     { id: 'policyName', label: 'Policy Name', defaultSelected: true }, { id: 'coverageType', label: 'Coverage Type', defaultSelected: true },
     { id: 'countries', label: 'Country Availability', defaultSelected: true }, { id: 'status', label: 'Status', defaultSelected: true },
@@ -298,15 +299,127 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
     { id: 'mandatory', label: 'Mandatory', defaultSelected: false }, { id: 'studentVisible', label: 'Student Visibility', defaultSelected: false }
   ];
 
+
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'referenceId', label: 'Reference ID', required: false, type: 'text' }, { id: 'providerName', label: 'Provider Name', required: true, type: 'text' },
     { id: 'policyName', label: 'Policy Name', required: true, type: 'text' }, { id: 'coverageType', label: 'Coverage Type', required: true, type: 'select', options: ['Comprehensive', 'Medical Only', 'Basic'] },
     { id: 'countries', label: 'Country Availability', required: true, type: 'text' }, { id: 'status', label: 'Status', required: false, type: 'select', options: ['Active', 'Inactive'] },
     { id: 'visaCompliant', label: 'Visa Compliant', required: false, type: 'select', options: ['Yes', 'No'] }, { id: 'studentVisible', label: 'Student Visibility', required: false, type: 'select', options: ['Yes', 'No'] }
   ];
 
-  const handleExport = async (options: any) => { console.log('Exporting:', options); toast.success(`Exporting ${options.scope} insurance records as ${options.format.toUpperCase()}`); await new Promise(resolve => setTimeout(resolve, 2000)); };
-  const handleImport = async (data: any[], mode: any) => { console.log('Importing:', data, 'Mode:', mode); toast.success(`Successfully imported ${data.length} insurance records`); };
+
+  const handleExport = async (options: any) => {
+    try {
+      setLoading(true);
+      toast.info(`Preparing ${options.scope} export...`);
+
+      let dataToExport: InsuranceType[] = [];
+      if (options.scope === 'all') {
+        const result = await getAllInsurance({ limit: 1000 });
+        dataToExport = result.data;
+      } else if (options.scope === 'selected') {
+        dataToExport = insurances.filter(i => selectedInsurance.includes(i.id.toString()));
+      } else {
+        dataToExport = insurances;
+      }
+
+      const mappedData = dataToExport.map(ins => {
+        const row: any = {};
+        options.selectedColumns.forEach((colId: string) => {
+          switch (colId) {
+            case 'id': row['Database ID'] = ins.id; break;
+            case 'referenceId': row['Reference ID'] = ins.insurance_id; break;
+            case 'providerName': row['Provider Name'] = ins.provider_name; break;
+            case 'policyName': row['Policy Name'] = ins.policy_name; break;
+            case 'coverageType': row['Coverage Type'] = ins.coverage_type; break;
+            case 'countries': row['Countries'] = ins.countries_covered; break;
+            case 'status': row['Status'] = ins.status; break;
+            case 'duration': row['Duration'] = ins.duration; break;
+            case 'visaCompliant': row['Visa Compliant'] = ins.visa_compliant ? 'Yes' : 'No'; break;
+            case 'mandatory': row['Mandatory'] = ins.mandatory ? 'Yes' : 'No'; break;
+            case 'studentVisible': row['Student Visible'] = ins.student_visible ? 'Yes' : 'No'; break;
+            default: break;
+          }
+        });
+        return row;
+      });
+
+      const XLSX = (window as any).XLSX;
+      if (!XLSX) {
+        const blob = new Blob([JSON.stringify(mappedData, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `insurance_export_${new Date().getTime()}.json`;
+        a.click();
+        toast.success("Insurance exported as JSON");
+        return;
+      }
+
+      const worksheet = XLSX.utils.json_to_sheet(mappedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Insurance");
+      XLSX.writeFile(workbook, `insurance_export_${new Date().getTime()}.${options.format === 'json' ? 'json' : (options.format === 'csv' ? 'csv' : 'xlsx')}`);
+      toast.success(`${options.scope.charAt(0).toUpperCase() + options.scope.slice(1)} insurance records exported successfully`);
+    } catch (error) {
+      console.error("Export failed:", error);
+      toast.error("Failed to export insurance items");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImport = async (data: any[], mode: any) => {
+    console.log('Importing data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing insurance (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          insurance_id: row.referenceId || '',
+          provider_name: row.providerName,
+          policy_name: row.policyName,
+          coverage_type: row.coverageType || 'Comprehensive',
+          countries_covered: Number(row.countries) || 0,
+          status: (row.status || 'Active').toLowerCase() as 'active' | 'inactive',
+          duration: row.duration || '12 months',
+          visa_compliant: row.visaCompliant === 'Yes',
+          mandatory: row.mandatory === 'Yes',
+          student_visible: row.studentVisible === 'Yes',
+          popularity: 0
+        };
+
+        if (mode === 'update' && row.id) {
+          await updateInsurance(row.id, payload);
+        } else {
+          await createInsurance(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing insurance (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    if (typeof fetchData === 'function') {
+      fetchData();
+    }
+  };
+
 
   return (
     <TooltipProvider><div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Search, Filter, ArrowUpDown, Columns, Download,
+  Search, Filter, ArrowUpDown, Columns, Download, Upload,
   Plus, MoreVertical, Edit2, Trash2, ChevronLeft, ChevronRight,
   BookOpen, Globe, Zap, ShieldCheck, DollarSign,
   CheckCircle2, XCircle, Clock, Star
@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AddCourseDialog } from './common/AddCourseDialog';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
+import { ImportDialog, ImportField } from './common/ImportDialog';
 import { Course, getAllCourses, createCourse, updateCourse, deleteCourse, getCourseMetrics } from '../services/courseService';
 
 const CustomCheckbox = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (
@@ -54,6 +55,7 @@ export const CoursesOverviewPage = () => {
 
   // Export state
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
 
   // Column visibility
@@ -139,11 +141,30 @@ export const CoursesOverviewPage = () => {
     { id: 'actions', label: 'Actions' }
   ];
 
-  const exportColumns: ExportColumn[] = columns.filter(col => col.id !== 'actions').map(col => ({
-    id: col.id,
-    label: col.label,
-    defaultSelected: true
-  }));
+  const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
+    ...columns.filter(col => col.id !== 'actions').map(col => ({
+      id: col.id,
+      label: col.label,
+      defaultSelected: true
+    }))
+  ];
+
+  const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
+    { id: 'reference_id', label: 'Reference ID', required: false, type: 'text' },
+    { id: 'course_name', label: 'Course Name', required: true, type: 'text' },
+    { id: 'provider', label: 'Provider', required: true, type: 'text' },
+    { id: 'category', label: 'Category', required: true, type: 'select', options: ['Certification', 'Degree', 'Bootcamp', 'Short Course'] },
+    { id: 'duration', label: 'Duration', required: false, type: 'text' },
+    { id: 'avg_cost', label: 'Avg Cost', required: false, type: 'text' },
+    { id: 'countries_covered', label: 'Countries Covered', required: false, type: 'text' },
+    { id: 'learners_count', label: 'Learners Count', required: false, type: 'text' },
+    { id: 'rating', label: 'Rating', required: false, type: 'text' },
+    { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] },
+    { id: 'student_visible', label: 'Visible to Students', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'popularity', label: 'Popularity Score', required: false, type: 'text' }
+  ];
 
   const handleExport = async (options: any) => {
     try {
@@ -262,6 +283,66 @@ export const CoursesOverviewPage = () => {
       setIsLoading(false);
       setShowExportDialog(false);
     }
+  };
+
+  const handleImport = async (data: any[], mode: any) => {
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing courses (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          reference_id: (row.reference_id || '').trim(),
+          course_name: row.course_name,
+          provider: row.provider,
+          category: row.category || 'Certification',
+          duration: row.duration || '',
+          avg_cost: row.avg_cost || '',
+          countries_covered: Number(row.countries_covered) || 0,
+          learners_count: Number(row.learners_count) || 0,
+          rating: Number(row.rating) || 0,
+          status: (row.status || 'active').toLowerCase() as 'active' | 'inactive',
+          student_visible: row.student_visible === 'Yes',
+          popularity: Number(row.popularity) || 1
+        };
+
+        let targetId = row.id;
+        if (!targetId && row.reference_id && (mode === 'update' || mode === 'merge')) {
+          const searchResult = await getAllCourses({ search: row.reference_id.trim(), limit: 10 });
+          const existingItem = searchResult.data?.find((i: any) => 
+            i.reference_id?.trim().toLowerCase() === row.reference_id.trim().toLowerCase()
+          );
+          if (existingItem) {
+            targetId = existingItem.id;
+          }
+        }
+
+        if ((mode === 'update' || mode === 'merge') && targetId) {
+          await updateCourse(targetId, payload);
+        } else {
+          await createCourse(payload);
+        }
+        successCount++;
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Unknown error";
+        console.error(`Failed to import course row ${i + 1}:`, error);
+        toast.error(`Row ${i + 1} Error: ${errorMessage}`, { duration: 5000 });
+        failCount++;
+      }
+      toast.loading(`Importing courses (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+    fetchData();
+    setShowImportDialog(false);
   };
 
   return (
@@ -395,6 +476,11 @@ export const CoursesOverviewPage = () => {
               <button onClick={() => setShowExportDialog(true)} className="hidden md:flex items-center gap-2 p-4 px-6 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-all text-gray-700 font-medium">
                 <Download size={20} />
                 Export
+              </button>
+
+              <button onClick={() => setShowImportDialog(true)} className="hidden md:flex items-center gap-2 p-4 px-6 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-all text-gray-700 font-medium">
+                <Upload size={20} />
+                Import
               </button>
 
               <button
@@ -581,6 +667,16 @@ export const CoursesOverviewPage = () => {
         columns={exportColumns}
         supportsDateRange={false}
         onExport={handleExport}
+      />
+
+      <ImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        moduleName="Courses"
+        fields={importFields}
+        onImport={handleImport}
+        templateUrl="/templates/courses-import-template.xlsx"
+        allowUpdate={true}
       />
     </div>
   );

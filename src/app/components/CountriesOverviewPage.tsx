@@ -49,7 +49,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { CountryForm } from './CountryForm';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
-import { getAll, getMetrics, deleteCountry, getCountryById, Country, CountryFormData, bulkUpdateCountries, exportCountries } from '@/services/countriesService';
+import { getAll, getMetrics, deleteCountry, getCountryById, Country, CountryFormData, createCountry, updateCountry, bulkUpdateCountries, exportCountries } from '@/services/countriesService';
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -498,6 +498,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
 
   // Export/Import configuration
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'name', label: 'Country Name', defaultSelected: true },
     { id: 'code', label: 'Country Code', defaultSelected: true },
     { id: 'region', label: 'Region/Continent', defaultSelected: true },
@@ -511,14 +512,21 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   ];
 
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'countryName', label: 'Country Name', required: true, type: 'text' },
     { id: 'countryCode', label: 'Country Code', required: true, type: 'text' },
     { id: 'region', label: 'Region/Continent', required: true, type: 'select', options: ['North America', 'South America', 'Europe', 'Asia', 'Africa', 'Oceania'] },
     { id: 'visaDifficulty', label: 'Visa Difficulty Level', required: true, type: 'select', options: ['Low', 'Medium', 'High'] },
     { id: 'costOfLiving', label: 'Cost of Living', required: true, type: 'select', options: ['Low', 'Medium', 'High'] },
-    { id: 'workRights', label: 'Work Rights Available', required: false, type: 'select', options: ['Yes', 'No', 'Limited'] },
-    { id: 'prAvailability', label: 'PR/Settlement Available', required: false, type: 'select', options: ['Yes', 'No', 'Conditional'] },
-    { id: 'status', label: 'Status', required: false, type: 'select', options: ['Active', 'Disabled'] }
+    { id: 'status', label: 'Status', required: false, type: 'select', options: ['Active', 'Disabled'] },
+    { id: 'service_visa', label: 'Service Visa', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'service_insurance', label: 'Service Insurance', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'service_housing', label: 'Service Housing', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'service_loans', label: 'Service Loans', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'service_forex', label: 'Service Forex', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'service_courses', label: 'Service Courses', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'service_food', label: 'Service Food', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'popularity', label: 'Popularity Score', required: false, type: 'text' }
   ];
 
   const handleExport = async (options: any) => {
@@ -688,8 +696,69 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   };
 
   const handleImport = async (data: any[], mode: any) => {
-    console.log('Importing:', data, 'Mode:', mode);
-    toast.success(`Successfully imported ${data.length} countries`);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing countries (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const formData: CountryFormData = {
+          country_name: row.countryName,
+          country_code: (row.countryCode || '').toUpperCase(),
+          region: row.region,
+          visa_difficulty: row.visaDifficulty || 'Medium',
+          cost_of_living: row.costOfLiving || 'Medium',
+          status: row.status === 'Active' ? 'Active' : 'Inactive',
+          visible: true,
+          service_availability: {
+            visa: row.service_visa === 'Yes',
+            insurance: row.service_insurance === 'Yes',
+            housing: row.service_housing === 'Yes',
+            loans: row.service_loans === 'Yes',
+            forex: row.service_forex === 'Yes',
+            courses: row.service_courses === 'Yes',
+            food: row.service_food === 'Yes'
+          },
+          popularity: Number(row.popularity) || 0
+        };
+
+        let targetId = row.id;
+        if (!targetId && (row.countryCode || row.countryName) && (mode === 'update' || mode === 'merge')) {
+          const searchResult = await getAll({ search: row.countryCode || row.countryName, limit: 10 });
+          const existingItem = searchResult.data?.find((i: any) => 
+            (row.countryCode && i.code?.trim().toLowerCase() === row.countryCode.trim().toLowerCase()) ||
+            (row.countryName && i.name?.trim().toLowerCase() === row.countryName.trim().toLowerCase())
+          );
+          if (existingItem) {
+            targetId = existingItem.id;
+          }
+        }
+
+        if ((mode === 'update' || mode === 'merge') && targetId) {
+          await updateCountry(targetId, formData);
+        } else {
+          await createCountry(formData);
+        }
+        successCount++;
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Unknown error";
+        console.error(`Failed to import country row ${i + 1}:`, error);
+        toast.error(`Row ${i + 1} (${row.countryName || 'Unknown'}): ${errorMessage}`, { duration: 5000 });
+        failCount++;
+      }
+      toast.loading(`Importing countries (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+    loadCountriesData();
+    setShowImportDialog(false);
   };
 
   const handleAddCountry = () => {

@@ -592,11 +592,92 @@ export const ExpertsOverviewPage: React.FC<ExpertsOverviewPageProps> = ({ onNavi
                 onOpenChange={setShowImportDialog}
                 moduleName="Experts"
                 fields={[
+                    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
+                    { id: 'expert_id', label: 'Expert ID', required: false, type: 'text' },
                     { id: 'full_name', label: 'Full Name', required: true, type: 'text' },
-                    { id: 'email', label: 'Email', required: true, type: 'text' },
-                    { id: 'specialization', label: 'Specialization', required: false, type: 'text' }
+                    { id: 'email', label: 'Email', required: true, type: 'email' },
+                    { id: 'phone', label: 'Phone', required: false, type: 'text' },
+                    { id: 'specialization', label: 'Specialization', required: false, type: 'text' },
+                    { id: 'experience_years', label: 'Experience Years', required: false, type: 'number' },
+                    { id: 'status', label: 'Status', required: true, type: 'select', options: ['active', 'inactive', 'on-leave'] }
                 ]}
-                onImport={async (data: any[], mode: ImportMode) => { toast.success(`Importing ${data.length} experts using ${mode} mode...`); }}
+                allowUpdate={true}
+                templateUrl="/templates/experts-import-template.xlsx"
+                onImport={async (data: any[], mode: ImportMode) => {
+                    let successCount = 0;
+                    let failCount = 0;
+
+                    const loadingToast = toast.loading(`Importing experts (0/${data.length})...`);
+
+                    try {
+                        const response = await expertService.getAllExperts(1, 1000, '');
+                        const allExperts = response.data || [];
+
+                        for (let i = 0; i < data.length; i++) {
+                            const row = data[i];
+                            try {
+                                const payload: any = {
+                                    full_name: row.full_name,
+                                    email: row.email,
+                                    phone: row.phone || '',
+                                    specialization: row.specialization || '',
+                                    experience_years: row.experience_years ? Number(row.experience_years) : undefined,
+                                    status: (row.status || 'active').toLowerCase(),
+                                };
+
+                                if (row.expert_id) {
+                                    payload.expert_id = row.expert_id;
+                                }
+
+                                let targetId = row.id;
+                                if (!targetId && row.email && (mode === 'update' || mode === 'merge')) {
+                                    const existingExpert = allExperts.find((e: any) => 
+                                        e.email?.trim().toLowerCase() === row.email.trim().toLowerCase()
+                                    );
+                                    if (existingExpert) {
+                                        targetId = existingExpert.id;
+                                    }
+                                }
+
+                                if (!targetId && row.expert_id && (mode === 'update' || mode === 'merge')) {
+                                    const existingExpert = allExperts.find((e: any) => 
+                                        e.expert_id?.trim().toLowerCase() === row.expert_id.trim().toLowerCase()
+                                    );
+                                    if (existingExpert) {
+                                        targetId = existingExpert.id;
+                                    }
+                                }
+
+                                if ((mode === 'update' || mode === 'merge') && targetId) {
+                                    await expertService.updateExpert(targetId, payload);
+                                } else {
+                                    await expertService.createExpert(payload);
+                                }
+                                successCount++;
+                            } catch (error: any) {
+                                const errorMessage = error.message || "Unknown error";
+                                console.error(`Failed to import expert row ${i + 1}:`, error);
+                                toast.error(`Row ${i + 1} (${row.full_name || 'Unknown'}): ${errorMessage}`, { duration: 5000 });
+                                failCount++;
+                            }
+                            toast.loading(`Importing experts (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+                        }
+
+                        toast.dismiss(loadingToast);
+                        if (successCount > 0) {
+                            toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+                        } else {
+                            toast.error(`Import failed! All ${failCount} rows failed.`);
+                        }
+                        fetchExperts();
+                        setShowImportDialog(false);
+
+                    } catch (error) {
+                        toast.dismiss(loadingToast);
+                        console.error("Bulk lookup failed:", error);
+                        toast.error("Failed to execute import batch lookup setup.");
+                    }
+                }}
             />
 
             <ExpertModal

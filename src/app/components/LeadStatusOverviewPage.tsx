@@ -346,6 +346,7 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
   ];
 
   const exportColumns: ExportColumn[] = [
+    { id: 'db_id', label: 'Database ID', defaultSelected: false },
     { id: 'leadId', label: 'Lead ID', defaultSelected: true },
     { id: 'studentName', label: 'Student Name', defaultSelected: true },
     { id: 'country', label: 'Country', defaultSelected: true },
@@ -356,20 +357,94 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
   ];
 
   const importFields: ImportField[] = [
-    { id: 'leadId', label: 'Lead ID', required: true, type: 'text' },
+    { id: 'db_id', label: 'Database ID (For Updates)', required: false, type: 'text' },
+    { id: 'leadId', label: 'Lead ID', required: false, type: 'text' },
     { id: 'firstName', label: 'First Name', required: true, type: 'text' },
     { id: 'lastName', label: 'Last Name', required: true, type: 'text' },
+    { id: 'email', label: 'Email', required: true, type: 'email' },
     { id: 'country', label: 'Country', required: true, type: 'text' },
     { id: 'counselor', label: 'Counselor', required: false, type: 'text' },
-    { id: 'stage', label: 'Stage', required: true, type: 'select', options: ['new', 'lead', 'application', 'visa', 'completed'] }
+    { id: 'stage', label: 'Stage', required: true, type: 'select', options: ['new', 'lead', 'application', 'visa', 'completed'] },
+    { id: 'riskLevel', label: 'Risk Level', required: false, type: 'select', options: ['low', 'medium', 'high'] }
   ];
 
   const handleExport = async (options: any) => {
     toast.success(`Exporting ${options.scope} leads as ${options.format}...`);
   };
 
-  const handleImport = async (data: any) => {
-    toast.success(`Importing ${data.length} leads...`);
+  const handleImport = async (data: any[], mode: any) => {
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing leads (0/${data.length})...`);
+
+    try {
+      const allLeads = await leadStatusService.getAllLeads();
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        try {
+          const payload: any = {
+            firstName: row.firstName,
+            lastName: row.lastName,
+            email: row.email,
+            currentCountry: row.country,
+            nationality: row.country,
+            assignedCounselor: row.counselor || '',
+            currentStage: (row.stage || 'new').toLowerCase(),
+            riskLevel: (row.riskLevel || 'low').toLowerCase() as any,
+            leadSource: 'Import'
+          };
+
+          let targetId = row.db_id;
+          if (!targetId && row.leadId && (mode === 'update' || mode === 'merge')) {
+            const existingLead = allLeads.find(l => 
+              l.student_id?.trim().toLowerCase() === row.leadId.trim().toLowerCase()
+            );
+            if (existingLead) {
+              targetId = existingLead.db_id;
+            }
+          }
+
+          if (!targetId && row.firstName && row.lastName && (mode === 'update' || mode === 'merge')) {
+            const existingLead = allLeads.find(l => 
+              l.first_name?.trim().toLowerCase() === row.firstName.trim().toLowerCase() &&
+              l.last_name?.trim().toLowerCase() === row.lastName.trim().toLowerCase()
+            );
+            if (existingLead) {
+              targetId = existingLead.db_id;
+            }
+          }
+
+          if ((mode === 'update' || mode === 'merge') && targetId) {
+            await leadStatusService.updateLead(targetId, payload);
+          } else {
+            await leadStatusService.createLead(payload);
+          }
+          successCount++;
+        } catch (error: any) {
+          const errorMessage = error.message || "Unknown error";
+          console.error(`Failed to import lead row ${i + 1}:`, error);
+          toast.error(`Row ${i + 1} (${row.firstName || 'Unknown'}): ${errorMessage}`, { duration: 5000 });
+          failCount++;
+        }
+        toast.loading(`Importing leads (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+      }
+
+      toast.dismiss(loadingToast);
+      if (successCount > 0) {
+        toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+      } else {
+        toast.error(`Import failed! All ${failCount} rows failed.`);
+      }
+      fetchData();
+      setShowImportDialog(false);
+
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("Bulk lookup failed:", error);
+      toast.error("Failed to execute import batch lookup setup.");
+    }
   };
 
   const slickSettings = {
@@ -739,6 +814,7 @@ const LeadStatusOverviewPage: React.FC<LeadStatusOverviewPageProps> = ({ onNavig
         moduleName="Leads"
         fields={importFields}
         onImport={handleImport}
+        templateUrl="/templates/leads-import-template.xlsx"
         allowUpdate={true}
       />
 

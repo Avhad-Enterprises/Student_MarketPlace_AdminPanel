@@ -13,7 +13,9 @@ import * as XLSX from 'xlsx';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AddFoodDialog } from './common/AddFoodDialog';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
+import { ImportDialog, ImportField } from './common/ImportDialog';
 import { Food, getAllFood, createFood, updateFood, deleteFood, getFoodMetrics } from '../services/foodService';
+
 
 const CustomCheckbox = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (
   <div
@@ -119,7 +121,9 @@ export const FoodOverviewPage = () => {
 
   // Export state
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showImportDialog, setShowImportDialog] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+
 
   // Column visibility
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['platform', 'service_type', 'offer_details', 'avg_cost', 'countries', 'status', 'verified', 'actions']);
@@ -191,6 +195,7 @@ export const FoodOverviewPage = () => {
   };
 
   const columns = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'reference_id', label: 'Reference ID', defaultSelected: true },
     { id: 'platform', label: 'Platform', defaultSelected: true },
     { id: 'service_type', label: 'Service Type', defaultSelected: true },
@@ -206,8 +211,23 @@ export const FoodOverviewPage = () => {
   const exportColumns: ExportColumn[] = columns.filter(col => col.id !== 'actions').map(col => ({
     id: col.id,
     label: col.label,
-    defaultSelected: true
+    defaultSelected: col.id !== 'id'
   }));
+
+  const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
+    { id: 'reference_id', label: 'Reference ID', required: false, type: 'text' },
+    { id: 'platform', label: 'Platform Name', required: true, type: 'text' },
+    { id: 'service_type', label: 'Service Type', required: true, type: 'select', options: ['Delivery', 'Meal Kits', 'Grocery Discounts', 'Student Specials'] },
+    { id: 'offer_details', label: 'Offer Details', required: false, type: 'text' },
+    { id: 'countries_covered', label: 'Countries Covered', required: false, type: 'text' },
+    { id: 'avg_cost', label: 'Avg Cost/Month', required: false, type: 'text' },
+    { id: 'verified', label: 'Verified Platform', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] },
+    { id: 'student_visible', label: 'Visible to Students', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'popularity', label: 'Popularity Score', required: false, type: 'text' }
+  ];
+
 
   const handleExport = async (options: any) => {
     try {
@@ -327,6 +347,65 @@ export const FoodOverviewPage = () => {
       setShowExportDialog(false);
     }
   };
+
+  const handleImport = async (data: any[], mode: any) => {
+    console.log('Importing food data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing food (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          reference_id: (row.reference_id || '').trim(),
+          platform: row.platform,
+          service_type: row.service_type || 'Delivery',
+          offer_details: row.offer_details || '',
+          countries_covered: Number(row.countries_covered) || 0,
+          avg_cost: row.avg_cost || '',
+          verified: row.verified === 'Yes',
+          status: (row.status || 'active').toLowerCase() as 'active' | 'inactive',
+          student_visible: row.student_visible === 'Yes',
+          popularity: Number(row.popularity) || 1
+        };
+
+        let targetId = row.id;
+        if (!targetId && row.reference_id && (mode === 'update' || mode === 'merge')) {
+          const searchResult = await getAllFood({ search: row.reference_id.trim(), limit: 10 });
+          const existingItem = searchResult.data?.find((i: any) => 
+            i.reference_id?.trim().toLowerCase() === row.reference_id.trim().toLowerCase()
+          );
+          if (existingItem) {
+            targetId = existingItem.id;
+          }
+        }
+
+        if ((mode === 'update' || mode === 'merge') && targetId) {
+          await updateFood(targetId, payload);
+        } else {
+          await createFood(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import food row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing food (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    fetchData();
+  };
+
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -459,6 +538,12 @@ export const FoodOverviewPage = () => {
                 <Download size={20} />
                 Export
               </button>
+
+              <button onClick={() => setShowImportDialog(true)} className="hidden md:flex items-center gap-2 p-4 px-6 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-all text-gray-700 font-medium">
+                <Upload size={20} />
+                Import
+              </button>
+
 
               <button
                 onClick={() => { setEditingPlatform(null); setIsAddDialogOpen(true); }}
@@ -645,6 +730,17 @@ export const FoodOverviewPage = () => {
         supportsDateRange={false}
         onExport={handleExport}
       />
+
+      <ImportDialog
+        open={showImportDialog}
+        onOpenChange={setShowImportDialog}
+        moduleName="Food"
+        fields={importFields}
+        onImport={handleImport}
+        templateUrl="/templates/food-import-template.xlsx"
+        allowUpdate={true}
+      />
+
     </div>
   );
 };

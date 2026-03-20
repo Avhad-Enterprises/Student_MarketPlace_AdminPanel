@@ -277,6 +277,7 @@ export const HousingOverviewPage: React.FC<{ onNavigate?: (page: string, data?: 
   ];
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'reference_id', label: 'Reference ID', defaultSelected: true },
     { id: 'provider_name', label: 'Provider', defaultSelected: true },
     { id: 'housing_type', label: 'Housing Type', defaultSelected: true },
@@ -286,14 +287,21 @@ export const HousingOverviewPage: React.FC<{ onNavigate?: (page: string, data?: 
     { id: 'avg_rent', label: 'Avg Rent', defaultSelected: true }
   ];
 
+
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'reference_id', label: 'Reference ID', required: false, type: 'text' },
     { id: 'provider_name', label: 'Provider Name', required: true, type: 'text' },
     { id: 'housing_type', label: 'Housing Type', required: true, type: 'select', options: ['Student Residence', 'Shared Apartment', 'Homestay', 'Private Room', 'Multiple'] },
     { id: 'location', label: 'Location', required: true, type: 'text' },
     { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] },
-    { id: 'avg_rent', label: 'Avg Rent', required: false, type: 'text' }
+    { id: 'avg_rent', label: 'Avg Rent', required: false, type: 'text' },
+    { id: 'countries_covered', label: 'Countries Covered', required: false, type: 'text' },
+    { id: 'student_visible', label: 'Visible to Students', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'verified', label: 'Verified Provider', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'popularity', label: 'Popularity Score', required: false, type: 'text' }
   ];
+
 
   const handleExport = async (options: any) => {
     try {
@@ -405,7 +413,53 @@ export const HousingOverviewPage: React.FC<{ onNavigate?: (page: string, data?: 
     }
   };
 
-  const handleImport = async (data: any[]) => { toast.success(`Successfully imported ${data.length} records`); };
+  const handleImport = async (data: any[], mode: any) => {
+    console.log('Importing housing data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing housing (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          reference_id: row.reference_id || '',
+          provider_name: row.provider_name,
+          housing_type: row.housing_type,
+          location: row.location,
+          countries_covered: Number(row.countries_covered) || 0,
+          status: (row.status || 'active').toLowerCase() as 'active' | 'inactive',
+          student_visible: row.student_visible === 'Yes',
+          avg_rent: row.avg_rent || '',
+          verified: row.verified === 'Yes',
+          popularity: Number(row.popularity) || 0
+        };
+
+        if (mode === 'update' && row.id) {
+          await updateHousing(row.id, payload);
+        } else {
+          await createHousing(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import housing row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing housing (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    fetchData();
+  };
+
 
   return (<TooltipProvider><div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
     <div className="hidden md:flex justify-between items-center gap-4 mb-8">

@@ -299,18 +299,22 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
   ];
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'visa_id', label: 'Reference ID', defaultSelected: true }, { id: 'visa_type', label: 'Visa Type', defaultSelected: true },
     { id: 'category', label: 'Category', defaultSelected: true }, { id: 'countries_covered', label: 'Countries', defaultSelected: true },
     { id: 'status', label: 'Status', defaultSelected: true }, { id: 'processing_difficulty', label: 'Processing Difficulty', defaultSelected: false }
   ];
 
+
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'visa_type', label: 'Visa Type', required: true, type: 'text' },
     { id: 'category', label: 'Category', required: true, type: 'select', options: ['Study', 'Work', 'Dependent', 'Visitor'] },
     { id: 'countries_covered', label: 'Countries', required: true, type: 'text' },
     { id: 'status', label: 'Status', required: false, type: 'select', options: ['Active', 'Inactive'] },
     { id: 'processing_difficulty', label: 'Processing Difficulty', required: false, type: 'select', options: ['Low', 'Medium', 'High'] }
   ];
+
 
   const handleExport = async (options: any) => {
     console.log('Exporting with options:', options);
@@ -358,6 +362,7 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
           const row: any = {};
           const isSelected = (id: string) => options.selectedColumns.includes(id);
 
+          if (isSelected('id')) row['Database ID'] = item.id;
           if (isSelected('visa_id')) row['Reference ID'] = item.visa_id;
           if (isSelected('visa_type')) row['Visa Type'] = item.visa_type;
           if (isSelected('category')) row['Category'] = item.category;
@@ -453,9 +458,48 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
     }
   };
   const handleImport = async (data: any[], mode: any) => {
-    toast.success(`Successfully imported ${data.length} visa records`);
+    console.log('Importing data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing visas (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          visa_type: row.visa_type,
+          category: row.category,
+          countries_covered: Number(row.countries_covered) || 0,
+          status: (row.status || 'Active').toLowerCase() as 'active' | 'inactive',
+          processing_difficulty: row.processing_difficulty || 'Medium',
+          student_visible: true // default
+        };
+
+        if (mode === 'update' && row.id) {
+          await visaService.updateVisa(row.id, payload);
+        } else {
+          await visaService.createVisa(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing visas (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
     fetchData();
   };
+
 
   return (
     <TooltipProvider>

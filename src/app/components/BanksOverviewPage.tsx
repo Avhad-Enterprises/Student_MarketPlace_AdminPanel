@@ -452,6 +452,7 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
   };
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'referenceId', label: 'Reference ID', defaultSelected: true },
     { id: 'bankName', label: 'Bank Name', defaultSelected: true },
     { id: 'accountType', label: 'Account Type', defaultSelected: true },
@@ -464,7 +465,9 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
     { id: 'popularity', label: 'Popularity', defaultSelected: false }
   ];
 
+
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'referenceId', label: 'Reference ID', required: false, type: 'text' },
     { id: 'bankName', label: 'Bank Name', required: true, type: 'text' },
     { id: 'accountType', label: 'Account Type', required: true, type: 'text' },
@@ -475,6 +478,7 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
     { id: 'studentFriendly', label: 'Student Friendly', required: false, type: 'select', options: ['Yes', 'No'] },
     { id: 'studentVisible', label: 'Student Visibility', required: false, type: 'select', options: ['Yes', 'No'] }
   ];
+
 
   const handleExport = async (options: any) => {
     try {
@@ -501,6 +505,7 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
         const row: any = {};
         options.selectedColumns.forEach((colId: string) => {
           switch (colId) {
+            case 'id': row['Database ID'] = bank.id; break;
             case 'referenceId': row['Reference ID'] = bank.bank_id; break;
             case 'bankName': row['Bank Name'] = bank.bank_name; break;
             case 'accountType': row['Account Type'] = bank.account_type; break;
@@ -514,6 +519,7 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
             default: break;
           }
         });
+
         return row;
       });
 
@@ -547,9 +553,54 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
   };
 
   const handleImport = async (data: any[], mode: any) => {
-    console.log('Importing:', data, 'Mode:', mode);
-    toast.success(`Successfully imported ${data.length} bank records`);
+    console.log('Importing data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing banks (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          bank_id: row.referenceId || '',
+          bank_name: row.bankName,
+          account_type: row.accountType,
+          countries_covered: Number(row.countries) || 0,
+          status: (row.status || 'Active').toLowerCase() as 'active' | 'inactive',
+          min_balance: row.minBalance || '',
+          digital_onboarding: row.digitalOnboarding === 'Yes',
+          student_friendly: row.studentFriendly === 'Yes',
+          student_visible: row.studentVisible === 'Yes',
+          popularity: 0
+        };
+
+        if (mode === 'update' && row.id) {
+          await updateBank(row.id, payload);
+        } else {
+          await createBank(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing banks (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    if (typeof fetchData === 'function') {
+      fetchData();
+    }
   };
+
 
   return (
     <TooltipProvider>

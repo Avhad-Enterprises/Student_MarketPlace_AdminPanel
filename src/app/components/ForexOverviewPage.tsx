@@ -200,6 +200,7 @@ export const ForexOverviewPage: React.FC<ForexOverviewPageProps> = ({ onNavigate
   ];
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'forex_id', label: 'Forex ID', defaultSelected: true },
     { id: 'provider_name', label: 'Provider', defaultSelected: true },
     { id: 'service_type', label: 'Service Type', defaultSelected: true },
@@ -209,13 +210,21 @@ export const ForexOverviewPage: React.FC<ForexOverviewPageProps> = ({ onNavigate
     { id: 'avg_fee', label: 'Avg Fee', defaultSelected: true },
     { id: 'transfer_speed', label: 'Speed', defaultSelected: true }
   ];
+
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'forex_id', label: 'Forex ID', required: false, type: 'text' },
     { id: 'provider_name', label: 'Provider Name', required: true, type: 'text' },
     { id: 'service_type', label: 'Service Type', required: true, type: 'select', options: ['Money Transfer', 'Multi-Currency Account', 'Currency Exchange'] },
     { id: 'currency_pairs', label: 'Currency Pairs', required: true, type: 'text' },
-    { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] }
+    { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] },
+    { id: 'countries_covered', label: 'Countries Covered', required: false, type: 'text' },
+    { id: 'avg_fee', label: 'Avg Fee (%)', required: false, type: 'text' },
+    { id: 'transfer_speed', label: 'Transfer Speed', required: false, type: 'text' },
+    { id: 'student_visible', label: 'Visible to Students', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'popularity', label: 'Popularity Score', required: false, type: 'text' }
   ];
+
   const toggleColumn = (col: string) => {
     setVisibleColumns(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]);
   };
@@ -338,7 +347,53 @@ export const ForexOverviewPage: React.FC<ForexOverviewPageProps> = ({ onNavigate
       setShowExportDialog(false);
     }
   };
-  const handleImport = async (data: any[]) => { toast.success(`Successfully imported ${data.length} records`); };
+  const handleImport = async (data: any[], mode: any) => {
+    console.log('Importing forex data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing forex (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          forex_id: row.forex_id || '',
+          provider_name: row.provider_name,
+          service_type: row.service_type || 'Money Transfer',
+          currency_pairs: Number(row.currency_pairs) || 0,
+          countries_covered: Number(row.countries_covered) || 0,
+          avg_fee: row.avg_fee || '',
+          transfer_speed: row.transfer_speed || '',
+          status: (row.status || 'active').toLowerCase() as 'active' | 'inactive',
+          student_visible: row.student_visible === 'Yes',
+          popularity: Number(row.popularity) || 1
+        };
+
+        if (mode === 'update' && row.id) {
+          await updateForex(row.id, payload);
+        } else {
+          await createForex(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import forex row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing forex (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    fetchData();
+  };
+
 
   return (<TooltipProvider>
     <>

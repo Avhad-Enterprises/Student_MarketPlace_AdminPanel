@@ -190,8 +190,17 @@ export const TaxesOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
   ];
 
   const allColumns = [{ key: 'id', label: 'Reference ID' }, { key: 'service', label: 'Service Name' }, { key: 'provider', label: 'Provider' }, { key: 'filingType', label: 'Filing Type' }, { key: 'countries', label: 'Countries' }, { key: 'status', label: 'Status' }, { key: 'residencyType', label: 'Residency Type' }, { key: 'complexity', label: 'Complexity' }, { key: 'usageRate', label: 'Usage Rate' }, { key: 'visible', label: 'Visible' }];
-  const exportColumns: ExportColumn[] = [{ id: 'tax_id', label: 'Reference ID', defaultSelected: true }, { id: 'service_name', label: 'Service Name', defaultSelected: true }, { id: 'provider', label: 'Provider', defaultSelected: true }, { id: 'filing_type', label: 'Filing Type', defaultSelected: true }, { id: 'countries_covered', label: 'Countries', defaultSelected: true }, { id: 'status', label: 'Status', defaultSelected: true }, { id: 'residency_type', label: 'Residency Type', defaultSelected: false }, { id: 'complexity', label: 'Complexity', defaultSelected: false }];
-  const importFields: ImportField[] = [{ id: 'tax_id', label: 'Reference ID', required: false, type: 'text' }, { id: 'service_name', label: 'Service Name', required: true, type: 'text' }, { id: 'provider', label: 'Provider', required: true, type: 'text' }, { id: 'filing_type', label: 'Filing Type', required: true, type: 'select', options: ['Full Service', 'Self-Service'] }, { id: 'countries_covered', label: 'Countries', required: true, type: 'text' }, { id: 'status', label: 'Status', required: false, type: 'select', options: ['Active', 'Inactive'] }, { id: 'residency_type', label: 'Residency Type', required: false, type: 'select', options: ['Resident', 'Non-Resident', 'Both'] }, { id: 'complexity', label: 'Complexity', required: false, type: 'select', options: ['Low', 'Medium', 'High'] }];
+  const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
+    { id: 'tax_id', label: 'Reference ID', defaultSelected: true }, { id: 'service_name', label: 'Service Name', defaultSelected: true }, { id: 'provider', label: 'Provider', defaultSelected: true }, { id: 'filing_type', label: 'Filing Type', defaultSelected: true }, { id: 'countries_covered', label: 'Countries', defaultSelected: true }, { id: 'status', label: 'Status', defaultSelected: true }, { id: 'residency_type', label: 'Residency Type', defaultSelected: false }, { id: 'complexity', label: 'Complexity', defaultSelected: false }
+  ];
+
+  const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
+    { id: 'tax_id', label: 'Reference ID', required: false, type: 'text' }, { id: 'service_name', label: 'Service Name', required: true, type: 'text' }, { id: 'provider', label: 'Provider', required: true, type: 'text' }, { id: 'filing_type', label: 'Filing Type', required: true, type: 'select', options: ['Full Service', 'Self-Service', 'Advisory Only'] }, { id: 'countries_covered', label: 'Countries', required: true, type: 'text' }, { id: 'status', label: 'Status', required: false, type: 'select', options: ['Active', 'Inactive'] }, { id: 'residency_type', label: 'Residency Type', required: false, type: 'select', options: ['Resident', 'Non-Resident', 'Both'] }, { id: 'complexity', label: 'Complexity', required: false, type: 'select', options: ['Low', 'Medium', 'High'] },
+    { id: 'student_visible', label: 'Visible to Students', required: false, type: 'select', options: ['Yes', 'No'] }
+  ];
+
 
   const handleExport = async (options: any) => {
     try {
@@ -237,7 +246,9 @@ export const TaxesOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
           const row: any = {};
           const isSelected = (id: string) => options.selectedColumns.includes(id);
 
+          if (isSelected('id')) row['Database ID'] = item.id;
           if (isSelected('tax_id')) row['Ref ID'] = item.tax_id;
+
           if (isSelected('service_name')) row['Service Name'] = item.service_name;
           if (isSelected('provider')) row['Provider'] = item.provider;
           if (isSelected('filing_type')) row['Filing Type'] = item.filing_type;
@@ -332,7 +343,57 @@ export const TaxesOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
     }
   };
 
-  const handleImport = async (data: any[], mode: any) => { toast.success(`Successfully imported ${data.length} tax records`); };
+  const handleImport = async (data: any[], mode: any) => {
+    console.log('Importing taxes data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing taxes (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          tax_id: row.tax_id || '',
+          service_name: row.service_name,
+          provider: row.provider,
+          filing_type: row.filing_type || 'Full Service',
+          countries_covered: Number(row.countries_covered) || 1,
+          status: (row.status || 'Active').toLowerCase() as 'active' | 'inactive',
+          student_visible: row.student_visible === 'Yes',
+          residency_type: row.residency_type || 'Non-Resident',
+          complexity: row.complexity || 'Medium',
+          usage_rate: '0%',
+          popularity: 0
+        };
+
+        if (mode === 'update' && row.id) {
+          await taxesService.updateTax(row.id, payload);
+        } else {
+          await taxesService.createTax(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import tax row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing taxes (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    fetchTaxes();
+    if (typeof fetchMetrics === 'function') {
+      fetchMetrics();
+    }
+  };
+
 
   return (
     <TooltipProvider>

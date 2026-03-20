@@ -229,6 +229,7 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
   };
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'enquiryId', label: 'Enquiry ID', defaultSelected: true },
     { id: 'dateSubmitted', label: 'Date Submitted', defaultSelected: true },
     { id: 'studentName', label: 'Student Name', defaultSelected: true },
@@ -239,6 +240,7 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
   ];
 
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'enquiry_id', label: 'Enquiry ID', required: true, type: 'text' },
     { id: 'student_name', label: 'Student Name', required: true, type: 'text' },
     { id: 'email', label: 'Email', required: true, type: 'email' },
@@ -252,8 +254,68 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
     toast.success(`Exporting ${options.scope} enquiries as ${options.format}...`);
   };
 
-  const handleImport = async (data: any) => {
-    toast.success(`Importing ${data.length} enquiries...`);
+  const handleImport = async (data: any[], mode: any) => {
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing enquiries (0/${data.length})...`);
+
+    try {
+      const allEnquiries = await enquiryService.getAllEnquiries();
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        try {
+          const payload: any = {
+            enquiry_id: row.enquiry_id,
+            date_submitted: new Date().toISOString(),
+            student_name: row.student_name,
+            email: row.email,
+            subject: row.subject,
+            message: row.message || '',
+            priority: (row.priority || 'medium').toLowerCase(),
+            status: (row.status || 'new').toLowerCase()
+          };
+
+          let targetId = row.id;
+          if (!targetId && row.enquiry_id && (mode === 'update' || mode === 'merge')) {
+            const existingItem = allEnquiries.find((e: any) => 
+              e.enquiry_id?.trim().toLowerCase() === row.enquiry_id.trim().toLowerCase()
+            );
+            if (existingItem) {
+              targetId = existingItem.id;
+            }
+          }
+
+          if ((mode === 'update' || mode === 'merge') && targetId) {
+            await enquiryService.updateEnquiry(targetId, payload);
+          } else {
+            await enquiryService.createEnquiry(payload);
+          }
+          successCount++;
+        } catch (error: any) {
+          const errorMessage = error.message || "Unknown error";
+          console.error(`Failed to import enquiry row ${i + 1}:`, error);
+          toast.error(`Row ${i + 1} (${row.enquiry_id || 'Unknown'}): ${errorMessage}`, { duration: 5000 });
+          failCount++;
+        }
+        toast.loading(`Importing enquiries (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+      }
+
+      toast.dismiss(loadingToast);
+      if (successCount > 0) {
+        toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+      } else {
+        toast.error(`Import failed! All ${failCount} rows failed.`);
+      }
+      fetchEnquiries();
+      setShowImportDialog(false);
+
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("Bulk lookup failed:", error);
+      toast.error("Failed to execute import batch lookup setup.");
+    }
   };
 
   const slickSettings = {
@@ -588,6 +650,7 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
         moduleName="Enquiries"
         fields={importFields}
         onImport={handleImport}
+        templateUrl="/templates/enquiries-import-template.xlsx"
         allowUpdate={true}
       />
 

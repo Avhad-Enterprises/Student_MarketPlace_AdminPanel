@@ -172,6 +172,7 @@ export const EmploymentOverviewPage: React.FC<EmploymentOverviewPageProps> = ({ 
   ];
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'reference_id', label: 'Reference ID', defaultSelected: true },
     { id: 'platform', label: 'Platform', defaultSelected: true },
     { id: 'service_type', label: 'Service Type', defaultSelected: true },
@@ -179,14 +180,21 @@ export const EmploymentOverviewPage: React.FC<EmploymentOverviewPageProps> = ({ 
     { id: 'countries_covered', label: 'Countries', defaultSelected: true },
     { id: 'status', label: 'Status', defaultSelected: true }
   ];
+
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'reference_id', label: 'Reference ID', required: false, type: 'text' },
-    { id: 'platform', label: 'Platform', required: true, type: 'text' },
+    { id: 'platform', label: 'Platform Name', required: true, type: 'text' },
     { id: 'service_type', label: 'Service Type', required: true, type: 'select', options: ['Job Board', 'Career Platform', 'Freelance'] },
     { id: 'job_types', label: 'Job Types', required: true, type: 'text' },
-    { id: 'countries_covered', label: 'Countries Covered', required: false, type: 'number' },
-    { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] }
+    { id: 'countries_covered', label: 'Countries Covered', required: false, type: 'text' },
+    { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] },
+    { id: 'avg_salary', label: 'Avg Salary Range', required: false, type: 'text' },
+    { id: 'verified', label: 'Verified Platform', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'student_visible', label: 'Visible to Students', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'popularity', label: 'Popularity Score', required: false, type: 'text' }
   ];
+
 
   const handleExport = async (options: any) => {
     try {
@@ -294,22 +302,66 @@ export const EmploymentOverviewPage: React.FC<EmploymentOverviewPageProps> = ({ 
     }
   };
 
-  const handleImport = async (data: any[]) => {
-    try {
-      setIsLoading(true);
-      toast.info(`Importing ${data.length} records...`);
-      for (const row of data) {
-        await createEmployment(row);
+  const handleImport = async (data: any[], mode: any) => {
+    console.log('Importing employment data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing employment (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          reference_id: (row.reference_id || '').trim(),
+          platform: row.platform,
+          service_type: row.service_type || 'Job Board',
+          job_types: row.job_types || '',
+          countries_covered: Number(row.countries_covered) || 0,
+          avg_salary: row.avg_salary || '',
+          verified: row.verified === 'Yes',
+          status: (row.status || 'active').toLowerCase() as 'active' | 'inactive',
+          student_visible: row.student_visible === 'Yes',
+          popularity: Number(row.popularity) || 1
+        };
+
+        let targetId = row.id;
+        if (!targetId && row.reference_id && (mode === 'update' || mode === 'merge')) {
+          const searchResult = await getAllEmployment({ search: row.reference_id.trim(), limit: 10 });
+          const existingItem = searchResult.data?.find((i: any) => 
+            i.reference_id?.trim().toLowerCase() === row.reference_id.trim().toLowerCase()
+          );
+          if (existingItem) {
+            targetId = existingItem.id;
+          }
+        }
+
+        if ((mode === 'update' || mode === 'merge') && targetId) {
+          await updateEmployment(targetId, payload);
+        } else {
+          await createEmployment(payload);
+        }
+        successCount++;
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.error?.message || error.response?.data?.message || error.message || "Unknown error";
+        console.error(`Failed to import employment row ${i + 1}:`, error);
+        toast.error(`Row ${i + 1} Error: ${errorMessage}`, { duration: 5000 });
+        failCount++;
       }
-      toast.success(`Successfully imported ${data.length} records`);
-      fetchData();
-    } catch (error) {
-      console.error("Import error:", error);
-      toast.error("Failed to import some records");
-    } finally {
-      setIsLoading(false);
+      toast.loading(`Importing employment (${successCount + failCount}/${data.length})...`, { id: loadingToast });
     }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    fetchData();
   };
+
 
   const handleAddPlatform = () => {
     setEditingItem(null);

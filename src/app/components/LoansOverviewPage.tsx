@@ -193,8 +193,17 @@ export const LoansOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
   ];
 
   const allColumns = [{ key: 'id', label: 'Reference ID' }, { key: 'provider', label: 'Provider' }, { key: 'product', label: 'Product Name' }, { key: 'amount', label: 'Amount Range' }, { key: 'countries', label: 'Countries' }, { key: 'status', label: 'Status' }, { key: 'interestType', label: 'Interest Type' }, { key: 'collateral', label: 'Collateral' }, { key: 'approvalRate', label: 'Approval Rate' }, { key: 'visible', label: 'Visible' }];
-  const exportColumns: ExportColumn[] = [{ id: 'loan_id', label: 'Reference ID', defaultSelected: true }, { id: 'provider_name', label: 'Provider', defaultSelected: true }, { id: 'product_name', label: 'Product Name', defaultSelected: true }, { id: 'amount_range', label: 'Amount Range', defaultSelected: true }, { id: 'countries_supported', label: 'Countries', defaultSelected: true }, { id: 'status', label: 'Status', defaultSelected: true }, { id: 'interest_type', label: 'Interest Type', defaultSelected: false }, { id: 'collateral_required', label: 'Collateral Requirement', defaultSelected: false }];
-  const importFields: ImportField[] = [{ id: 'loan_id', label: 'Reference ID', required: false, type: 'text' }, { id: 'provider_name', label: 'Provider', required: true, type: 'text' }, { id: 'product_name', label: 'Product Name', required: true, type: 'text' }, { id: 'amount_range', label: 'Amount Range', required: true, type: 'text' }, { id: 'countries_supported', label: 'Countries', required: true, type: 'text' }, { id: 'status', label: 'Status', required: false, type: 'select', options: ['Active', 'Inactive'] }, { id: 'interest_type', label: 'Interest Type', required: false, type: 'select', options: ['Fixed', 'Variable'] }, { id: 'collateral_required', label: 'Collateral Requirement', required: false, type: 'select', options: ['Yes', 'No'] }];
+  const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
+    { id: 'loan_id', label: 'Reference ID', defaultSelected: true }, { id: 'provider_name', label: 'Provider', defaultSelected: true }, { id: 'product_name', label: 'Product Name', defaultSelected: true }, { id: 'amount_range', label: 'Amount Range', defaultSelected: true }, { id: 'countries_supported', label: 'Countries', defaultSelected: true }, { id: 'status', label: 'Status', defaultSelected: true }, { id: 'interest_type', label: 'Interest Type', defaultSelected: false }, { id: 'collateral_required', label: 'Collateral Requirement', defaultSelected: false }
+  ];
+
+  const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
+    { id: 'loan_id', label: 'Reference ID', required: false, type: 'text' }, { id: 'provider_name', label: 'Provider', required: true, type: 'text' }, { id: 'product_name', label: 'Product Name', required: true, type: 'text' }, { id: 'amount_range', label: 'Amount Range', required: true, type: 'text' }, { id: 'countries_supported', label: 'Countries', required: true, type: 'text' }, { id: 'status', label: 'Status', required: false, type: 'select', options: ['Active', 'Inactive'] }, { id: 'interest_type', label: 'Interest Type', required: false, type: 'select', options: ['Fixed', 'Variable'] }, { id: 'collateral_required', label: 'Collateral Requirement', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'student_visible', label: 'Visible to Students', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'approval_rate', label: 'Approval Rate', required: false, type: 'text' }
+  ];
 
   const handleExport = async (options: any) => {
     try {
@@ -221,7 +230,9 @@ export const LoansOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
         const exportData = dataToExport.map(item => {
           const row: any = {};
           const isSelected = (id: string) => options.selectedColumns.includes(id);
+          if (isSelected('id')) row['Database ID'] = item.id;
           if (isSelected('loan_id')) row['Ref ID'] = item.loan_id;
+
           if (isSelected('provider_name')) row['Provider'] = item.provider_name;
           if (isSelected('product_name')) row['Product'] = item.product_name;
           if (isSelected('amount_range')) row['Amount'] = item.amount_range;
@@ -276,7 +287,57 @@ export const LoansOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
     }
   };
 
-  const handleImport = async (data: any[], mode: any) => { toast.success(`Successfully imported ${data.length} loan records`); };
+  const handleImport = async (data: any[], mode: any) => {
+    console.log('Importing loans data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing loans (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          loan_id: row.loan_id || '',
+          provider_name: row.provider_name,
+          product_name: row.product_name,
+          amount_range: row.amount_range || '',
+          countries_supported: Number(row.countries_supported) || 0,
+          status: (row.status || 'Active').toLowerCase() as 'active' | 'inactive',
+          student_visible: row.student_visible === 'Yes',
+          interest_type: row.interest_type || 'Fixed',
+          collateral_required: row.collateral_required === 'Yes',
+          approval_rate: row.approval_rate || '0%',
+          popularity: 0
+        };
+
+        if (mode === 'update' && row.id) {
+          await loansService.updateLoan(row.id, payload);
+        } else {
+          await loansService.createLoan(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import loan row ${i + 1}:`, error);
+        failCount++;
+      }
+      toast.loading(`Importing loans (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+    }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    fetchLoans();
+    if (typeof fetchMetrics === 'function') {
+      fetchMetrics();
+    }
+  };
+
 
   return (
     <TooltipProvider>

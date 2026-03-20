@@ -276,7 +276,8 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[600px]">
+      <DialogContent className="max-w-[600px] max-h-[85vh] overflow-y-auto">
+
         <DialogHeader className="p-6 border-b border-slate-100">
           <DialogTitle className="text-xl font-bold text-[#1d293d]">{getStepTitle()}</DialogTitle>
           <DialogDescription className="text-slate-500">
@@ -306,7 +307,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                 </div>
                 {file ? (
                   <div>
-                    <p className="font-bold text-[#1d293d] text-lg">{file.name}</p>
+                    <p className="font-bold text-[#1d293d] text-lg break-all max-w-[320px] sm:max-w-[450px] mx-auto">{file.name}</p>
                     <p className="text-slate-500 text-sm mt-1">{(file.size / 1024).toFixed(2)} KB</p>
                     <Button variant="ghost" size="sm" className="mt-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
                       Change File
@@ -400,7 +401,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
 
           {/* STEP 3: MAPPING */}
           {step === 'mapping' && (
-            <div className="space-y-4 py-4 h-[400px] flex flex-col">
+            <div className="space-y-4 py-4 flex flex-col">
               <Alert className="bg-blue-50 border-blue-100 text-blue-800">
                 <Info className="h-4 w-4 text-blue-600" />
                 <AlertTitle className="text-blue-900">Column Mapping</AlertTitle>
@@ -409,19 +410,17 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                 </AlertDescription>
               </Alert>
 
-              <div className="border border-slate-200 rounded-lg overflow-hidden flex-1 mx-1">
-                <Table>
-                  <TableHeader className="bg-slate-50 sticky top-0 z-10">
-                    <TableRow>
-                      <TableHead className="w-[40%]">Source Column (from file)</TableHead>
-                      <TableHead className="w-[10%]"></TableHead>
-                      <TableHead className="w-[40%]">System Field</TableHead>
-                      <TableHead className="w-[10%] text-right">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                </Table>
-                <ScrollArea className="h-[280px]">
+              <div className="border border-slate-200 rounded-lg overflow-hidden mx-1">
+                <ScrollArea className="h-[320px]">
                   <Table>
+                    <TableHeader className="bg-slate-50 sticky top-0 z-10">
+                      <TableRow>
+                        <TableHead className="w-[40%]">Source Column (from file)</TableHead>
+                        <TableHead className="w-[10%]"></TableHead>
+                        <TableHead className="w-[40%]">System Field</TableHead>
+                        <TableHead className="w-[10%] text-right">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                       {sourceColumns.map((col, idx) => {
                         const isMapped = !!mappings[col];

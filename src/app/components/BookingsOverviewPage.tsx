@@ -340,6 +340,7 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
   };
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'bookingId', label: 'Booking ID', defaultSelected: true },
     { id: 'dateTime', label: 'Date & Time', defaultSelected: true },
     { id: 'studentName', label: 'Student Name', defaultSelected: true },
@@ -350,8 +351,8 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
   ];
 
   const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
     { id: 'bookingId', label: 'Booking ID', required: true, type: 'text' },
-    { id: 'bookingDate', label: 'Booking Date', required: true, type: 'date' },
     { id: 'dateTime', label: 'Date & Time', required: true, type: 'text' },
     { id: 'studentName', label: 'Student Name', required: true, type: 'text' },
     { id: 'service', label: 'Service', required: true, type: 'select', options: ['Initial Consultation', 'Visa Interview Prep', 'Document Review', 'Application Support', 'SOP Review', 'University Selection'] },
@@ -440,8 +441,68 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
     toast.success(`Exported ${dataToExport.length} bookings as ${options.format}`);
   };
 
-  const handleImport = async (data: any) => {
-    toast.success(`Importing ${data.length} bookings...`);
+  const handleImport = async (data: any[], mode: any) => {
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing bookings (0/${data.length})...`);
+
+    try {
+      const allBookings = await bookingService.getAllBookings();
+
+      for (let i = 0; i < data.length; i++) {
+        const row = data[i];
+        try {
+          const payload: any = {
+            booking_id: row.bookingId,
+            date_time: row.dateTime ? new Date(row.dateTime).toISOString() : new Date().toISOString(),
+            student_name: row.studentName,
+            service: row.service,
+            expert: row.expert,
+            status: (row.status || 'upcoming').toLowerCase(),
+            mode: row.mode || 'Online',
+            source: 'regular'
+          };
+
+          let targetId = row.id;
+          if (!targetId && row.bookingId && (mode === 'update' || mode === 'merge')) {
+            const existingItem = allBookings.find((i: any) => 
+              i.booking_id?.trim().toLowerCase() === row.bookingId.trim().toLowerCase()
+            );
+            if (existingItem) {
+              targetId = existingItem.id;
+            }
+          }
+
+          if ((mode === 'update' || mode === 'merge') && targetId) {
+            await bookingService.updateBooking(targetId, payload);
+          } else {
+            await bookingService.createBooking(payload);
+          }
+          successCount++;
+        } catch (error: any) {
+          const errorMessage = error.message || "Unknown error";
+          console.error(`Failed to import booking row ${i + 1}:`, error);
+          toast.error(`Row ${i + 1} (${row.bookingId || 'Unknown'}): ${errorMessage}`, { duration: 5000 });
+          failCount++;
+        }
+        toast.loading(`Importing bookings (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+      }
+
+      toast.dismiss(loadingToast);
+      if (successCount > 0) {
+        toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+      } else {
+        toast.error(`Import failed! All ${failCount} rows failed.`);
+      }
+      fetchBookings();
+      setShowImportDialog(false);
+
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      console.error("Bulk lookup failed:", error);
+      toast.error("Failed to execute import batch lookup setup.");
+    }
   };
 
   const slickSettings = {
@@ -851,6 +912,7 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
         moduleName="Bookings"
         fields={importFields}
         onImport={handleImport}
+        templateUrl="/templates/bookings-import-template.xlsx"
         allowUpdate={true}
       />
       <AddBookingModal

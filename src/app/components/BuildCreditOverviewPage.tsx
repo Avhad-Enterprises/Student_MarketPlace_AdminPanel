@@ -206,7 +206,9 @@ export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => 
         const exportData = dataToExport.map((item: BuildCredit) => {
           const row: any = {};
           const isSelected = (id: string) => options.selectedColumns.includes(id);
+          if (isSelected('id')) row['Database ID'] = item.id;
           if (isSelected('reference_id')) row['Ref ID'] = item.reference_id;
+
           if (isSelected('provider_name')) row['Provider'] = item.provider_name;
           if (isSelected('program_name')) row['Program'] = item.program_name;
           if (isSelected('card_type')) row['Card Type'] = item.card_type;
@@ -289,6 +291,7 @@ export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => 
   };
 
   const exportColumns: ExportColumn[] = [
+    { id: 'id', label: 'Database ID', defaultSelected: false },
     { id: 'reference_id', label: 'Reference ID', defaultSelected: true },
     { id: 'provider_name', label: 'Provider', defaultSelected: true },
     { id: 'program_name', label: 'Program Name', defaultSelected: true },
@@ -298,19 +301,68 @@ export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => 
     { id: 'credit_limit', label: 'Credit Limit', defaultSelected: false },
     { id: 'monthly_fee', label: 'Monthly Fee', defaultSelected: false }
   ];
-  const importFields: ImportField[] = [{ id: 'provider_name', label: 'Provider Name', required: true, type: 'text' }, { id: 'program_name', label: 'Program Name', required: true, type: 'text' }, { id: 'card_type', label: 'Card Type', required: true, type: 'select', options: ['Student Card', 'Secured Card', 'Savings-Secured'] }, { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] }];
 
-  const handleImport = async (data: any[]) => {
-    try {
-      for (const item of data) {
-        await buildCreditService.create(item);
+  const importFields: ImportField[] = [
+    { id: 'id', label: 'Database ID (For Updates)', required: false, type: 'text' },
+    { id: 'provider_name', label: 'Provider Name', required: true, type: 'text' },
+    { id: 'program_name', label: 'Program Name', required: true, type: 'text' },
+    { id: 'card_type', label: 'Card Type', required: true, type: 'select', options: ['Student Card', 'Secured Card', 'Savings-Secured'] },
+    { id: 'status', label: 'Status', required: false, type: 'select', options: ['active', 'inactive'] },
+    { id: 'countries_supported', label: 'Countries Supported', required: false, type: 'text' },
+    { id: 'student_visible', label: 'Visible to Students', required: false, type: 'select', options: ['Yes', 'No'] },
+    { id: 'credit_limit', label: 'Credit Limit', required: false, type: 'text' },
+    { id: 'monthly_fee', label: 'Monthly Fee', required: false, type: 'text' },
+    { id: 'building_period', label: 'Building Period', required: false, type: 'text' }
+  ];
+
+
+  const handleImport = async (data: any[], mode: any) => {
+    console.log('Importing build credit data:', data, 'mode:', mode);
+    let successCount = 0;
+    let failCount = 0;
+
+    const loadingToast = toast.loading(`Importing programs (0/${data.length})...`);
+
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      try {
+        const payload = {
+          provider_name: row.provider_name,
+          program_name: row.program_name,
+          card_type: row.card_type || 'Student Card',
+          countries_supported: Number(row.countries_supported) || 1,
+          status: (row.status || 'active').toLowerCase() as 'active' | 'inactive',
+          student_visible: row.student_visible === 'Yes',
+          credit_limit: row.credit_limit || '',
+          monthly_fee: row.monthly_fee || '$0',
+          building_period: row.building_period || '6 months',
+          popularity: 0
+        };
+
+        if (mode === 'update' && row.id) {
+          await buildCreditService.update(Number(row.id), payload);
+        } else {
+          await buildCreditService.create(payload);
+        }
+        successCount++;
+      } catch (error) {
+        console.error(`Failed to import build credit row ${i + 1}:`, error);
+        failCount++;
       }
-      toast.success(`Successfully imported ${data.length} records`);
-      fetchData();
-    } catch (error) {
-      toast.error("Import failed");
+      toast.loading(`Importing programs (${successCount + failCount}/${data.length})...`, { id: loadingToast });
     }
+
+    toast.dismiss(loadingToast);
+    if (successCount > 0) {
+      toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+    } else {
+      toast.error(`Import failed! All ${failCount} rows failed.`);
+    }
+
+    setShowImportDialog(false);
+    fetchData();
   };
+
 
   const handleSort = (field: string) => {
     if (sortBy === field) {
