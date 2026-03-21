@@ -1,11 +1,9 @@
-name: Deploy + Release (Coolify + Tailscale)
+name: Deploy to Coolify (Tailscale)
 
 on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
 
 concurrency:
   group: deploy-main
@@ -16,45 +14,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 5. Connect to Tailscale (WORKING - DO NOT CHANGE)
+      # 5. Connect to Tailscale
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      # 6. Verify network
+      # 6. Verify network (debug safety)
       - name: Verify connectivity
         run: |
           tailscale ip
           ping -c 3 100.112.225.41
-
-      # 7. Deploy
+      # 7. Trigger Coolify deploy
       - name: Trigger Coolify Deploy
         run: |
           curl "http://100.112.225.41:8000/api/v1/deploy?uuid=vqfjn5vvmfam71o2f86ao917" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
-
-      # 8. Wait
+      # 8. Optional: wait & health check
       - name: Wait for deployment
         run: sleep 15
 
-      # 9. Health check
       - name: Health check
         run: |
           curl -f http://100.112.225.41:8000 || exit 1
-
-  release:
-    name: Create Release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          generate_release_notes: true
