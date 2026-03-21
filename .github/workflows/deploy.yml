@@ -1,60 +1,117 @@
-name: Deploy + Release (Coolify + Tailscale)
+name: Auto Deploy + Version + Release (Coolify + Tailscale)
 
 on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
 
 concurrency:
   group: deploy-main
   cancel-in-progress: true
 
 jobs:
-  deploy:
+  version-and-release:
     runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.tag.outputs.new_tag }}
 
     steps:
-      # 5. Connect to Tailscale (WORKING - DO NOT CHANGE)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 🔍 Get latest tag
+      - name: Get latest tag
+        id: get_tag
+        run: |
+          TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1)
+          echo "latest_tag=$TAG" >> $GITHUB_OUTPUT
+
+      # 🔢 Bump version (v1 → v2 → v3...)
+      - name: Calculate next version
+        id: tag
+        run: |
+          if [ -z "${{ steps.get_tag.outputs.latest_tag }}" ]; then
+            NEW_TAG="v1"
+          else
+            NUM=${{ steps.get_tag.outputs.latest_tag }}
+            NUM=${NUM#v}
+            NEW_TAG="v$((NUM + 1))"
+          fi
+
+          echo "New tag: $NEW_TAG"
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+
+      # 🏷️ Create tag
+      - name: Create Git tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git tag ${{ steps.tag.outputs.new_tag }}
+          git push origin ${{ steps.tag.outputs.new_tag }}
+
+      # 📦 Create GitHub Release
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.new_tag }}
+          name: Release ${{ steps.tag.outputs.new_tag }}
+          generate_release_notes: true
+
+  deploy:
+    name: Deploy to Coolify
+    runs-on: ubuntu-latest
+    needs: version-and-release
+
+    steps:
+      # 🔗 Connect to Tailscale
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      # 6. Verify network
+      # 🌐 Verify network
       - name: Verify connectivity
         run: |
+          echo "Runner Tailscale IP:"
           tailscale ip
-          ping -c 3 100.112.225.41
+          echo "Pinging Coolify..."
+          ping -c 3 ${{ vars.COOLIFY_HOST }}
 
-      # 7. Deploy
+      # 🚀 Trigger Coolify Deploy
       - name: Trigger Coolify Deploy
         run: |
-          curl "http://100.112.225.41:8000/api/v1/deploy?uuid=vqfjn5vvmfam71o2f86ao917" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+          echo "Triggering deployment..."
 
-      # 8. Wait
+          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            "http://${{ vars.COOLIFY_HOST }}:${{ vars.COOLIFY_PORT }}/api/v1/deploy?uuid=${{ vars.COOLIFY_APP_UUID }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}")
+
+          echo "$RESPONSE"
+
+          STATUS=$(echo "$RESPONSE" | grep HTTP_STATUS | cut -d':' -f2)
+
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ Deploy API failed"
+            exit 1
+          fi
+
+      # ⏳ Wait for Coolify queue
       - name: Wait for deployment
-        run: sleep 15
+        run: sleep 20
 
-      # 9. Health check
+      # ❤️ Health check with retries
       - name: Health check
         run: |
-          curl -f http://100.112.225.41:8000 || exit 1
+          for i in {1..5}; do
+            echo "Health check attempt $i..."
+            if curl -f http://${{ vars.COOLIFY_HOST }}:${{ vars.COOLIFY_PORT }}; then
+              echo "✅ Service is healthy"
+              exit 0
+            fi
+            sleep 5
+          done
 
-  release:
-    name: Create Release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          generate_release_notes: true
+          echo "❌ Service failed health check"
+          exit 1
