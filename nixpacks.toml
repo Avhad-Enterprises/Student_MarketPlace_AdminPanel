@@ -1,0 +1,11 @@
+[phases.build]
+cmds = [
+  "rm -f tsconfig.tsbuildinfo",
+  "npm run build"
+]
+
+[phases.build.cache]
+paths = [
+  ".next/cache",
+  "node_modules/.cache"
+]
