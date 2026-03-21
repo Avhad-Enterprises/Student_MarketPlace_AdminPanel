@@ -1,0 +1,60 @@
+name: Deploy to Coolify (Tailscale)
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout (optional but useful for validation later)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Setup Node (match your app)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # 3. Install deps
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Build validation (fail fast)
+      - name: Build project
+        run: npm run build
+
+      # 5. Connect to Tailscale
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v2
+        with:
+          authkey: ${{ secrets.TS_AUTHKEY }}
+
+      # 6. Verify network (debug safety)
+      - name: Verify connectivity
+        run: |
+          tailscale ip
+          ping -c 3 100.112.225.41
+
+      # 7. Trigger Coolify deploy
+      - name: Trigger Coolify Deploy
+        run: |
+          curl "http://100.112.225.41:8000/api/v1/deploy?uuid=vqfjn5vvmfam71o2f86ao917" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
+
+      # 8. Optional: wait & health check
+      - name: Wait for deployment
+        run: sleep 15
+
+      - name: Health check
+        run: |
+          curl -f http://100.112.225.41:8000 || exit 1
