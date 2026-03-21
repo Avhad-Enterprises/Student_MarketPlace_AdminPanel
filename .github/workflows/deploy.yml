@@ -1,9 +1,11 @@
-name: Deploy to Coolify (Tailscale)
+name: Deploy + Release (Coolify)
 
 on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
 
 concurrency:
   group: deploy-main
@@ -11,50 +13,53 @@ concurrency:
 
 jobs:
   deploy:
+    name: Deploy to Coolify
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout (optional but useful for validation later)
+      # 1. Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Setup Node (match your app)
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      # 3. Install deps
-      - name: Install dependencies
-        run: npm ci
-
-      # 4. Build validation (fail fast)
-      - name: Build project
-        run: npm run build
-
-      # 5. Connect to Tailscale
+      # 2. Connect to Tailscale
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      # 6. Verify network (debug safety)
+      # 3. Verify network (debug safety)
       - name: Verify connectivity
         run: |
           tailscale ip
           ping -c 3 100.112.225.41
 
-      # 7. Trigger Coolify deploy
+      # 4. Trigger Coolify Deploy (NO BUILD HERE)
       - name: Trigger Coolify Deploy
         run: |
           curl "http://100.112.225.41:8000/api/v1/deploy?uuid=vqfjn5vvmfam71o2f86ao917" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
 
-      # 8. Optional: wait & health check
+      # 5. Optional: wait for deployment
       - name: Wait for deployment
         run: sleep 15
 
+      # 6. Health check
       - name: Health check
         run: |
           curl -f http://100.112.225.41:8000 || exit 1
+
+  release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
