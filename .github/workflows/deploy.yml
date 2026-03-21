@@ -1,4 +1,4 @@
-name: Deploy + Release (Coolify)
+name: Deploy + Release (Coolify + Tailscale)
 
 on:
   push:
@@ -21,25 +21,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Connect to Tailscale
+      # 2. Connect to Tailscale (KEEP USING AUTHKEY)
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      # 3. Verify network (debug safety)
+      # 3. Verify connectivity (debug safety)
       - name: Verify connectivity
         run: |
           tailscale ip
           ping -c 3 100.112.225.41
 
-      # 4. Trigger Coolify Deploy (NO BUILD HERE)
+      # 4. Trigger Coolify Deploy (no build here)
       - name: Trigger Coolify Deploy
         run: |
           curl "http://100.112.225.41:8000/api/v1/deploy?uuid=vqfjn5vvmfam71o2f86ao917" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
 
-      # 5. Optional: wait for deployment
+      # 5. Optional wait
       - name: Wait for deployment
         run: sleep 15
 
@@ -57,7 +57,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Release ${{ github.ref_name }}
