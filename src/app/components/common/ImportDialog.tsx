@@ -116,8 +116,8 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
         const autoMappings: Record<string, string> = {};
         headers.forEach(col => {
           const matchedField = fields.find(f =>
-            f.label.toLowerCase() === col.toLowerCase() ||
-            f.id.toLowerCase() === col.toLowerCase().replace(/\s/g, '')
+            col && (f.label.toLowerCase() === String(col).trim().toLowerCase() ||
+            f.id.toLowerCase() === String(col).trim().toLowerCase().replace(/\s/g, ''))
           );
           if (matchedField) {
             autoMappings[col] = matchedField.id;
@@ -332,7 +332,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
                   </div>
                 </div>
                 <Button variant="outline" size="sm" className="h-8 gap-2" asChild>
-                  <a href={templateUrl}>
+                  <a href={templateUrl} download>
                     <Download size={14} /> Download Template
                   </a>
                 </Button>

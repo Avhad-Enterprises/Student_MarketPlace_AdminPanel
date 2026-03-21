@@ -122,6 +122,16 @@ export const sopAssistantService = {
         }
     },
 
+    importSOPs: async (data: any[]) => {
+        try {
+            const response = await axios.post(`${API_BASE_URL}/api/sop-assistant/sops/import`, data, getAuthHeaders());
+            return response.data;
+        } catch (error) {
+            console.error('Error importing SOPs:', error);
+            throw error;
+        }
+    },
+
     getSettings: async () => {
         try {
             const response = await axios.get(`${API_BASE_URL}/api/sop-assistant/settings`, getAuthHeaders());

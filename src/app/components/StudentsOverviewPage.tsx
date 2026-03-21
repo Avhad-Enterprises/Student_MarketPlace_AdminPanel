@@ -49,6 +49,7 @@ import { ConfirmDialog } from './ui/modals/ConfirmDialog';
 import { AddStudentModal } from './AddStudentModal';
 import { getAllStudents, Student, PaginationData, deleteStudent, getStudentMetrics, StudentMetrics, createStudent, updateStudent } from '../services/studentsService';
 import { useRouter } from 'next/navigation';
+import { Skeleton } from './ui/skeleton';
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -88,7 +89,7 @@ const CustomCheckbox: React.FC<CustomCheckboxProps> = ({
 // --- METRIC CARD WITH INLINE EXPANSION ---
 interface MetricCardProps {
   title: string;
-  value: string;
+  value: React.ReactNode;
   icon: React.ElementType;
   bgClass: string;
   colorClass: string;
@@ -139,7 +140,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         <div className={`w-10 h-10 rounded-xl ${bgClass} ${colorClass} flex items-center justify-center mb-2 flex-shrink-0`}>
           <Icon size={20} strokeWidth={1.5} />
         </div>
-        <p className="text-[20px] font-bold text-[#253154] leading-none">{value}</p>
+        <div className="text-[20px] font-bold text-[#253154] leading-none">{value}</div>
         <span className="text-[10px] text-gray-500 font-medium mt-1.5 text-center leading-tight px-1">{title}</span>
       </div>
     );
@@ -183,7 +184,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
                   <Icon size={22} strokeWidth={1.5} />
                 </div>
                 <div>
-                  <p className="text-[26px] font-bold text-[#253154] leading-none">{value}</p>
+                  <div className="text-[26px] font-bold text-[#253154] leading-none">{value}</div>
                 </div>
               </div>
             </div>
@@ -293,7 +294,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 <Icon size={22} strokeWidth={1.5} />
               </div>
               <div>
-                <p className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</p>
+                <div className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</div>
               </div>
             </div>
 
@@ -339,7 +340,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
           <Icon size={22} strokeWidth={1.5} />
         </div>
         <div>
-          <p className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</p>
+          <div className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</div>
         </div>
       </div>
 
@@ -476,6 +477,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [studentMetrics, setStudentMetrics] = useState<StudentMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(true);
 
   // Sort and Filter State
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' }>({
@@ -525,8 +527,10 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
   };
 
   const fetchMetrics = async () => {
+    setMetricsLoading(true);
     const data = await getStudentMetrics();
     setStudentMetrics(data);
+    setMetricsLoading(false);
   };
 
   React.useEffect(() => {
@@ -782,7 +786,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
   const metrics = [
     {
       title: 'Total Students',
-      value: studentMetrics?.totalStudents?.toLocaleString() || '0',
+      value: metricsLoading ? <Skeleton className="h-8 w-16" /> : (studentMetrics?.totalStudents?.toLocaleString() || '0'),
       icon: Users,
       bgClass: 'bg-indigo-50',
       colorClass: 'text-indigo-600',
@@ -790,7 +794,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
     },
     {
       title: 'Active Students',
-      value: studentMetrics?.activeStudents?.toLocaleString() || '0',
+      value: metricsLoading ? <Skeleton className="h-8 w-16" /> : (studentMetrics?.activeStudents?.toLocaleString() || '0'),
       icon: CheckCircle,
       bgClass: 'bg-green-50',
       colorClass: 'text-green-600',
@@ -798,7 +802,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
     },
     {
       title: 'Applications In Progress',
-      value: studentMetrics?.applicationsInProgress?.toLocaleString() || '0',
+      value: metricsLoading ? <Skeleton className="h-8 w-16" /> : (studentMetrics?.applicationsInProgress?.toLocaleString() || '0'),
       icon: FileText,
       bgClass: 'bg-blue-50',
       colorClass: 'text-blue-600',
@@ -806,7 +810,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
     },
     {
       title: 'At-Risk Students',
-      value: studentMetrics?.atRiskStudents?.toLocaleString() || '0',
+      value: metricsLoading ? <Skeleton className="h-8 w-16" /> : (studentMetrics?.atRiskStudents?.toLocaleString() || '0'),
       icon: AlertTriangle,
       bgClass: 'bg-orange-50',
       colorClass: 'text-orange-600',
@@ -814,7 +818,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
     },
     {
       title: 'Recently Added',
-      value: studentMetrics?.recentlyAdded?.toLocaleString() || '0',
+      value: metricsLoading ? <Skeleton className="h-8 w-16" /> : (studentMetrics?.recentlyAdded?.toLocaleString() || '0'),
       icon: CalendarPlus,
       bgClass: 'bg-pink-50',
       colorClass: 'text-pink-600',
@@ -880,12 +884,20 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
     { id: 'firstName', label: 'First Name', type: 'text', required: true },
     { id: 'lastName', label: 'Last Name', type: 'text', required: true },
     { id: 'email', label: 'Email', type: 'email', required: true },
+    { id: 'dateOfBirth', label: 'Date of Birth (YYYY-MM-DD)', type: 'text', required: false },
+    { id: 'countryCode', label: 'Country Code', type: 'text', required: false },
     { id: 'phoneNumber', label: 'Phone Number', type: 'text', required: false },
-    { id: 'country', label: 'Country', type: 'text', required: false },
-    { id: 'passportNumber', label: 'Passport Number', type: 'text', required: false },
-    { id: 'dateOfBirth', label: 'Date of Birth', type: 'text', required: false },
-    { id: 'gender', label: 'Gender', type: 'select', required: false, options: ['Male', 'Female', 'Other'] },
-    { id: 'riskLevel', label: 'Risk Level', type: 'select', required: false, options: ['low', 'medium', 'high'] }
+    { id: 'nationality', label: 'Nationality', type: 'text', required: false },
+    { id: 'currentCountry', label: 'Current Country', type: 'text', required: false },
+    { id: 'primaryDestination', label: 'Primary Destination', type: 'text', required: false },
+    { id: 'intendedIntake', label: 'Intake', type: 'text', required: false },
+    { id: 'currentStage', label: 'Current Stage', type: 'text', required: false },
+    { id: 'assignedCounselor', label: 'Counselor', type: 'text', required: false },
+    { id: 'riskLevel', label: 'Risk Level', type: 'select', required: false, options: ['low', 'medium', 'high'] },
+    { id: 'leadSource', label: 'Lead Source', type: 'text', required: false },
+    { id: 'campaign', label: 'Campaign', type: 'text', required: false },
+    { id: 'countryPreferences', label: 'Country Preferences (Comma Separated)', type: 'text', required: false },
+    { id: 'notes', label: 'Notes', type: 'text', required: false }
   ];
 
   return (
@@ -1213,11 +1225,20 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
               </thead>
               <tbody>
                 {loading ? (
-                  <tr>
-                    <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
-                      Loading students...
-                    </td>
-                  </tr>
+                  [...Array(rowsPerPage)].map((_, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      <td className="px-6 py-4"><Skeleton className="h-4 w-4" /></td>
+                      {visibleColumns.studentId && <td className="px-6 py-4"><Skeleton className="h-4 w-16" /></td>}
+                      {visibleColumns.firstName && <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>}
+                      {visibleColumns.email && <td className="px-6 py-4"><Skeleton className="h-4 w-32" /></td>}
+                      {visibleColumns.status && <td className="px-6 py-4"><Skeleton className="h-6 w-16 rounded-lg" /></td>}
+                      {visibleColumns.riskLevel && <td className="px-6 py-4"><Skeleton className="h-6 w-16 rounded-lg" /></td>}
+                      {visibleColumns.countryPreferences && <td className="px-6 py-4"><Skeleton className="h-4 w-28" /></td>}
+                      {visibleColumns.applicationsCount && <td className="px-6 py-4"><Skeleton className="h-4 w-8" /></td>}
+                      {visibleColumns.assignedCounselor && <td className="px-6 py-4"><Skeleton className="h-4 w-24" /></td>}
+                      {visibleColumns.actions && <td className="px-6 py-4 text-right"><Skeleton className="h-8 w-8 rounded-full ml-auto" /></td>}
+                    </tr>
+                  ))
                 ) : students.length === 0 ? (
                   <tr>
                     <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
@@ -1416,7 +1437,17 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
 
         {/* Mobile Card View */}
         <div className="block lg:hidden space-y-4">
-          {students.map((student) => (
+          {loading ? (
+            [...Array(5)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl p-4 shadow-md border border-gray-100 space-y-3">
+                <div className="flex items-start gap-3"><Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-32" /></div>
+                <Skeleton className="h-3 w-40" />
+                <Skeleton className="h-3 w-24" />
+                <div className="flex gap-2"><Skeleton className="h-6 w-14" /><Skeleton className="h-6 w-14" /></div>
+                <div className="flex gap-2 pt-3 border-t"><Skeleton className="h-10 flex-1 rounded-xl" /><Skeleton className="h-10 flex-1 rounded-xl" /></div>
+              </div>
+            ))
+          ) : students.map((student) => (
             <MobileStudentCard
               key={student.id}
               student={student}
@@ -1472,6 +1503,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
         onOpenChange={setShowImportDialog}
         moduleName="Students"
         fields={importFields}
+        templateUrl="/templates/students-import-template.xlsx"
         onImport={async (data, mode) => {
           console.log('Importing data:', data, 'mode:', mode);
           let successCount = 0;
@@ -1485,7 +1517,8 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
               const payload = {
                 ...row,
                 riskLevel: row.riskLevel || 'low',
-                accountStatus: true
+                accountStatus: true,
+                countryPreferences: row.countryPreferences ? String(row.countryPreferences).split(',').map((s: any) => s.trim()) : []
               };
 
               if (mode === 'update' && row.id) {

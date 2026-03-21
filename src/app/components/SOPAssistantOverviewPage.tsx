@@ -114,7 +114,7 @@ export const SOPAssistantOverviewPage: React.FC = () => {
   ];
 
   const exportColumns: ExportColumn[] = [{ id: 'sopId', label: 'SOP ID', defaultSelected: true }, { id: 'studentName', label: 'Student Name', defaultSelected: true }, { id: 'university', label: 'University', defaultSelected: true }, { id: 'reviewStatus', label: 'Review Status', defaultSelected: true }, { id: 'aiConfidenceScore', label: 'AI Confidence Score', defaultSelected: false }];
-  const importFields: ImportField[] = [{ id: 'sopId', label: 'SOP ID', required: false, type: 'text' }, { id: 'studentName', label: 'Student Name', required: true, type: 'text' }, { id: 'university', label: 'University', required: true, type: 'text' }, { id: 'reviewStatus', label: 'Review Status', required: false, type: 'select', options: ['Draft', 'Under Review', 'Completed', 'Approved'] }];
+  const importFields: ImportField[] = [{ id: 'sopId', label: 'SOP ID', required: false, type: 'text' }, { id: 'studentName', label: 'Student Name', required: true, type: 'text' }, { id: 'country', label: 'Country', required: true, type: 'text' }, { id: 'university', label: 'University', required: true, type: 'text' }, { id: 'reviewStatus', label: 'Review Status', required: false, type: 'select', options: ['Draft', 'Under Review', 'Completed', 'Approved'] }];
 
   const handleExport = async (options: any) => {
     toast.success(`Exporting ${options.scope} records as ${options.format.toUpperCase()}`);
@@ -122,7 +122,14 @@ export const SOPAssistantOverviewPage: React.FC = () => {
   };
 
   const handleImport = async (data: any[]) => {
-    toast.success(`Successfully imported ${data.length} records`);
+    try {
+      await sopAssistantService.importSOPs(data);
+      toast.success(`Successfully imported ${data.length} records`);
+      fetchData(true);
+    } catch (error) {
+      toast.error("Failed to import SOPs");
+      console.error(error);
+    }
   };
 
   return (<TooltipProvider><div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light"><div className="hidden md:flex justify-between items-center gap-4 mb-8"><div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center"><Popover><PopoverTrigger asChild><button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"><CalendarIcon size={20} className="text-[#253154]" /><span className="font-medium text-[#253154] text-[14px]">{date?.from ? (date.to ? `${format(date.from, 'LLL dd')} - ${format(date.to, 'LLL dd')}` : format(date.from, 'LLL dd')) : 'Select date range'}</span></button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CalendarComponent initialFocus mode="range" selected={date} onSelect={setDate} numberOfMonths={2} /></PopoverContent></Popover><div className="w-px h-4 bg-gray-200 mx-2" /><button onClick={handleRefresh} className={`p-2 hover:bg-gray-50 rounded-full transition-all duration-500 ${isRefreshing ? 'animate-spin' : 'hover:rotate-180'}`}><RefreshCw size={20} className="text-[#253154]" /></button></div><div className="flex items-center gap-3"><button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Download size={20} />Export</button><button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Upload size={20} />Import</button><button onClick={handleCreateSOP} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"><Plus size={20} />New SOP</button></div></div><div className="hidden lg:grid grid-cols-4 gap-5 mb-8">{metrics.map((m, i) => <MetricCard key={i} {...m} />)}</div><div className="block lg:hidden mb-14 -mx-4"><Slider dots infinite={false} speed={500} slidesToShow={1.1} slidesToScroll={1} arrows={false} centerMode centerPadding='20px'>{metrics.map((m, i) => <div key={i} className="px-2 py-2"><MetricCard {...m} /></div>)}</Slider></div><div className="hidden md:flex justify-between items-center gap-4 mb-6"><div className="relative flex-1"><Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" /><input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search SOPs..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" /></div><div className="flex items-center gap-3 shrink-0">
