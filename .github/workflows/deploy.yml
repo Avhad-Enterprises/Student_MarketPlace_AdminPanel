@@ -1,4 +1,4 @@
-name: Auto Deploy + Version + Release (Coolify + Tailscale)
+name: Auto Deploy + Auto Tag (Coolify + Tailscale)
 
 on:
   push:
@@ -9,109 +9,75 @@ concurrency:
   group: deploy-main
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
-  version-and-release:
+  deploy-and-tag:
     runs-on: ubuntu-latest
-    outputs:
-      new_tag: ${{ steps.tag.outputs.new_tag }}
 
     steps:
+      # 1. Checkout
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # 🔍 Get latest tag
+      # 2. Get latest tag
       - name: Get latest tag
         id: get_tag
         run: |
           TAG=$(git tag -l "v*" --sort=-v:refname | head -n 1)
-          echo "latest_tag=$TAG" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      # 🔢 Bump version (v1 → v2 → v3...)
+      # 3. Calculate next version
       - name: Calculate next version
-        id: tag
+        id: next_tag
         run: |
-          if [ -z "${{ steps.get_tag.outputs.latest_tag }}" ]; then
+          if [ -z "${{ steps.get_tag.outputs.tag }}" ]; then
             NEW_TAG="v1"
           else
-            NUM=${{ steps.get_tag.outputs.latest_tag }}
+            NUM=${{ steps.get_tag.outputs.tag }}
             NUM=${NUM#v}
             NEW_TAG="v$((NUM + 1))"
           fi
-
-          echo "New tag: $NEW_TAG"
           echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          echo "Next tag: $NEW_TAG"
 
-      # 🏷️ Create tag
+      # 4. Create tag safely (no crash if exists)
       - name: Create Git tag
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
-          git tag ${{ steps.tag.outputs.new_tag }}
-          git push origin ${{ steps.tag.outputs.new_tag }}
+          git fetch --tags
+          if git rev-parse "${{ steps.next_tag.outputs.new_tag }}" >/dev/null 2>&1; then
+            echo "Tag already exists, skipping"
+          else
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git tag ${{ steps.next_tag.outputs.new_tag }}
+            git push origin ${{ steps.next_tag.outputs.new_tag }}
+          fi
 
-      # 📦 Create GitHub Release
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.tag.outputs.new_tag }}
-          name: Release ${{ steps.tag.outputs.new_tag }}
-          generate_release_notes: true
-
-  deploy:
-    name: Deploy to Coolify
-    runs-on: ubuntu-latest
-    needs: version-and-release
-
-    steps:
-      # 🔗 Connect to Tailscale
+      # 5. Connect to Tailscale (KEEP SAME - WORKING)
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      # 🌐 Verify network
+      # 6. Verify network
       - name: Verify connectivity
         run: |
-          echo "Runner Tailscale IP:"
           tailscale ip
-          echo "Pinging Coolify..."
-          ping -c 3 ${{ vars.COOLIFY_HOST }}
+          ping -c 3 100.112.225.41
 
-      # 🚀 Trigger Coolify Deploy
-      - name: Trigger Coolify Deploy
+      # 7. Trigger Coolify Deploy
+      - name: Deploy to Coolify
         run: |
-          echo "Triggering deployment..."
+          curl "http://100.112.225.41:8000/api/v1/deploy?uuid=vqfjn5vvmfam71o2f86ao917" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
 
-          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-            "http://${{ vars.COOLIFY_HOST }}:${{ vars.COOLIFY_PORT }}/api/v1/deploy?uuid=${{ vars.COOLIFY_APP_UUID }}" \
-            -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}")
-
-          echo "$RESPONSE"
-
-          STATUS=$(echo "$RESPONSE" | grep HTTP_STATUS | cut -d':' -f2)
-
-          if [ "$STATUS" != "200" ]; then
-            echo "❌ Deploy API failed"
-            exit 1
-          fi
-
-      # ⏳ Wait for Coolify queue
+      # 8. Wait
       - name: Wait for deployment
         run: sleep 20
 
-      # ❤️ Health check with retries
+      # 9. Health check
       - name: Health check
         run: |
-          for i in {1..5}; do
-            echo "Health check attempt $i..."
-            if curl -f http://${{ vars.COOLIFY_HOST }}:${{ vars.COOLIFY_PORT }}; then
-              echo "✅ Service is healthy"
-              exit 0
-            fi
-            sleep 5
-          done
-
-          echo "❌ Service failed health check"
-          exit 1
+          curl -f http://100.112.225.41:8000 || exit 1
