@@ -13,7 +13,6 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to Coolify
     runs-on: ubuntu-latest
 
     steps:
@@ -21,35 +20,50 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Connect to Tailscale (KEEP USING AUTHKEY)
+      # 2. Setup Node (keep your working setup)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # 3. Install deps
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Build validation (fail fast)
+      - name: Build project
+        run: npm run build
+
+      # 5. Connect to Tailscale (WORKING - DO NOT CHANGE)
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TS_AUTHKEY }}
 
-      # 3. Verify connectivity (debug safety)
+      # 6. Verify network
       - name: Verify connectivity
         run: |
           tailscale ip
           ping -c 3 100.112.225.41
 
-      # 4. Trigger Coolify Deploy (no build here)
+      # 7. Deploy
       - name: Trigger Coolify Deploy
         run: |
           curl "http://100.112.225.41:8000/api/v1/deploy?uuid=vqfjn5vvmfam71o2f86ao917" \
             -H "Authorization: Bearer ${{ secrets.COOLIFY_API_TOKEN }}"
 
-      # 5. Optional wait
+      # 8. Wait
       - name: Wait for deployment
         run: sleep 15
 
-      # 6. Health check
+      # 9. Health check
       - name: Health check
         run: |
           curl -f http://100.112.225.41:8000 || exit 1
 
   release:
-    name: Create GitHub Release
+    name: Create Release
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
 
@@ -60,6 +74,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           generate_release_notes: true
