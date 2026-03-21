@@ -16,24 +16,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # # 1. Checkout
+      # - name: Checkout repository
+      #   uses: actions/checkout@v4
 
-      # 2. Setup Node (keep your working setup)
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
+      # # 2. Setup Node (keep your working setup)
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: 20
+      #     cache: npm
 
-      # 3. Install deps
-      - name: Install dependencies
-        run: npm ci
+      # # 3. Install deps
+      # - name: Install dependencies
+      #   run: npm ci
 
-      # 4. Build validation (fail fast)
-      - name: Build project
-        run: npm run build
+      # # 4. Build validation (fail fast)
+      # - name: Build project
+      #   run: npm run build
 
       # 5. Connect to Tailscale (WORKING - DO NOT CHANGE)
       - name: Connect to Tailscale
