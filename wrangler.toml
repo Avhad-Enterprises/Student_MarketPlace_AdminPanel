@@ -1,9 +1,0 @@
-name = "student-marketplace-admin"
-main = ".open-next/worker.js"
-compatibility_date = "2024-12-01"
-
-[build]
-command = ""
-
-[vars]
-NODE_ENV = "production"

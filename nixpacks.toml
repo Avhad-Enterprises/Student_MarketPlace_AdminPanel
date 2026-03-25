@@ -1,0 +1,15 @@
+[phases.build]
+cmds = [
+  "rm -f tsconfig.tsbuildinfo",
+  "npm run build"
+]
+
+[phases.build.cache]
+paths = [
+  ".next/cache",
+  "node_modules/.cache"
+]
+
+# 👇 Explicitly block file cache
+[variables]
+NIXPACKS_NO_CACHE = "tsconfig.tsbuildinfo"
