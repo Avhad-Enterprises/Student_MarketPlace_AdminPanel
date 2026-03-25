@@ -25,6 +25,23 @@ export interface Student {
     intended_intake: string;
     created_at: string;
     notes?: string;
+    
+    // Education Snapshot
+    highest_qualification?: string;
+    field_of_study?: string;
+    current_institution?: string;
+    graduation_year?: string;
+    gpa?: string;
+
+    // Lead & Attribution
+    first_touch_date?: string;
+    conversion_path_summary?: string;
+
+    // Intent & Preferences
+    preferred_course_level?: string;
+    budget_range?: string;
+    intake_preference?: string;
+    test_scores?: string;
 }
 
 export interface PaginationData {
