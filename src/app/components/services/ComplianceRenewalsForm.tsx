@@ -1,4 +1,5 @@
 import React from 'react';
+import { DateInput } from '../ui/date-input';
 
 interface ComplianceRenewalsFormProps {
   data: any;
@@ -16,27 +17,19 @@ export function ComplianceRenewalsForm({ data, onChange }: ComplianceRenewalsFor
       <section>
         <h3 className="text-lg font-semibold mb-4 text-[#253154]">A. Visa Validity Tracking</h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Visa Start Date</label>
-            <input
-              type="date"
-              value={data.visaStartDate || ''}
-              onChange={(e) => updateField('visaStartDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            />
-            <p className="text-sm text-gray-500 mt-1">When does the visa become valid?</p>
-          </div>
+          <DateInput
+            label="Visa Start Date"
+            value={data.visaStartDate || ''}
+            onChange={(e) => updateField('visaStartDate', e.target.value)}
+            helperText="When does the visa become valid?"
+          />
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Visa Expiry Date</label>
-            <input
-              type="date"
-              value={data.visaExpiryDate || ''}
-              onChange={(e) => updateField('visaExpiryDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            />
-            <p className="text-sm text-gray-500 mt-1">When does the visa expire?</p>
-          </div>
+          <DateInput
+            label="Visa Expiry Date"
+            value={data.visaExpiryDate || ''}
+            onChange={(e) => updateField('visaExpiryDate', e.target.value)}
+            helperText="When does the visa expire?"
+          />
 
           <div>
             <label className="block text-sm font-medium mb-1">Multiple Entry Allowed</label>
@@ -178,16 +171,12 @@ export function ComplianceRenewalsForm({ data, onChange }: ComplianceRenewalsFor
             <p className="text-sm text-gray-500 mt-1">Are periodic reviews required?</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Last Compliance Review Date</label>
-            <input
-              type="date"
-              value={data.lastReviewDate || ''}
-              onChange={(e) => updateField('lastReviewDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            />
-            <p className="text-sm text-gray-500 mt-1">When was it last reviewed?</p>
-          </div>
+          <DateInput
+            label="Last Compliance Review Date"
+            value={data.lastReviewDate || ''}
+            onChange={(e) => updateField('lastReviewDate', e.target.value)}
+            helperText="When was it last reviewed?"
+          />
 
           <div>
             <label className="block text-sm font-medium mb-1">Issues Noted</label>

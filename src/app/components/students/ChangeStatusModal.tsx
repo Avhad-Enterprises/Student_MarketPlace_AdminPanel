@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { DateInput } from '../ui/date-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../ui/dialog';
 import { CustomSelect } from '../common/CustomSelect';
 import { AlertCircle, CheckCircle } from 'lucide-react';
@@ -109,18 +110,13 @@ export const ChangeStatusModal: React.FC<ChangeStatusModalProps> = ({
           </div>
 
           {/* Effective Date */}
-          <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-              Effective Date <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="date"
-              value={formData.effectiveDate}
-              onChange={(e) => setFormData({ ...formData, effectiveDate: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-              required
-            />
-          </div>
+          <DateInput
+            label="Effective Date"
+            required
+            value={formData.effectiveDate}
+            onChange={(e) => setFormData({ ...formData, effectiveDate: e.target.value })}
+            className="text-sm"
+          />
 
           {/* Internal Notes */}
           <div>

@@ -284,14 +284,13 @@ export const EditStudentDrawer: React.FC<EditStudentDrawerProps> = ({ isOpen, on
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Date of Birth</label>
-                                        <DateInput
-                                            value={formData.dateOfBirth}
-                                            onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                                            className="w-full h-11"
-                                        />
-                                    </div>
+                                    <DateInput
+                                        label="Date of Birth"
+                                        labelClassName="text-xs font-bold text-gray-400 uppercase tracking-wider"
+                                        value={formData.dateOfBirth}
+                                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                                        className="w-full h-11"
+                                    />
                                     <div className="space-y-2">
                                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Phone Number</label>
                                         <div className="flex gap-2">

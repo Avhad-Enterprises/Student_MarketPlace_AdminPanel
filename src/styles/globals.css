@@ -229,3 +229,19 @@
   background: linear-gradient(90deg, #4f46e5 0%, #a855f7 50%, #4f46e5 100%);
   background-size: 200% 100%;
 }
+
+/* Hide native date picker icon for custom DateInput component */
+.date-input-hide-native-icon::-webkit-calendar-picker-indicator {
+  background: transparent;
+  bottom: 0;
+  color: transparent;
+  cursor: pointer;
+  height: auto;
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: auto;
+  opacity: 0;
+  display: none !important;
+}

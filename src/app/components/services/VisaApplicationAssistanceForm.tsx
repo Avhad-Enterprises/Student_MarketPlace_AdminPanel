@@ -1,4 +1,5 @@
 import React from 'react';
+import { DateInput } from '../ui/date-input';
 
 interface VisaApplicationAssistanceFormProps {
   data: any;
@@ -46,16 +47,12 @@ export function VisaApplicationAssistanceForm({ data, onChange }: VisaApplicatio
             <p className="text-sm text-gray-500 mt-1">What type of student visa is required?</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Intake / Start Date</label>
-            <input
-              type="date"
-              value={data.intakeStartDate || ''}
-              onChange={(e) => updateField('intakeStartDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            />
-            <p className="text-sm text-gray-500 mt-1">When does the course begin?</p>
-          </div>
+          <DateInput
+            label="Intake / Start Date"
+            value={data.intakeStartDate || ''}
+            onChange={(e) => updateField('intakeStartDate', e.target.value)}
+            helperText="When does the course begin?"
+          />
         </div>
       </section>
 
@@ -298,16 +295,12 @@ export function VisaApplicationAssistanceForm({ data, onChange }: VisaApplicatio
             <p className="text-sm text-gray-500 mt-1">Has the appointment been booked?</p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Appointment Date</label>
-            <input
-              type="date"
-              value={data.appointmentDate || ''}
-              onChange={(e) => updateField('appointmentDate', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            />
-            <p className="text-sm text-gray-500 mt-1">When is the appointment scheduled?</p>
-          </div>
+          <DateInput
+            label="Appointment Date"
+            value={data.appointmentDate || ''}
+            onChange={(e) => updateField('appointmentDate', e.target.value)}
+            helperText="When is the appointment scheduled?"
+          />
         </div>
       </section>
 

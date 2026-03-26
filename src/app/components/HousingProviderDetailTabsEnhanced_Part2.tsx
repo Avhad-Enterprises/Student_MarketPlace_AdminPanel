@@ -7,6 +7,7 @@
  */
 
 import React, { useState } from 'react';
+import { DateInput } from './ui/date-input';
 import {
   Plus,
   Edit3,
@@ -872,23 +873,16 @@ export const HousingPricingFeesTabEnhanced: React.FC<PricingFeesTabProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Valid From</label>
-                <Input
-                  type="date"
-                  value={newPromo.validFrom}
-                  onChange={(e) => setNewPromo({ ...newPromo, validFrom: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Valid To</label>
-                <Input
-                  type="date"
-                  value={newPromo.validTo}
-                  onChange={(e) => setNewPromo({ ...newPromo, validTo: e.target.value })}
-                />
-              </div>
+              <DateInput
+                label="Valid From"
+                value={newPromo.validFrom}
+                onChange={(e) => setNewPromo({ ...newPromo, validFrom: e.target.value })}
+              />
+              <DateInput
+                label="Valid To"
+                value={newPromo.validTo}
+                onChange={(e) => setNewPromo({ ...newPromo, validTo: e.target.value })}
+              />
             </div>
 
             <div className="flex items-center gap-2 pt-2">

@@ -332,13 +332,11 @@ export const AddStudentModal: React.FC<AddStudentModalProps> = ({ open, onOpenCh
                                                 </div>
 
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Date of Birth</label>
-                                                        <DateInput
-                                                            value={formData.dateOfBirth}
-                                                            onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-                                                        />
-                                                    </div>
+                                                    <DateInput
+                                                        label="Date of Birth"
+                                                        value={formData.dateOfBirth}
+                                                        onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                                                    />
                                                     <div>
                                                         <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Phone</label>
                                                         <div className="flex gap-2">

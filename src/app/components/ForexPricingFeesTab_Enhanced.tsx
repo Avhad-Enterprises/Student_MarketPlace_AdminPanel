@@ -59,6 +59,7 @@ import {
 import { Label } from './ui/label';
 import { DndProvider, useDrag, useDrop } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
+import { DateInput } from './ui/date-input';
 
 interface TabProps {
   providerId: string;
@@ -1384,34 +1385,21 @@ export const ForexPricingFeesTab: React.FC<TabProps> = ({
                   placeholder="50"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2 block">
-                  Valid From
-                </Label>
-                <Input
-                  type="date"
-                  value={discountForm.validFrom || ''}
-                  onChange={(e) =>
-                    setDiscountForm({ ...discountForm, validFrom: e.target.value })
-                  }
-                />
-              </div>
-
-              <div>
-                <Label className="text-sm font-semibold text-gray-700 mb-2 block">
-                  Valid To
-                </Label>
-                <Input
-                  type="date"
-                  value={discountForm.validTo || ''}
-                  onChange={(e) =>
-                    setDiscountForm({ ...discountForm, validTo: e.target.value })
-                  }
-                />
-              </div>
+            </div>            <div className="grid grid-cols-2 gap-4">
+              <DateInput
+                label="Valid From"
+                value={discountForm.validFrom || ''}
+                onChange={(e) =>
+                  setDiscountForm({ ...discountForm, validFrom: e.target.value })
+                }
+              />
+              <DateInput
+                label="Valid To"
+                value={discountForm.validTo || ''}
+                onChange={(e) =>
+                  setDiscountForm({ ...discountForm, validTo: e.target.value })
+                }
+              />
             </div>
 
             <div>

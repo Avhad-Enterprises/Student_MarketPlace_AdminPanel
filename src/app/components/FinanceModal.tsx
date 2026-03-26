@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { DateInput } from './ui/date-input';
 import { X, Check, Calendar as CalendarIcon, DollarSign, Type, FileText, User, CreditCard } from 'lucide-react';
 import { financeService, Payment, PaymentFormData } from '@/services/financeService';
 import { leadStatusService, LeadStatus } from '@/services/leadStatusService';
@@ -203,27 +204,18 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
                                 </select>
                             </div>
 
-                            {/* Due Date & Paid Date */}
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-[#0e042f] flex items-center gap-2"><CalendarIcon size={16} className="text-indigo-600" />Due Date</label>
-                                <input
-                                    type="date"
-                                    value={formData.due_date}
-                                    onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-                                    className="w-full h-12 bg-gray-50 rounded-xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-600 outline-none px-4 transition-all"
-                                    required
-                                />
-                            </div>
+                            <DateInput
+                                label="Due Date"
+                                required
+                                value={formData.due_date}
+                                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+                            />
 
-                            <div className="space-y-2">
-                                <label className="text-sm font-semibold text-[#0e042f] flex items-center gap-2"><CalendarIcon size={16} className="text-indigo-600" />Paid Date (Optional)</label>
-                                <input
-                                    type="date"
-                                    value={formData.paid_date || ''}
-                                    onChange={(e) => setFormData({ ...formData, paid_date: e.target.value || null })}
-                                    className="w-full h-12 bg-gray-50 rounded-xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-600 outline-none px-4 transition-all"
-                                />
-                            </div>
+                            <DateInput
+                                label="Paid Date (Optional)"
+                                value={formData.paid_date || ''}
+                                onChange={(e) => setFormData({ ...formData, paid_date: e.target.value || null })}
+                            />
 
                             {/* Notes */}
                             <div className="space-y-2 col-span-2">

@@ -38,6 +38,7 @@ import {
     Clock,
     ExternalLink,
 } from 'lucide-react';
+import { DateInput } from './ui/date-input';
 import { Button } from './ui/button';
 import {
     Select,
@@ -439,30 +440,16 @@ export const CreateArticle: React.FC<CreateArticleProps> = ({ onBack }) => {
                             {expandedSections.includes('guardrails') && (
                                 <div className="px-5 pb-6 pt-2 border-t border-gray-100 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Effective Date</label>
-                                            <div className="relative">
-                                                <Calendar size={16} className="absolute inset-y-0 left-3 my-auto text-gray-400" />
-                                                <input
-                                                    type="date"
-                                                    value={formData.effectiveDate}
-                                                    onChange={(e) => handleChange('effectiveDate', e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-gray-700 mb-2">Expiry Date (Optional)</label>
-                                            <div className="relative">
-                                                <Clock size={16} className="absolute inset-y-0 left-3 my-auto text-gray-400" />
-                                                <input
-                                                    type="date"
-                                                    value={formData.expiryDate}
-                                                    onChange={(e) => handleChange('expiryDate', e.target.value)}
-                                                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                                                />
-                                            </div>
-                                        </div>
+                                        <DateInput
+                                            label="Effective Date"
+                                            value={formData.effectiveDate}
+                                            onChange={(e) => handleChange('effectiveDate', e.target.value)}
+                                        />
+                                        <DateInput
+                                            label="Expiry Date (Optional)"
+                                            value={formData.expiryDate}
+                                            onChange={(e) => handleChange('expiryDate', e.target.value)}
+                                        />
                                     </div>
 
                                     <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg flex items-start gap-3">

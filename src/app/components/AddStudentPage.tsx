@@ -581,11 +581,12 @@ ${app.notes || 'None provided'}`;
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-                  <div>
-                    <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Date of Birth</label>
-                    <DateInput value={formData.dateOfBirth} onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })} />
-                    <p className="text-xs text-[#62748e] mt-1.5">Used for eligibility and compliance checks</p>
-                  </div>
+                  <DateInput
+                    label="Date of Birth"
+                    value={formData.dateOfBirth}
+                    onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                    helperText="Used for eligibility and compliance checks"
+                  />
                   <div>
                     <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Phone Number</label>
                     <div className="flex gap-3">
@@ -1230,10 +1231,11 @@ ${app.notes || 'None provided'}`;
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-6">
-                      <div>
-                        <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Submission Date</label>
-                        <input type="date" value={formData.submissionDate} onChange={(e) => setFormData({ ...formData, submissionDate: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" />
-                      </div>
+                        <DateInput
+                          label="Submission Date"
+                          value={formData.submissionDate}
+                          onChange={(e) => setFormData({ ...formData, submissionDate: e.target.value })}
+                        />
                       <div>
                         <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Application Portal</label>
                         <input type="text" value={formData.submissionPortal} onChange={(e) => setFormData({ ...formData, submissionPortal: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" placeholder="URL or Portal Name" />
@@ -1314,10 +1316,11 @@ ${app.notes || 'None provided'}`;
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Offer Deadline</label>
-                      <input type="date" value={formData.offerDeadline} onChange={(e) => setFormData({ ...formData, offerDeadline: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" />
-                    </div>
+                    <DateInput
+                      label="Offer Deadline"
+                      value={formData.offerDeadline}
+                      onChange={(e) => setFormData({ ...formData, offerDeadline: e.target.value })}
+                    />
                     <div className="flex items-center mt-7">
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <input
@@ -1444,10 +1447,11 @@ ${app.notes || 'None provided'}`;
                       <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Visa Type</label>
                       <input type="text" value={formData.visaType} onChange={(e) => setFormData({ ...formData, visaType: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" placeholder="e.g. F-1, Student Visa" />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Intake / Start Date</label>
-                      <input type="date" value={formData.visaStartDate} onChange={(e) => setFormData({ ...formData, visaStartDate: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" />
-                    </div>
+                    <DateInput
+                      label="Intake / Start Date"
+                      value={formData.visaStartDate}
+                      onChange={(e) => setFormData({ ...formData, visaStartDate: e.target.value })}
+                    />
                     <div>
                       <label className="block text-sm font-medium text-[#0f172b] mb-1.5">University Name</label>
                       <input type="text" value={formData.visaUniversityName} onChange={(e) => setFormData({ ...formData, visaUniversityName: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" placeholder="University Name" />
@@ -1496,10 +1500,11 @@ ${app.notes || 'None provided'}`;
                         <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Bank Statement Duration Covered</label>
                         <input type="text" value={formData.visaBankStatementDuration} onChange={(e) => setFormData({ ...formData, visaBankStatementDuration: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" placeholder="e.g. 6 Months" />
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Passport Validity</label>
-                        <input type="date" value={formData.visaPassportValidity} onChange={(e) => setFormData({ ...formData, visaPassportValidity: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" />
-                      </div>
+                        <DateInput
+                          label="Passport Validity"
+                          value={formData.visaPassportValidity}
+                          onChange={(e) => setFormData({ ...formData, visaPassportValidity: e.target.value })}
+                        />
                     </div>
                   </div>
 
@@ -1535,8 +1540,11 @@ ${app.notes || 'None provided'}`;
                         <span className="text-sm font-medium text-gray-600 group-hover:text-[#0f172b] transition-colors">Appointment Booked</span>
                       </label>
                       <div className="flex-1 min-w-[200px]">
-                        <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Appointment Date</label>
-                        <input type="date" value={formData.visaAppointmentDate} onChange={(e) => setFormData({ ...formData, visaAppointmentDate: e.target.value })} className="w-full h-11 px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500" />
+                        <DateInput
+                          label="Visa Appointment Date"
+                          value={formData.visaAppointmentDate}
+                          onChange={(e) => setFormData({ ...formData, visaAppointmentDate: e.target.value })}
+                        />
                       </div>
                     </div>
 
@@ -1588,14 +1596,16 @@ ${app.notes || 'None provided'}`;
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Visa Start Date</label>
-                      <input type="date" value={formData.compVisaStartDate} onChange={(e) => setFormData({ ...formData, compVisaStartDate: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Visa Expiry Date</label>
-                      <input type="date" value={formData.compVisaExpiryDate} onChange={(e) => setFormData({ ...formData, compVisaExpiryDate: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" />
-                    </div>
+                    <DateInput
+                      label="Visa Start Date"
+                      value={formData.compVisaStartDate}
+                      onChange={(e) => setFormData({ ...formData, compVisaStartDate: e.target.value })}
+                    />
+                    <DateInput
+                      label="Visa Expiry Date"
+                      value={formData.compVisaExpiryDate}
+                      onChange={(e) => setFormData({ ...formData, compVisaExpiryDate: e.target.value })}
+                    />
                     <div className="flex items-center">
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <input
@@ -1656,10 +1666,11 @@ ${app.notes || 'None provided'}`;
                         <span className="text-sm font-medium text-gray-600 group-hover:text-[#0f172b] transition-colors">Compliance Check-ins Required</span>
                       </label>
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Last Compliance Review Date</label>
-                      <input type="date" value={formData.compLastReviewDate} onChange={(e) => setFormData({ ...formData, compLastReviewDate: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" />
-                    </div>
+                    <DateInput
+                      label="Last Compliance Review Date"
+                      value={formData.compLastReviewDate}
+                      onChange={(e) => setFormData({ ...formData, compLastReviewDate: e.target.value })}
+                    />
                   </div>
 
                   <div className="mt-5 space-y-4">
@@ -1708,10 +1719,11 @@ ${app.notes || 'None provided'}`;
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Planned Travel Date</label>
-                      <input type="date" value={formData.predepTravelDate} onChange={(e) => setFormData({ ...formData, predepTravelDate: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" />
-                    </div>
+                    <DateInput
+                      label="Planned Travel Date"
+                      value={formData.predepTravelDate}
+                      onChange={(e) => setFormData({ ...formData, predepTravelDate: e.target.value })}
+                    />
                     <div className="flex items-center mt-7">
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <input

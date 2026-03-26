@@ -59,6 +59,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { DateInput } from '../ui/date-input';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
@@ -642,34 +643,28 @@ export const ServiceProviderLogsTab: React.FC<ServiceProviderLogsTabProps> = ({
 
             {/* Date Range */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Start Date</label>
-                <Input
-                  type="date"
-                  value={filters.dateRange?.start || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setFilters({
-                      ...filters,
-                      dateRange: { start: e.target.value, end: filters.dateRange?.end || e.target.value }
-                    });
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">End Date</label>
-                <Input
-                  type="date"
-                  value={filters.dateRange?.end || ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    setFilters({
-                      ...filters,
-                      dateRange: { start: filters.dateRange?.start || e.target.value, end: e.target.value }
-                    });
-                    setCurrentPage(1);
-                  }}
-                />
-              </div>
+              <DateInput
+                label="Start Date"
+                value={filters.dateRange?.start || ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  setFilters({
+                    ...filters,
+                    dateRange: { start: e.target.value, end: filters.dateRange?.end || e.target.value }
+                  });
+                  setCurrentPage(1);
+                }}
+              />
+              <DateInput
+                label="End Date"
+                value={filters.dateRange?.end || ''}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  setFilters({
+                    ...filters,
+                    dateRange: { start: filters.dateRange?.start || e.target.value, end: e.target.value }
+                  });
+                  setCurrentPage(1);
+                }}
+              />
             </div>
 
             {/* Multi-select Filters */}

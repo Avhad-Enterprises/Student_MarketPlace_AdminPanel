@@ -1,4 +1,5 @@
 import React from 'react';
+import { DateInput } from '../../ui/date-input';
 import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
@@ -141,20 +142,12 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           />
         </div>
 
-        <div>
-          <Label htmlFor="offer-deadline" className="text-sm font-medium text-gray-900">
-            Offer Deadline
-          </Label>
-          <p className="text-xs text-gray-500 mt-1 mb-2">
-            By when does the student need to respond?
-          </p>
-          <Input
-            id="offer-deadline"
-            type="date"
+          <DateInput
+            label="Offer Deadline"
             value={data.offerDeadline || ''}
             onChange={(e) => updateField('offerDeadline', e.target.value)}
+            helperText="By when does the student need to respond?"
           />
-        </div>
 
         <div>
           <Label htmlFor="deposit-required" className="text-sm font-medium text-gray-900">

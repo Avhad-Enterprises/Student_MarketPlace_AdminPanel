@@ -18,6 +18,7 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
+import { DateInput } from './ui/date-input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from './ui/dialog';
 
 export const BankTransactionsTab = () => {
@@ -418,11 +419,18 @@ export const BankTransactionsTab = () => {
             <option value="Not Settled">Not Settled</option>
             <option value="On Hold">On Hold</option>
           </select>
-          <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white">
-            <Calendar size={16} className="text-gray-500" />
-            <input type="date" className="border-none outline-none text-sm" />
+          <div className="flex items-center gap-2">
+            <DateInput
+              value=""
+              onChange={() => {}}
+              className="w-32"
+            />
             <span className="text-gray-400">to</span>
-            <input type="date" className="border-none outline-none text-sm" />
+            <DateInput
+              value=""
+              onChange={() => {}}
+              className="w-32"
+            />
           </div>
         </div>
 

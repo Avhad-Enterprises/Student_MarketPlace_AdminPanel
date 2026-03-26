@@ -3,6 +3,7 @@ import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { DateInput } from '../../ui/date-input';
 
 interface ApplicationSubmissionFormProps {
   data: any;
@@ -113,20 +114,13 @@ export const ApplicationSubmissionForm: React.FC<ApplicationSubmissionFormProps>
       </div>
 
       {/* Submission Date */}
-      <div>
-        <Label htmlFor="submission-date" className="text-sm font-medium text-gray-900">
-          Submission Date
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Date
-        </p>
-        <Input
-          id="submission-date"
-          type="date"
-          value={data.submissionDate || ''}
-          onChange={(e) => updateField('submissionDate', e.target.value)}
-        />
-      </div>
+      <DateInput
+        id="submission-date"
+        label="Submission Date"
+        helperText="Date"
+        value={data.submissionDate || ''}
+        onValueChange={(value) => updateField('submissionDate', value)}
+      />
 
       {/* Application Portal */}
       <div>

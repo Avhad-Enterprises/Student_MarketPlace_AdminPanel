@@ -3,19 +3,124 @@ import { API_BASE_URL } from '../config/api';
 
 const API_URL = `${API_BASE_URL}/api/universities`;
 
-export interface CreateUniversityDto {
+export interface UniversityFormData {
+    // 1. BASIC INFORMATION
     name: string;
     city: string;
     country: string;
-    tuition: string;
-    acceptanceRate: string;
-    type: string;
-    applicationStatus: string;
-    status: string;
+    region: string;
+    university_type: string; // Public/Private
+    world_ranking: number;
+    national_ranking: number;
+    website: string;
+    logo_url: string;
+    established_year: number;
+    location: string;
+    
+    // 2. ADMISSIONS
+    acceptance_rate: number;
+    application_fee: number;
+    application_deadline_fall: string;
+    application_deadline_spring: string;
+    application_deadline: string; // Specific date
+    min_gpa: number;
+    avg_gpa: string; // Range or textual
+    english_requirement: string; // Textual overview
+    min_ielts: number;
+    
+    // 3. STUDENT BODY
+    total_students: number;
+    international_students: number;
+    international_ratio: number;
+    international_students_percentage: number; // Aliased for clarity
+    gender_ratio: string;
+    student_faculty_ratio: string;
+    popular_programs: string[];
+    
+    // 4. COSTS
+    tuition_fees: number;
+    tuition_fees_min: number;
+    tuition_fees_max: number;
+    living_cost: number;
+    living_cost_min: number;
+    living_cost_max: number;
+    total_annual_cost: number;
+    financial_aid_available: boolean;
+    financial_aid_details: string;
+    scholarships_info: string;
+    
+    // 5. ACADEMIC & CAREER
+    research_rating: string;
+    research_funding: number;
+    campus_size: string;
+    graduate_outcome_rate: number;
+    employment_rate: number;
+    average_starting_salary: number;
+    top_recruiters: string[]; // JSONB
+    career_services: string;
+    
+    // 6. PROGRAM STRUCTURE
+    degree_levels: string[]; // Bachelor, Master...
+    credit_system: string;
+    undergraduate_duration: number;
+    undergraduate_credits: number;
+    graduate_duration: number;
+    graduate_programs: string[];
+    internship_available: boolean;
+    industry_partners: string[];
+    
+    // 7. CAMPUS LIFE
+    campus_facilities: string[];
+    housing_available: boolean;
+    housing_types: string;
+    student_orgs_count: number;
+    varsity_sports_count: number;
+    on_campus_living_percentage: number;
+    countries_represented: number;
+    
+    // 8. CONTENT
+    description: string;
+    overview: string;
+    academic_programs_content: string;
+    admissions_content: string;
+    financial_aid_content: string;
+    campus_life_content: string;
+    career_outcomes_content: string;
+    research_content: string;
+    key_facts: string[];
+    pros: string[];
+    cons: string[];
+    
+    // 9. MEDIA
+    university_logo: string;
+    university_banner: string;
+    gallery_images: string[];
+    video_tour_url: string;
+    campus_map_url: string;
+    hero_image: string;
+    
+    // 10. AI / DECISION FIELDS
+    roi_rating: string;         // High / Medium / Low
+    prestige_level: string;     // Top Tier / Mid Tier / Low Tier
+    tags: string[];             // Ivy League, STEM Strong, etc.
+    ai_context_summary: string;
+    key_selling_points: string[];
+    admission_difficulty: string;
+    
+    // 11. SYSTEM / CONTROL
+    application_status: string; // Open/Closed
+    status: string; // active/inactive
+    visible: boolean;
+    is_featured: boolean;
+    display_order: number;
+    admin_notes: string;
+    slug: string;
+    meta_title: string;
+    meta_description: string;
 }
 
 export const universityService = {
-    create: async (data: CreateUniversityDto) => {
+    create: async (data: UniversityFormData) => {
         const token = localStorage.getItem('auth_token');
         const response = await axios.post(API_URL, data, {
             headers: {
@@ -25,7 +130,7 @@ export const universityService = {
         return response.data;
     },
 
-    update: async (id: string, data: Partial<CreateUniversityDto>) => {
+    update: async (id: string, data: Partial<UniversityFormData>) => {
         const token = localStorage.getItem('auth_token');
         const response = await axios.put(`${API_URL}/${id}`, data, {
             headers: {

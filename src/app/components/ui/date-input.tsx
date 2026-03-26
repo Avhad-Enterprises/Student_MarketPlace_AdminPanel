@@ -27,9 +27,14 @@
  * />
  */
 
-import React, { forwardRef, useState } from 'react';
+import React, { forwardRef, useRef, useState } from 'react';
 import { Calendar, AlertCircle } from 'lucide-react';
 import { cn } from './utils';
+
+// Inline style to hide the native browser date picker icon
+const hiddenNativeDatePickerStyle: React.CSSProperties = {
+  // This will be applied alongside a className-based approach
+};
 
 // ============================================
 // TYPES
@@ -118,6 +123,10 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
     },
     ref
   ) => {
+    // Internal ref for triggering the native date picker
+    const internalRef = useRef<HTMLInputElement>(null);
+    const inputRef = (ref as React.RefObject<HTMLInputElement>) || internalRef;
+
     // Generate unique ID if not provided
     const inputId = id || `date-input-${Math.random().toString(36).substr(2, 9)}`;
     const helperId = `${inputId}-helper`;
@@ -165,6 +174,23 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
       onValueChange?.(newValue);
     };
 
+    // Handle clicking the custom calendar icon to open the native date picker
+    const handleIconClick = () => {
+      if (disabled) return;
+      const input = internalRef.current || (inputRef as React.RefObject<HTMLInputElement>)?.current;
+      if (input) {
+        input.focus();
+        // Use showPicker() if available (modern browsers)
+        if (typeof input.showPicker === 'function') {
+          try {
+            input.showPicker();
+          } catch {
+            // Fallback: just focus the input
+          }
+        }
+      }
+    };
+
     return (
       <div className={cn('w-full', containerClassName)}>
         {/* Label */}
@@ -184,9 +210,9 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
 
         {/* Input Container */}
         <div className="relative">
-          {/* Input */}
+          {/* Input - hide native calendar picker icon via inline styles */}
           <input
-            ref={ref}
+            ref={internalRef}
             id={inputId}
             type="date"
             value={value}
@@ -201,9 +227,10 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
             aria-describedby={hasError ? errorId : helperText ? helperId : undefined}
             aria-invalid={hasError}
             className={cn(
-              // Base styles
+              // Base styles - includes class to hide native date picker icon
               'w-full rounded-[10px] border font-medium transition-all outline-none',
               'text-[#0f172b] placeholder:text-gray-400',
+              'date-input-hide-native-icon',
               responsiveClasses,
 
               // Icon padding
@@ -239,13 +266,19 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
             {...props}
           />
 
-          {/* Calendar Icon */}
+          {/* Custom Calendar Icon - clickable to open the native date picker */}
           {showIcon && (
-            <div
+            <button
+              type="button"
+              tabIndex={-1}
+              onClick={handleIconClick}
+              disabled={disabled}
               className={cn(
-                'absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none',
-                'transition-colors duration-200'
+                'absolute right-3.5 top-1/2 -translate-y-1/2',
+                'transition-colors duration-200 bg-transparent border-none p-0 cursor-pointer',
+                disabled && 'cursor-not-allowed'
               )}
+              aria-label="Open date picker"
             >
               <Calendar
                 className={cn(
@@ -256,7 +289,7 @@ export const DateInput = forwardRef<HTMLInputElement, DateInputProps>(
                   disabled && 'text-gray-400'
                 )}
               />
-            </div>
+            </button>
           )}
         </div>
 

@@ -1,4 +1,5 @@
 'use client';
+import { DateInput } from './ui/date-input';
 
 /**
  * ARTICLE DETAILS PAGE
@@ -428,15 +429,12 @@ export const ArticleDetail: React.FC<ArticleDetailProps> = ({ articleId, onBack 
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-2">Next Review Date</label>
-                                    <input
-                                        type="date"
-                                        value={formData.nextReviewDate}
-                                        onChange={(e) => handleChange('nextReviewDate', e.target.value)}
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                                    />
-                                </div>
+                                <DateInput
+                                    label="Next Review Date"
+                                    value={formData.nextReviewDate}
+                                    onChange={(e) => handleChange('nextReviewDate', e.target.value)}
+                                    helperText={`This article will be flagged for review on ${formData.nextReviewDate}. Ensure all information is current and accurate.`}
+                                />
 
                                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
                                     <Calendar size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />

@@ -35,6 +35,7 @@ import {
   Video,
   Map,
 } from 'lucide-react';
+import { DateInput } from './ui/date-input';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Switch } from './ui/switch';
@@ -1200,41 +1201,26 @@ export const HousingListingForm: React.FC<HousingListingFormProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Move-in Date Start</label>
-                  <Input
-                    type="date"
-                    value={formData.moveInDateStart}
-                    onChange={(e) => setFormData({ ...formData, moveInDateStart: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Move-in Date End</label>
-                  <Input
-                    type="date"
-                    value={formData.moveInDateEnd}
-                    onChange={(e) => setFormData({ ...formData, moveInDateEnd: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Move-out Date Start</label>
-                  <Input
-                    type="date"
-                    value={formData.moveOutDateStart}
-                    onChange={(e) => setFormData({ ...formData, moveOutDateStart: e.target.value })}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">Move-out Date End</label>
-                  <Input
-                    type="date"
-                    value={formData.moveOutDateEnd}
-                    onChange={(e) => setFormData({ ...formData, moveOutDateEnd: e.target.value })}
-                  />
-                </div>
+                <DateInput
+                  label="Move-in Date Start"
+                  value={formData.moveInDateStart}
+                  onChange={(e) => setFormData({ ...formData, moveInDateStart: e.target.value })}
+                />
+                <DateInput
+                  label="Move-in Date End"
+                  value={formData.moveInDateEnd}
+                  onChange={(e) => setFormData({ ...formData, moveInDateEnd: e.target.value })}
+                />
+                <DateInput
+                  label="Move-out Date Start"
+                  value={formData.moveOutDateStart}
+                  onChange={(e) => setFormData({ ...formData, moveOutDateStart: e.target.value })}
+                />
+                <DateInput
+                  label="Move-out Date End"
+                  value={formData.moveOutDateEnd}
+                  onChange={(e) => setFormData({ ...formData, moveOutDateEnd: e.target.value })}
+                />
               </div>
 
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
