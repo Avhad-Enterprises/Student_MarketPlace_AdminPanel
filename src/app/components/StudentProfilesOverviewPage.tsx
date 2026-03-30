@@ -43,7 +43,7 @@ import { useRouter } from 'next/navigation';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { ChangeCounselorModal } from './students/ChangeCounselorModal';
-import { AddStudentModal } from './AddStudentModal';
+// Removed AddStudentModal import
 import { ArchiveStudentModal } from './students/ArchiveStudentModal';
 import { getAllStudents, getStudentMetrics, Student as BackendStudent } from '../services/studentsService';
 
@@ -245,7 +245,11 @@ const calculateCompletion = (student: BackendStudent): number => {
 };
 
 // --- Main Component ---
-export const StudentProfilesOverviewPage: React.FC = () => {
+interface StudentProfilesOverviewPageProps {
+  onNavigate?: (page: string) => void;
+}
+
+export const StudentProfilesOverviewPage: React.FC<StudentProfilesOverviewPageProps> = ({ onNavigate }) => {
   // State management
   const [date, setDate] = useState<DateRange | undefined>({
     from: new Date(2024, 0, 1),
@@ -270,7 +274,6 @@ export const StudentProfilesOverviewPage: React.FC = () => {
   const [showArchiveModal, setShowArchiveModal] = useState(false);
   const [exportScope, setExportScope] = useState<'all' | 'selected'>('all');
 
-  const [studentToEdit, setStudentToEdit] = useState<BackendStudent | null>(null);
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [studentToArchive, setStudentToArchive] = useState<{ id: string, name: string } | null>(null);
   const [selectedIndividualStudent, setSelectedIndividualStudent] = useState<BackendStudent | null>(null);
@@ -444,12 +447,15 @@ export const StudentProfilesOverviewPage: React.FC = () => {
   };
 
   const handleActionViewProfile = (studentId: string) => {
-    router.push(`/students/${studentId}`);
+    if (onNavigate) {
+      onNavigate(`student-detail:${studentId}`);
+    } else {
+      router.push(`/students/${studentId}?tab=overview`);
+    }
   };
 
   const handleActionEditProfile = (student: BackendStudent) => {
-    setStudentToEdit(student);
-    setShowAddModal(true);
+    router.push(`/students/add?id=${student.id}`);
   };
 
   const handleActionViewApplications = (studentId: string) => {
@@ -1117,7 +1123,8 @@ export const StudentProfilesOverviewPage: React.FC = () => {
                   students.map((student) => (
                     <tr
                       key={student.id}
-                      className={`hover:bg-gray-50 transition-colors group ${selectedStudents.includes(student.id) ? 'bg-purple-50/30' : ''}`}
+                      onClick={() => handleActionViewProfile(student.dbId)}
+                      className={`hover:bg-gray-50 transition-colors group cursor-pointer ${selectedStudents.includes(student.id) ? 'bg-purple-50/30' : ''}`}
                     >
                       <td className="px-6 py-4">
                         <CustomCheckbox
@@ -1223,7 +1230,7 @@ export const StudentProfilesOverviewPage: React.FC = () => {
               <div className="relative">
                 <button
                   onClick={() => setShowRowsMenu(!showRowsMenu)}
-                  className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700"
+                  className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700"
                 >
                   {rowsPerPage}
                   <ChevronDown size={14} className="text-gray-400" />
@@ -1297,17 +1304,6 @@ export const StudentProfilesOverviewPage: React.FC = () => {
         studentName={selectedIndividualStudent ? `${selectedIndividualStudent.first_name} ${selectedIndividualStudent.last_name}` : (selectedStudents.length > 0 ? `${selectedStudents.length} Selected Students` : '')}
         currentCounselor={selectedIndividualStudent ? { name: selectedIndividualStudent.assigned_counselor || 'Unassigned', initials: (selectedIndividualStudent.assigned_counselor || 'U').substring(0, 2).toUpperCase() } : { name: 'Multiple', initials: 'MS' }}
         onSave={selectedIndividualStudent ? handleIndividualCounselorSave : handleBulkAssignCounselor}
-      />
-
-      {/* Add/Edit Student Modal */}
-      <AddStudentModal
-        open={showAddModal}
-        onOpenChange={(open) => {
-          setShowAddModal(open);
-          if (!open) setStudentToEdit(null);
-        }}
-        studentToEdit={studentToEdit}
-        onStudentAdded={fetchStudentsData}
       />
 
       {/* Archive Student Modal */}

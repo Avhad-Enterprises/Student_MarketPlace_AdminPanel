@@ -2,7 +2,8 @@ import React from 'react';
 import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { CustomSelect } from '../../common/CustomSelect';
+import { GraduationCap, Briefcase, Ruler, AlertCircle } from 'lucide-react';
 
 interface ProfileEvaluationFormProps {
   data: any;
@@ -17,267 +18,209 @@ export const ProfileEvaluationForm: React.FC<ProfileEvaluationFormProps> = ({
     onChange({ ...data, [field]: value });
   };
 
+  const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
+    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
+      <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600">
+        <Icon size={18} />
+      </div>
+      <h3 className="text-lg font-bold text-[#253154] tracking-tight">{title}</h3>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Highest Qualification */}
-      <div>
-        <Label htmlFor="highest-qualification" className="text-sm font-medium text-gray-900">
-          Highest Qualification
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Highest completed qualification
-        </p>
-        <Input
-          id="highest-qualification"
-          placeholder="e.g., Bachelor's in Computer Science"
-          value={data.highestQualification || ''}
-          onChange={(e) => updateField('highestQualification', e.target.value)}
-        />
-      </div>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {/* Academic Profile */}
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={GraduationCap} title="Academic Profile" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Highest Qualification</Label>
+            <Input
+              id="highest-qualification"
+              placeholder="e.g., Bachelor's in Computer Science"
+              value={data.highestQualification || ''}
+              onChange={(e) => updateField('highestQualification', e.target.value)}
+              className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
+            />
+          </div>
 
-      {/* GPA / Percentage */}
-      <div>
-        <Label htmlFor="gpa-percentage" className="text-sm font-medium text-gray-900">
-          GPA / Percentage
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Academic score
-        </p>
-        <Input
-          id="gpa-percentage"
-          placeholder="e.g., 3.8 / 4.0 or 85%"
-          value={data.gpaPercentage || ''}
-          onChange={(e) => updateField('gpaPercentage', e.target.value)}
-        />
-      </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">GPA / Percentage</Label>
+            <Input
+              id="gpa-percentage"
+              placeholder="e.g., 3.8 / 4.0 or 85%"
+              value={data.gpaPercentage || ''}
+              onChange={(e) => updateField('gpaPercentage', e.target.value)}
+              className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
+            />
+          </div>
 
-      {/* Grading System */}
-      <div>
-        <Label htmlFor="grading-system" className="text-sm font-medium text-gray-900">
-          Grading System
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Scale used
-        </p>
-        <Select
-          value={data.gradingSystem || ''}
-          onValueChange={(value) => updateField('gradingSystem', value)}
-        >
-          <SelectTrigger id="grading-system">
-            <SelectValue placeholder="Select grading system" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="4.0 Scale">4.0 Scale</SelectItem>
-            <SelectItem value="10.0 Scale">10.0 Scale</SelectItem>
-            <SelectItem value="Percentage">Percentage</SelectItem>
-            <SelectItem value="Class/Division">Class/Division</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Grading System</Label>
+            <CustomSelect
+              value={data.gradingSystem || ''}
+              onChange={(value) => updateField('gradingSystem', value)}
+              options={[
+                { value: "4.0 Scale", label: "4.0 Scale" },
+                { value: "10.0 Scale", label: "10.0 Scale" },
+                { value: "Percentage", label: "Percentage" },
+                { value: "Class/Division", label: "Class/Division" },
+                { value: "Other", label: "Other" }
+              ]}
+              placeholder="Select grading system"
+            />
+          </div>
 
-      {/* Institution Type / Tier */}
-      <div>
-        <Label htmlFor="institution-tier" className="text-sm font-medium text-gray-900">
-          Institution Type / Tier
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Reputed / average / unknown
-        </p>
-        <Select
-          value={data.institutionTier || ''}
-          onValueChange={(value) => updateField('institutionTier', value)}
-        >
-          <SelectTrigger id="institution-tier">
-            <SelectValue placeholder="Select institution tier" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Tier 1 - Top Ranked">Tier 1 - Top Ranked</SelectItem>
-            <SelectItem value="Tier 2 - Well-known">Tier 2 - Well-known</SelectItem>
-            <SelectItem value="Tier 3 - Average">Tier 3 - Average</SelectItem>
-            <SelectItem value="Unknown">Unknown</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Institution Type / Tier</Label>
+            <CustomSelect
+              value={data.institutionTier || ''}
+              onChange={(value) => updateField('institutionTier', value)}
+              options={[
+                { value: "Tier 1 - Top Ranked", label: "Tier 1 - Top Ranked" },
+                { value: "Tier 2 - Well-known", label: "Tier 2 - Well-known" },
+                { value: "Tier 3 - Average", label: "Tier 3 - Average" },
+                { value: "Unknown", label: "Unknown" }
+              ]}
+              placeholder="Select institution tier"
+            />
+          </div>
 
-      {/* Backlogs */}
-      <div>
-        <Label htmlFor="backlogs" className="text-sm font-medium text-gray-900">
-          Backlogs
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Yes / No
-        </p>
-        <Select
-          value={data.backlogs || ''}
-          onValueChange={(value) => updateField('backlogs', value)}
-        >
-          <SelectTrigger id="backlogs">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="Yes - All Cleared">Yes - All Cleared</SelectItem>
-            <SelectItem value="Yes - Some Pending">Yes - Some Pending</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Backlogs</Label>
+            <CustomSelect
+              value={data.backlogs || ''}
+              onChange={(value) => updateField('backlogs', value)}
+              options={[
+                { value: "No", label: "No" },
+                { value: "Yes - All Cleared", label: "Yes - All Cleared" },
+                { value: "Yes - Some Pending", label: "Yes - Some Pending" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
+        </div>
+      </section>
 
-      {/* Work Experience (Years) */}
-      <div>
-        <Label htmlFor="work-experience" className="text-sm font-medium text-gray-900">
-          Work Experience (Years)
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Total experience
-        </p>
-        <Input
-          id="work-experience"
-          type="number"
-          placeholder="e.g., 2"
-          value={data.workExperience || ''}
-          onChange={(e) => updateField('workExperience', e.target.value)}
-        />
-      </div>
+      {/* Professional Experience */}
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={Briefcase} title="Professional Experience" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Work Experience (Years)</Label>
+            <Input
+              id="work-experience"
+              type="number"
+              placeholder="e.g., 2"
+              value={data.workExperience || ''}
+              onChange={(e) => updateField('workExperience', e.target.value)}
+              className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
+            />
+          </div>
 
-      {/* Field Relevance */}
-      <div>
-        <Label htmlFor="field-relevance" className="text-sm font-medium text-gray-900">
-          Field Relevance
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Related to intended course?
-        </p>
-        <Select
-          value={data.fieldRelevance || ''}
-          onValueChange={(value) => updateField('fieldRelevance', value)}
-        >
-          <SelectTrigger id="field-relevance">
-            <SelectValue placeholder="Select relevance" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Highly Relevant">Highly Relevant</SelectItem>
-            <SelectItem value="Somewhat Relevant">Somewhat Relevant</SelectItem>
-            <SelectItem value="Not Relevant">Not Relevant</SelectItem>
-            <SelectItem value="No Work Experience">No Work Experience</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Field Relevance</Label>
+            <CustomSelect
+              value={data.fieldRelevance || ''}
+              onChange={(value) => updateField('fieldRelevance', value)}
+              options={[
+                { value: "Highly Relevant", label: "Highly Relevant" },
+                { value: "Somewhat Relevant", label: "Somewhat Relevant" },
+                { value: "Not Relevant", label: "Not Relevant" },
+                { value: "No Work Experience", label: "No Work Experience" }
+              ]}
+              placeholder="Select relevance"
+            />
+          </div>
 
-      {/* Internships / Projects */}
-      <div>
-        <Label htmlFor="internships-projects" className="text-sm font-medium text-gray-900">
-          Internships / Projects
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Relevant experience
-        </p>
-        <Textarea
-          id="internships-projects"
-          rows={3}
-          placeholder="Describe internships and projects..."
-          value={data.internshipsProjects || ''}
-          onChange={(e) => updateField('internshipsProjects', e.target.value)}
-        />
-      </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Internships / Projects</Label>
+            <Textarea
+              id="internships-projects"
+              rows={3}
+              placeholder="Describe internships and projects..."
+              value={data.internshipsProjects || ''}
+              onChange={(e) => updateField('internshipsProjects', e.target.value)}
+              className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
+            />
+          </div>
 
-      {/* Research / Publications */}
-      <div>
-        <Label htmlFor="research-publications" className="text-sm font-medium text-gray-900">
-          Research / Publications
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Any research work?
-        </p>
-        <Textarea
-          id="research-publications"
-          rows={3}
-          placeholder="List research papers, publications, or conference presentations..."
-          value={data.researchPublications || ''}
-          onChange={(e) => updateField('researchPublications', e.target.value)}
-        />
-      </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Research / Publications</Label>
+            <Textarea
+              id="research-publications"
+              rows={3}
+              placeholder="List research papers, publications, or conference presentations..."
+              value={data.researchPublications || ''}
+              onChange={(e) => updateField('researchPublications', e.target.value)}
+              className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
+            />
+          </div>
+        </div>
+      </section>
 
-      {/* Gap Years */}
-      <div>
-        <Label htmlFor="gap-years" className="text-sm font-medium text-gray-900">
-          Gap Years
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Any gaps?
-        </p>
-        <Select
-          value={data.gapYears || ''}
-          onValueChange={(value) => updateField('gapYears', value)}
-        >
-          <SelectTrigger id="gap-years">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="Yes">Yes</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* Gap Analysis */}
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={Ruler} title="Gap Analysis" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gap Years</Label>
+            <CustomSelect
+              value={data.gapYears || ''}
+              onChange={(value) => updateField('gapYears', value)}
+              options={[
+                { value: "No", label: "No" },
+                { value: "Yes", label: "Yes" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
 
-      {/* Gap Duration */}
-      {data.gapYears === 'Yes' && (
-        <div>
-          <Label htmlFor="gap-duration" className="text-sm font-medium text-gray-900">
-            Gap Duration
-          </Label>
-          <p className="text-xs text-gray-500 mt-1 mb-2">
-            Length of gap
-          </p>
-          <Input
-            id="gap-duration"
-            placeholder="e.g., 1 year, 6 months"
-            value={data.gapDuration || ''}
-            onChange={(e) => updateField('gapDuration', e.target.value)}
+          {data.gapYears === 'Yes' && (
+            <div className="space-y-2 animate-in slide-in-from-left-2 duration-300">
+              <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gap Duration</Label>
+              <Input
+                id="gap-duration"
+                placeholder="e.g., 1 year, 6 months"
+                value={data.gapDuration || ''}
+                onChange={(e) => updateField('gapDuration', e.target.value)}
+                className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
+              />
+            </div>
+          )}
+
+          {data.gapYears === 'Yes' && (
+            <div className="space-y-2 md:col-span-2 animate-in slide-in-from-left-2 duration-300">
+              <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gap Explanation Available</Label>
+              <CustomSelect
+                value={data.gapExplanation || ''}
+                onChange={(value) => updateField('gapExplanation', value)}
+                options={[
+                  { value: "Yes", label: "Yes" },
+                  { value: "No", label: "No" }
+                ]}
+                placeholder="Select option"
+              />
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Reviewer Notes */}
+      <section className="bg-purple-50/30 p-6 rounded-2xl border border-purple-100/50 space-y-6">
+        <SectionHeader icon={AlertCircle} title="Reviewer Notes" />
+        <div className="space-y-2">
+          <Label className="text-xs font-bold text-purple-700 uppercase tracking-wider">Additional Notes</Label>
+          <Textarea
+            id="additional-notes"
+            rows={4}
+            placeholder="Add any concerns or observations..."
+            value={data.additionalNotes || ''}
+            onChange={(e) => updateField('additionalNotes', e.target.value)}
+            className="bg-white border-purple-100 focus:border-purple-300 focus:ring-purple-200"
           />
         </div>
-      )}
-
-      {/* Gap Explanation Available */}
-      {data.gapYears === 'Yes' && (
-        <div>
-          <Label htmlFor="gap-explanation" className="text-sm font-medium text-gray-900">
-            Gap Explanation Available
-          </Label>
-          <p className="text-xs text-gray-500 mt-1 mb-2">
-            Yes / No
-          </p>
-          <Select
-            value={data.gapExplanation || ''}
-            onValueChange={(value) => updateField('gapExplanation', value)}
-          >
-            <SelectTrigger id="gap-explanation">
-              <SelectValue placeholder="Select option" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Yes">Yes</SelectItem>
-              <SelectItem value="No">No</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* Additional Notes */}
-      <div>
-        <Label htmlFor="additional-notes" className="text-sm font-medium text-gray-900">
-          Additional Notes
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Concerns during review
-        </p>
-        <Textarea
-          id="additional-notes"
-          rows={4}
-          placeholder="Add any concerns or observations..."
-          value={data.additionalNotes || ''}
-          onChange={(e) => updateField('additionalNotes', e.target.value)}
-        />
-      </div>
+      </section>
     </div>
   );
 };

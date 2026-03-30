@@ -11,6 +11,10 @@ export default function StudentsPage() {
         // Translate the page ID to Next.js route
         if (page === 'dashboard') router.push('/dashboard');
         else if (page === 'add-student') router.push('/students/add');
+        else if (page.startsWith('student-detail:')) {
+            const id = page.replace('student-detail:', '');
+            router.push(`/students/${id}?tab=overview`);
+        }
         else if (page.startsWith('students-')) {
             const sub = page.replace('students-', '');
             if (sub === 'all') router.push('/students');

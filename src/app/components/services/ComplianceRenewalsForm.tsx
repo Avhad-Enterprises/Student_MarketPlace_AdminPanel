@@ -1,5 +1,10 @@
 import React from 'react';
 import { DateInput } from '../ui/date-input';
+import { CustomSelect } from '../common/CustomSelect';
+import { Label } from '../ui/label';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { ShieldCheck, ClipboardCheck, CalendarClock, Activity, MessageSquare } from 'lucide-react';
 
 interface ComplianceRenewalsFormProps {
   data: any;
@@ -11,239 +16,232 @@ export function ComplianceRenewalsForm({ data, onChange }: ComplianceRenewalsFor
     onChange({ ...data, [field]: value });
   };
 
+  const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
+    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
+      <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600">
+        <Icon size={18} />
+      </div>
+      <h3 className="text-lg font-bold text-[#253154] tracking-tight">{title}</h3>
+    </div>
+  );
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
       {/* A. Visa Validity Tracking */}
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-[#253154]">A. Visa Validity Tracking</h3>
-        <div className="space-y-4">
-          <DateInput
-            label="Visa Start Date"
-            value={data.visaStartDate || ''}
-            onChange={(e) => updateField('visaStartDate', e.target.value)}
-            helperText="When does the visa become valid?"
-          />
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={ShieldCheck} title="Visa Validity Tracking" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <DateInput
+              label="Visa Start Date"
+              value={data.visaStartDate || ''}
+              onValueChange={(value) => updateField('visaStartDate', value)}
+            />
+          </div>
 
-          <DateInput
-            label="Visa Expiry Date"
-            value={data.visaExpiryDate || ''}
-            onChange={(e) => updateField('visaExpiryDate', e.target.value)}
-            helperText="When does the visa expire?"
-          />
+          <div className="space-y-2">
+            <DateInput
+              label="Visa Expiry Date"
+              value={data.visaExpiryDate || ''}
+              onValueChange={(value) => updateField('visaExpiryDate', value)}
+            />
+          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Multiple Entry Allowed</label>
-            <select
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Multiple Entry Allowed</Label>
+            <CustomSelect
               value={data.multipleEntryAllowed || ''}
-              onChange={(e) => updateField('multipleEntryAllowed', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select status</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-              <option value="not-sure">Not Sure</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Is multiple entry permitted?</p>
+              onChange={(value) => updateField('multipleEntryAllowed', value)}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No" },
+                { value: "not-sure", label: "Not Sure" }
+              ]}
+              placeholder="Select status"
+            />
           </div>
         </div>
       </section>
 
       {/* B. Compliance Requirements */}
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-[#253154]">B. Compliance Requirements</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Work Hour Restrictions</label>
-            <select
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={ClipboardCheck} title="Compliance Requirements" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Work Hour Restrictions</Label>
+            <CustomSelect
               value={data.workHourRestrictions || ''}
-              onChange={(e) => updateField('workHourRestrictions', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select status</option>
-              <option value="yes-20-hours">Yes - 20 Hours/Week</option>
-              <option value="yes-custom">Yes - Custom Limit</option>
-              <option value="no">No Restrictions</option>
-              <option value="not-allowed">Work Not Allowed</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Are work limits applicable?</p>
+              onChange={(value) => updateField('workHourRestrictions', value)}
+              options={[
+                { value: "yes-20-hours", label: "Yes - 20 Hours/Week" },
+                { value: "yes-custom", label: "Yes - Custom Limit" },
+                { value: "no", label: "No Restrictions" },
+                { value: "not-allowed", label: "Work Not Allowed" }
+              ]}
+              placeholder="Select status"
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Attendance Requirements</label>
-            <select
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Attendance Requirements</Label>
+            <CustomSelect
               value={data.attendanceRequirements || ''}
-              onChange={(e) => updateField('attendanceRequirements', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select status</option>
-              <option value="yes-mandatory">Yes - Mandatory</option>
-              <option value="yes-minimum">Yes - Minimum Threshold</option>
-              <option value="no">No Requirements</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Is attendance monitoring mandatory?</p>
+              onChange={(value) => updateField('attendanceRequirements', value)}
+              options={[
+                { value: "yes-mandatory", label: "Yes - Mandatory" },
+                { value: "yes-minimum", label: "Yes - Minimum Threshold" },
+                { value: "no", label: "No Requirements" }
+              ]}
+              placeholder="Select status"
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Address Reporting Required</label>
-            <select
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Address Reporting Required</Label>
+            <CustomSelect
               value={data.addressReporting || ''}
-              onChange={(e) => updateField('addressReporting', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select status</option>
-              <option value="yes">Yes - Mandatory</option>
-              <option value="no">No</option>
-              <option value="only-change">Only When Changed</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Is address reporting mandatory?</p>
+              onChange={(value) => updateField('addressReporting', value)}
+              options={[
+                { value: "yes", label: "Yes - Mandatory" },
+                { value: "no", label: "No" },
+                { value: "only-change", label: "Only When Changed" }
+              ]}
+              placeholder="Select status"
+            />
           </div>
         </div>
       </section>
 
       {/* C. Extension / Renewal Planning */}
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-[#253154]">C. Extension / Renewal Planning</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Extension Eligible</label>
-            <select
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={CalendarClock} title="Extension & Renewal Planning" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Extension Eligible</Label>
+            <CustomSelect
               value={data.extensionEligible || ''}
-              onChange={(e) => updateField('extensionEligible', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select status</option>
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-              <option value="conditional">Conditional</option>
-              <option value="not-sure">Not Sure</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Can the visa be extended?</p>
+              onChange={(value) => updateField('extensionEligible', value)}
+              options={[
+                { value: "yes", label: "Yes" },
+                { value: "no", label: "No" },
+                { value: "conditional", label: "Conditional" },
+                { value: "not-sure", label: "Not Sure" }
+              ]}
+              placeholder="Select status"
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Extension Type</label>
-            <select
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Extension Type</Label>
+            <CustomSelect
               value={data.extensionType || ''}
-              onChange={(e) => updateField('extensionType', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select type</option>
-              <option value="study">Study Extension</option>
-              <option value="work">Work Visa</option>
-              <option value="dependent">Dependent Visa</option>
-              <option value="other">Other</option>
-              <option value="not-applicable">Not Applicable</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Study / work / dependent / other</p>
+              onChange={(value) => updateField('extensionType', value)}
+              options={[
+                { value: "study", label: "Study Extension" },
+                { value: "work", label: "Work Visa" },
+                { value: "dependent", label: "Dependent Visa" },
+                { value: "other", label: "Other" },
+                { value: "not-applicable", label: "Not Applicable" }
+              ]}
+              placeholder="Select type"
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Renewal Window</label>
-            <input
-              type="text"
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Renewal Window</Label>
+            <Input
               value={data.renewalWindow || ''}
               onChange={(e) => updateField('renewalWindow', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
               placeholder="e.g., 3 months before expiry"
+              className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
             />
-            <p className="text-sm text-gray-500 mt-1">When should renewal be initiated?</p>
           </div>
         </div>
       </section>
 
-      {/* D. Compliance Monitoring */}
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-[#253154]">D. Compliance Monitoring</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Compliance Check-ins Required</label>
-            <select
+      {/* D. Monitoring & Reviews */}
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={Activity} title="Monitoring & Reviews" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Check-ins Required</Label>
+            <CustomSelect
               value={data.complianceCheckIns || ''}
-              onChange={(e) => updateField('complianceCheckIns', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select status</option>
-              <option value="yes-monthly">Yes - Monthly</option>
-              <option value="yes-quarterly">Yes - Quarterly</option>
-              <option value="yes-biannual">Yes - Bi-Annual</option>
-              <option value="no">No</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Are periodic reviews required?</p>
+              onChange={(value) => updateField('complianceCheckIns', value)}
+              options={[
+                { value: "yes-monthly", label: "Yes - Monthly" },
+                { value: "yes-quarterly", label: "Yes - Quarterly" },
+                { value: "yes-biannual", label: "Yes - Bi-Annual" },
+                { value: "no", label: "No" }
+              ]}
+              placeholder="Select status"
+            />
           </div>
 
-          <DateInput
-            label="Last Compliance Review Date"
-            value={data.lastReviewDate || ''}
-            onChange={(e) => updateField('lastReviewDate', e.target.value)}
-            helperText="When was it last reviewed?"
-          />
+          <div className="space-y-2">
+            <DateInput
+              label="Last Review Date"
+              value={data.lastReviewDate || ''}
+              onValueChange={(value) => updateField('lastReviewDate', value)}
+            />
+          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Issues Noted</label>
-            <textarea
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Issues Noted</Label>
+            <Textarea
               value={data.issuesNoted || ''}
               onChange={(e) => updateField('issuesNoted', e.target.value)}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-              placeholder="Any compliance concerns..."
+              rows={3}
+              placeholder="Record any compliance concerns or noted issues..."
+              className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
             />
-            <p className="text-sm text-gray-500 mt-1">Any compliance concerns?</p>
           </div>
         </div>
       </section>
 
-      {/* E. Post-study Transition (Optional) */}
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-[#253154]">E. Post-study Transition (Optional)</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">PSW / Work Visa Interest</label>
-            <select
+      {/* E. Transition & Notes */}
+      <section className="bg-purple-50/30 p-6 rounded-2xl border border-purple-100/50 space-y-6">
+        <SectionHeader icon={MessageSquare} title="Transition & Notes" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-purple-700 uppercase tracking-wider">PSW Interest</Label>
+            <CustomSelect
               value={data.pswInterest || ''}
-              onChange={(e) => updateField('pswInterest', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select status</option>
-              <option value="yes-high">Yes - High Interest</option>
-              <option value="yes-maybe">Yes - Maybe</option>
-              <option value="no">No</option>
-              <option value="not-sure">Not Sure</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Interest in post-study work visa?</p>
+              onChange={(value) => updateField('pswInterest', value)}
+              options={[
+                { value: "yes-high", label: "Yes - High Interest" },
+                { value: "yes-maybe", label: "Yes - Maybe" },
+                { value: "no", label: "No" },
+                { value: "not-sure", label: "Not Sure" }
+              ]}
+              placeholder="Select status"
+            />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1">Eligibility Awareness</label>
-            <select
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-purple-700 uppercase tracking-wider">Eligibility Awareness</Label>
+            <CustomSelect
               value={data.eligibilityAwareness || ''}
-              onChange={(e) => updateField('eligibilityAwareness', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-            >
-              <option value="">Select status</option>
-              <option value="yes-fully-aware">Yes - Fully Aware</option>
-              <option value="partial">Partial Understanding</option>
-              <option value="no">No</option>
-              <option value="needs-counselling">Needs Counselling</option>
-            </select>
-            <p className="text-sm text-gray-500 mt-1">Does the student understand PSW rules?</p>
+              onChange={(value) => updateField('eligibilityAwareness', value)}
+              options={[
+                { value: "yes-fully-aware", label: "Yes - Fully Aware" },
+                { value: "partial", label: "Partial Understanding" },
+                { value: "no", label: "No" },
+                { value: "needs-counselling", label: "Needs Counselling" }
+              ]}
+              placeholder="Select status"
+            />
           </div>
-        </div>
-      </section>
 
-      {/* F. Notes */}
-      <section>
-        <h3 className="text-lg font-semibold mb-4 text-[#253154]">F. Notes</h3>
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Compliance Notes</label>
-            <textarea
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-500 uppercase tracking-wider">General Compliance Notes</Label>
+            <Textarea
               value={data.complianceNotes || ''}
               onChange={(e) => updateField('complianceNotes', e.target.value)}
-              rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#253154]"
-              placeholder="Important reminders or risks..."
+              rows={4}
+              placeholder="Important reminders, risks, or post-study transition plans..."
+              className="bg-white border-gray-200 focus:border-purple-300 focus:ring-purple-200"
             />
-            <p className="text-sm text-gray-500 mt-1">Important reminders or risks</p>
           </div>
         </div>
       </section>

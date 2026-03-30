@@ -27,6 +27,7 @@ import { DateInput } from "@/components/ui/date-input";
 export interface UniversityFormProps {
     initialData?: any;
     isEdit?: boolean;
+    initialTab?: string;
     onSuccess?: () => void;
     onCancel?: () => void;
     onAdd?: (data: any) => Promise<void>; // Backwards compatibility for dialog
@@ -35,131 +36,133 @@ export interface UniversityFormProps {
 export const UniversityForm: React.FC<UniversityFormProps> = ({
     initialData,
     isEdit = false,
+    initialTab = 'basic-info',
     onSuccess,
     onCancel,
     onAdd
 }) => {
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('basic-info');
-    const [formData, setFormData] = useState<UniversityFormData>(initialData || {
-        // 1. BASIC INFORMATION
-        name: '',
-        city: '',
-        country: '',
-        region: '',
-        university_type: 'Public',
-        world_ranking: 0,
-        national_ranking: 0,
-        website: '',
-        logo_url: '',
-        established_year: new Date().getFullYear(),
-        location: '',
-        
-        // 2. ADMISSIONS
-        acceptance_rate: 0,
-        application_fee: 0,
-        application_deadline: '',
-        application_deadline_fall: '',
-        application_deadline_spring: '',
-        min_gpa: 0,
-        avg_gpa: '',
-        english_requirement: '',
-        min_ielts: 0,
-        min_toefl: 0,
-        min_gre: 0,
-        min_gmat: 0,
-        admission_difficulty: 'Moderate',
-        
-        // 3. STUDENT BODY
-        total_students: 0,
-        international_students: 0,
-        international_ratio: 0,
-        international_students_percentage: 0,
-        gender_ratio: '',
-        student_faculty_ratio: '',
-        popular_programs: [],
-        
-        // 4. COSTS
-        tuition_fees: 0,
-        tuition_fees_min: 0,
-        tuition_fees_max: 0,
-        living_cost: 0,
-        living_cost_min: 0,
-        living_cost_max: 0,
-        total_annual_cost: 0,
-        financial_aid_available: true,
-        financial_aid_details: '',
-        scholarships_info: '',
-        
-        // 5. ACADEMIC & CAREER
-        research_rating: 'High',
-        research_funding: 0,
-        campus_size: '',
-        graduate_outcome_rate: 0,
-        employment_rate: 0,
-        average_starting_salary: 0,
-        top_recruiters: [],
-        career_services: '',
-        
-        // 6. PROGRAM STRUCTURE
-        degree_levels: [],
-        credit_system: '',
-        undergraduate_duration: 0,
-        undergraduate_credits: 0,
-        graduate_duration: 0,
-        graduate_programs: [],
-        internship_available: true,
-        industry_partners: [],
-        
-        // 7. CAMPUS LIFE
-        campus_facilities: [],
-        housing_available: true,
-        housing_types: '',
-        student_orgs_count: 0,
-        varsity_sports_count: 0,
-        on_campus_living_percentage: 0,
-        countries_represented: 0,
-        
-        // 8. CONTENT
-        description: '',
-        overview: '',
-        academic_programs_content: '',
-        admissions_content: '',
-        financial_aid_content: '',
-        campus_life_content: '',
-        career_outcomes_content: '',
-        research_content: '',
-        key_facts: [],
-        pros: [],
-        cons: [],
-        
-        // 9. MEDIA
-        university_logo: '',
-        university_banner: '',
-        gallery_images: [],
-        video_tour_url: '',
-        campus_map_url: '',
-        hero_image: '',
-        
-        // 10. AI / DECISION FIELDS
-        roi_rating: 'Medium',
-        prestige_level: 'Mid Tier',
-        tags: [],
-        ai_context_summary: '',
-        key_selling_points: [],
-        
-        // 11. SYSTEM / CONTROL
-        application_status: 'open',
-        status: 'active',
-        visible: true,
-        is_featured: false,
-        display_order: 0,
-        admin_notes: '',
-        slug: '',
-        meta_title: '',
-        meta_description: '',
-    });
+    const [activeTab, setActiveTab] = useState(initialTab);
+const defaultUniversityData: UniversityFormData = {
+    // 1. BASIC INFORMATION
+    name: '',
+    city: '',
+    country: '',
+    region: '',
+    university_type: 'Public',
+    world_ranking: 0,
+    national_ranking: 0,
+    website: '',
+    logo_url: '',
+    established_year: new Date().getFullYear(),
+    location: '',
+    
+    // 2. ADMISSIONS
+    acceptance_rate: 0,
+    application_fee: 0,
+    application_deadline: '',
+    application_deadline_fall: '',
+    application_deadline_spring: '',
+    min_gpa: 0,
+    avg_gpa: '',
+    english_requirement: '',
+    min_ielts: 0,
+    min_toefl: 0,
+    min_gre: 0,
+    min_gmat: 0,
+    admission_difficulty: 'Moderate',
+    
+    // 3. STUDENT BODY
+    total_students: 0,
+    international_students: 0,
+    international_ratio: 0,
+    international_students_percentage: 0,
+    gender_ratio: '',
+    student_faculty_ratio: '',
+    popular_programs: [],
+    
+    // 4. COSTS
+    tuition_fees: 0,
+    tuition_fees_min: 0,
+    tuition_fees_max: 0,
+    living_cost: 0,
+    living_cost_min: 0,
+    living_cost_max: 0,
+    total_annual_cost: 0,
+    financial_aid_available: true,
+    financial_aid_details: '',
+    scholarships_info: '',
+    
+    // 5. ACADEMIC & CAREER
+    research_rating: 'High',
+    research_funding: 0,
+    campus_size: '',
+    graduate_outcome_rate: 0,
+    employment_rate: 0,
+    average_starting_salary: 0,
+    top_recruiters: [],
+    career_services: '',
+    
+    // 6. PROGRAM STRUCTURE
+    degree_levels: [],
+    credit_system: '',
+    undergraduate_duration: 0,
+    undergraduate_credits: 0,
+    graduate_duration: 0,
+    graduate_programs: [],
+    internship_available: true,
+    industry_partners: [],
+    
+    // 7. CAMPUS LIFE
+    campus_facilities: [],
+    housing_available: true,
+    housing_types: '',
+    student_orgs_count: 0,
+    varsity_sports_count: 0,
+    on_campus_living_percentage: 0,
+    countries_represented: 0,
+    
+    // 8. CONTENT
+    description: '',
+    overview: '',
+    academic_programs_content: '',
+    admissions_content: '',
+    financial_aid_content: '',
+    campus_life_content: '',
+    career_outcomes_content: '',
+    research_content: '',
+    key_facts: [],
+    pros: [],
+    cons: [],
+    
+    // 9. MEDIA
+    university_logo: '',
+    university_banner: '',
+    gallery_images: [],
+    video_tour_url: '',
+    campus_map_url: '',
+    hero_image: '',
+    
+    // 10. AI / DECISION FIELDS
+    roi_rating: 'Medium',
+    prestige_level: 'Mid Tier',
+    tags: [],
+    ai_context_summary: '',
+    key_selling_points: [],
+    
+    // 11. SYSTEM / CONTROL
+    application_status: 'open',
+    status: 'active',
+    visible: true,
+    is_featured: false,
+    display_order: 0,
+    admin_notes: '',
+    slug: '',
+    meta_title: '',
+    meta_description: '',
+};
+    const [formData, setFormData] = useState<UniversityFormData>(defaultUniversityData);
 
     const [activeSection, setActiveSection] = useState('overview');
     const [countries, setCountries] = useState<Country[]>([]);
@@ -169,12 +172,31 @@ export const UniversityForm: React.FC<UniversityFormProps> = ({
     React.useEffect(() => {
         const fetchCountries = async () => {
             try {
+                setIsLoading(true);
                 const response = await getAllCountries();
-                if (response && response.data) {
-                    setCountries(response.data);
+                console.log("[UniversityForm] Fetched countries:", response);
+                
+                // Robustly handle both { data: [...] } and direct array [...] responses
+                let countryList = [];
+                if (Array.isArray(response)) {
+                    countryList = response;
+                } else if (response && Array.isArray(response.data)) {
+                    countryList = response.data;
+                } else if (response && response.countries && Array.isArray(response.countries)) {
+                    countryList = response.countries;
+                }
+
+                if (countryList.length > 0) {
+                    setCountries(countryList);
+                    console.log(`[UniversityForm] Successfully loaded ${countryList.length} countries`);
+                } else {
+                    console.warn("[UniversityForm] No countries found in API response");
                 }
             } catch (error) {
-                console.error("Failed to fetch countries", error);
+                console.error("[UniversityForm] Failed to fetch countries:", error);
+                toast.error("Failed to load countries list");
+            } finally {
+                setIsLoading(false);
             }
         };
         fetchCountries();
@@ -182,11 +204,22 @@ export const UniversityForm: React.FC<UniversityFormProps> = ({
 
     // Update cities when country changes
     React.useEffect(() => {
-        if (formData.country) {
-            const selectedCountry = countries.find(c => c.name === formData.country);
-            if (selectedCountry && selectedCountry.popular_cities) {
-                setAvailableCities(selectedCountry.popular_cities);
+        if (formData.country && countries.length > 0) {
+            // Find by name (display name) or country_name (case-insensitive and trimmed)
+            const searchName = formData.country.toLowerCase().trim();
+            const selectedCountry = countries.find(c => 
+                (c.name && c.name.toLowerCase().trim() === searchName) || 
+                (c.country_name && c.country_name.toLowerCase().trim() === searchName)
+            );
+            
+            if (selectedCountry) {
+                const cities = selectedCountry.popular_cities || [];
+                // Sort cities alphabetically
+                const sortedCities = Array.isArray(cities) ? [...cities].sort() : [];
+                setAvailableCities(sortedCities);
+                console.log(`[UniversityForm] Found country ${selectedCountry.name}, loaded ${sortedCities.length} cities`);
             } else {
+                console.warn(`[UniversityForm] No match found for country: ${formData.country}`);
                 setAvailableCities([]);
             }
         } else {
@@ -194,11 +227,177 @@ export const UniversityForm: React.FC<UniversityFormProps> = ({
         }
     }, [formData.country, countries]);
 
+    // Normalize data from backend to match form state
+    const normalizeUniversityData = (data: any): Partial<UniversityFormData> => {
+        if (!data) return {};
+        
+        // Handle common API response wrappers: res.data or res.university
+        const sourceData = data.data || data.university || data;
+        const normalized: any = { ...sourceData };
+        
+        // Handle common backend -> frontend field mismatches with explicit presence checks
+        if (sourceData.country_name !== undefined) normalized.country = sourceData.country_name;
+        if (sourceData.type !== undefined) normalized.university_type = sourceData.type;
+        if (sourceData.tuition !== undefined) normalized.tuition_fees = sourceData.tuition;
+        if (sourceData.year_established !== undefined) normalized.established_year = sourceData.year_established;
+        if (sourceData.world_rank !== undefined) normalized.world_ranking = sourceData.world_rank;
+        if (sourceData.national_rank !== undefined) normalized.national_ranking = sourceData.national_rank;
+        
+        // Handle camelCase vs snake_case mismatches comprehensively
+        const mappings: Record<string, string> = {
+            'acceptanceRate': 'acceptance_rate',
+            'applicationStatus': 'application_status',
+            'isFeatured': 'is_featured',
+            'displayOrder': 'display_order',
+            'metaTitle': 'meta_title',
+            'metaDescription': 'meta_description',
+            'studentFacultyRatio': 'student_faculty_ratio',
+            'genderRatio': 'gender_ratio',
+            'applicationDeadline': 'application_deadline',
+            'avgGpa': 'avg_gpa',
+            'englishRequirement': 'english_requirement',
+            'employmentRate': 'employment_rate',
+            'averageStartingSalary': 'average_starting_salary',
+            'researchRating': 'research_rating',
+            'researchFunding': 'research_funding',
+            'campusSize': 'campus_size',
+            'undergraduateDuration': 'undergraduate_duration',
+            'undergraduateCredits': 'undergraduate_credits',
+            'graduateDuration': 'graduate_duration',
+            'studentOrgsCount': 'student_orgs_count',
+            'varsitySportsCount': 'varsity_sports_count',
+            'onCampusLivingPercentage': 'on_campus_living_percentage',
+            'countriesRepresented': 'countries_represented',
+            'housingAvailable': 'housing_available',
+            'financialAidAvailable': 'financial_aid_available',
+            'prestigeLevel': 'prestige_level',
+            'roiRating': 'roi_rating'
+        };
+
+        Object.entries(mappings).forEach(([camel, snake]) => {
+            if (sourceData[camel] !== undefined && sourceData[snake] === undefined) {
+                normalized[snake] = sourceData[camel];
+            }
+        });
+        
+        // Ensure numbers are numbers
+        const numberFields = [
+            'world_ranking', 'national_ranking', 'established_year', 'acceptance_rate', 
+            'application_fee', 'min_gpa', 'min_ielts', 'min_toefl', 'min_gre', 'min_gmat',
+            'total_students', 'international_students', 'international_ratio', 
+            'international_students_percentage', 'tuition_fees', 'tuition_fees_min', 
+            'tuition_fees_max', 'living_cost', 'living_cost_min', 'living_cost_max', 
+            'total_annual_cost', 'research_funding', 'graduate_outcome_rate', 
+            'employment_rate', 'average_starting_salary', 'undergraduate_duration', 
+            'undergraduate_credits', 'graduate_duration', 'student_orgs_count', 
+            'varsity_sports_count', 'on_campus_living_percentage', 'countries_represented'
+        ];
+        
+        numberFields.forEach(field => {
+            if (normalized[field] !== undefined && typeof normalized[field] === 'string') {
+                const val = parseFloat(normalized[field]);
+                normalized[field] = isNaN(val) ? 0 : val;
+            }
+        });
+
+        // Ensure arrays are arrays
+        const arrayFields = [
+            'popular_programs', 'top_recruiters', 'degree_levels', 'graduate_programs',
+            'industry_partners', 'campus_facilities', 'key_facts', 'pros', 'cons',
+            'gallery_images', 'tags', 'key_selling_points'
+        ];
+
+        arrayFields.forEach(field => {
+            if (normalized[field] && typeof normalized[field] === 'string') {
+                try {
+                    normalized[field] = JSON.parse(normalized[field]);
+                } catch (e) {
+                    normalized[field] = [normalized[field]];
+                }
+            } else if (!normalized[field]) {
+                normalized[field] = [];
+            }
+        });
+
+        return normalized;
+    };
+
+    // Denormalize data from form state to match backend schema
+    const denormalizeUniversityData = (data: UniversityFormData): any => {
+        const denormalized: any = { ...data };
+        
+        // Map frontend back to backend naming
+        if (data.university_type !== undefined) denormalized.type = data.university_type;
+        if (data.established_year !== undefined) denormalized.year_established = data.established_year;
+        if (data.world_ranking !== undefined) denormalized.world_rank = data.world_ranking;
+        if (data.national_ranking !== undefined) denormalized.national_rank = data.national_ranking;
+        if (data.tuition_fees !== undefined) denormalized.tuition = data.tuition_fees;
+        
+        // Resolve country_id
+        if (data.country && countries.length > 0) {
+            const matched = countries.find(c => 
+                (c.name && String(c.name).toLowerCase() === String(data.country).toLowerCase()) || 
+                (c.country_name && String(c.country_name).toLowerCase() === String(data.country).toLowerCase())
+            );
+            if (matched) {
+                denormalized.country_id = matched.id;
+            }
+        }
+        
+        // Handle common camelCase mappings the backend might expect
+        denormalized.acceptanceRate = data.acceptance_rate;
+        denormalized.applicationStatus = data.application_status;
+        denormalized.isFeatured = data.is_featured;
+        denormalized.displayOrder = data.display_order;
+        denormalized.metaTitle = data.meta_title;
+        denormalized.metaDescription = data.meta_description;
+        denormalized.studentFacultyRatio = data.student_faculty_ratio;
+        denormalized.genderRatio = data.gender_ratio;
+        denormalized.applicationDeadline = data.application_deadline;
+        denormalized.avgGpa = data.avg_gpa;
+        denormalized.englishRequirement = data.english_requirement;
+        denormalized.employmentRate = data.employment_rate;
+        denormalized.averageStartingSalary = data.average_starting_salary;
+        denormalized.researchRating = data.research_rating;
+        denormalized.researchFunding = data.research_funding;
+        denormalized.campusSize = data.campus_size;
+        denormalized.undergraduateDuration = data.undergraduate_duration;
+        denormalized.undergraduateCredits = data.undergraduate_credits;
+        denormalized.graduateDuration = data.graduate_duration;
+        denormalized.studentOrgsCount = data.student_orgs_count;
+        denormalized.varsitySportsCount = data.varsity_sports_count;
+        denormalized.onCampusLivingPercentage = data.on_campus_living_percentage;
+        denormalized.countriesRepresented = data.countries_represented;
+        denormalized.housingAvailable = data.housing_available;
+        denormalized.financialAidAvailable = data.financial_aid_available;
+        denormalized.prestigeLevel = data.prestige_level;
+        denormalized.roiRating = data.roi_rating;
+
+        return denormalized;
+    };
+
     React.useEffect(() => {
         if (isEdit && initialData) {
-            setFormData({ ...initialData });
+            console.log("[UniversityForm] Syncing initialData with normalization", initialData);
+            const normalized = normalizeUniversityData(initialData);
+            
+            // Special handling for country name resolution if only ID is present
+            let finalCountry = normalized.country || '';
+            if (!finalCountry && initialData.country_id && countries.length > 0) {
+                const matched = countries.find(c => String(c.id) === String(initialData.country_id));
+                if (matched) {
+                    console.log("[UniversityForm] Resolved country_id to name:", matched.name);
+                    finalCountry = matched.name;
+                }
+            }
+
+            setFormData(prev => ({
+                ...defaultUniversityData,
+                ...normalized,
+                country: finalCountry || prev.country // Keep existing if resolved
+            }));
         }
-    }, [isEdit, initialData]);
+    }, [isEdit, initialData, countries]); // Re-run when countries load to resolve IDs
 
     const handleChange = (field: keyof UniversityFormData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -233,14 +432,17 @@ export const UniversityForm: React.FC<UniversityFormProps> = ({
                 return;
             }
 
+            const payload = denormalizeUniversityData(formData);
+            console.log("[UniversityForm] Submitting payload:", payload);
+
             if (onAdd) {
-                await onAdd(formData);
+                await onAdd(payload);
             } else {
                 if (isEdit && initialData?.id) {
-                    await universityService.update(initialData.id, formData);
+                    await universityService.update(initialData.id, payload);
                     toast.success("University updated successfully");
                 } else {
-                    await universityService.create(formData);
+                    await universityService.create(payload);
                     toast.success("University added successfully");
                 }
             }
@@ -424,20 +626,42 @@ export const UniversityForm: React.FC<UniversityFormProps> = ({
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium">City *</Label>
-                                        <Select value={formData.city || undefined} onValueChange={(v) => handleChange('city', v)}>
-                                            <SelectTrigger className="h-[44px]">
-                                                <SelectValue placeholder="Select City" />
-                                            </SelectTrigger>
-                                            <SelectContent className="rounded-xl">
-                                                {availableCities.length > 0 ? (
-                                                    availableCities.filter(city => city && city.trim() !== '').map(city => (
-                                                        <SelectItem key={city} value={city}>{city}</SelectItem>
-                                                    ))
-                                                ) : (
-                                                    <div className="p-2 text-sm text-slate-400 italic">Select country first or no cities found</div>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
+                                        {formData.country && availableCities.length === 0 ? (
+                                            <div className="space-y-1">
+                                                <Input 
+                                                    value={formData.city || ''} 
+                                                    onChange={(e) => handleChange('city', e.target.value)}
+                                                    placeholder="Type City Name"
+                                                    className="h-[44px]"
+                                                />
+                                                <p className="text-[10px] text-slate-400 italic px-1">
+                                                    Enter city manually (none found in database)
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <Select 
+                                                value={formData.city || undefined} 
+                                                onValueChange={(v) => handleChange('city', v)}
+                                                disabled={!formData.country}
+                                            >
+                                                <SelectTrigger className="h-[44px]">
+                                                    <SelectValue placeholder={!formData.country ? "Select country first" : "Select City"} />
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-xl">
+                                                    {availableCities.length > 0 ? (
+                                                        availableCities
+                                                            .filter(city => city && typeof city === 'string' && city.trim() !== '')
+                                                            .map(city => (
+                                                                <SelectItem key={city} value={city}>{city}</SelectItem>
+                                                            ))
+                                                    ) : (
+                                                        <SelectItem value="none" disabled>
+                                                            {formData.country ? "No cities available" : "Select country first"}
+                                                        </SelectItem>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="space-y-2">

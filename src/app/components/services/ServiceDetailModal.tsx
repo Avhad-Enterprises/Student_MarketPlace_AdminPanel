@@ -30,6 +30,7 @@ interface ServiceDetailModalProps {
     assignedTo?: string;
     startedOn?: string;
     lastUpdate?: string;
+    initialData?: any; // Added initialData field
   };
   studentName: string;
   onSave?: (data: any) => void;
@@ -42,8 +43,15 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
   studentName,
   onSave,
 }) => {
-  const [formData, setFormData] = useState<any>({});
+  const [formData, setFormData] = React.useState<any>(service?.initialData || {});
   const [isSaving, setIsSaving] = useState(false);
+
+  // Sync formData with service.initialData when service changes or modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setFormData(service?.initialData || {});
+    }
+  }, [isOpen, service?.initialData]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -122,12 +130,6 @@ export const ServiceDetailModal: React.FC<ServiceDetailModalProps> = ({
                 </Badge>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={20} />
-            </button>
           </div>
         </DialogHeader>
 

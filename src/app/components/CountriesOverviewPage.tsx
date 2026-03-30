@@ -30,6 +30,9 @@ import {
   Settings,
   FileText,
   Building2,
+  Building,
+  GraduationCap,
+  MoreVertical,
   ToggleLeft,
   ToggleRight,
   Trash2,
@@ -226,7 +229,7 @@ const MobileCountryCard: React.FC<MobileCountryCardProps> = ({ country, isSelect
 // --- Main Component ---
 interface CountriesOverviewPageProps {
   onNavigate?: (page: string) => void;
-  onEditCountry?: (countryId: string) => void;
+  onEditCountry?: (countryId: string, tab?: string) => void;
 }
 
 export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ onNavigate, onEditCountry }) => {
@@ -765,38 +768,12 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
     onNavigate?.('add-country');
   };
 
-  const handleEditCountry = async (countryId: string) => {
-    setIsFetchingEdit(true);
-    try {
-      const fullCountry = await getCountryById(countryId);
-      const country = fullCountry || countries.find(c => c.id === countryId);
-      if (country) {
-        setEditingCountry(country);
-        setEditingCountryFormData({
-          country_name: country.name,
-          country_code: country.code,
-          region: country.region,
-          visa_difficulty: country.visa_difficulty,
-          cost_of_living: country.cost_of_living,
-          status: country.status === 'active' ? 'Active' : 'Inactive',
-          visible: true,
-          service_availability: {
-            visa: country.service_visa ?? false,
-            insurance: country.service_insurance ?? false,
-            housing: country.service_housing ?? false,
-            loans: country.service_loans ?? false,
-            forex: country.service_forex ?? false,
-            courses: country.service_courses ?? false,
-            food: country.service_food ?? false,
-          }
-        });
-      }
-    } catch (err) {
-      console.error('Failed to fetch country details:', err);
-      const country = countries.find(c => c.id === countryId);
-      if (country) setEditingCountry(country);
-    } finally {
-      setIsFetchingEdit(false);
+  const handleEditCountry = async (countryId: string, tab: string = 'basic-info') => {
+    if (onEditCountry) {
+      onEditCountry(countryId, tab);
+    } else {
+      // Fallback navigation if onEditCountry prop not provided
+      window.location.href = `/countries/add?id=${countryId}&tab=${tab}`;
     }
   };
 
@@ -1176,22 +1153,66 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
                   <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-20 p-2 w-48 animate-in fade-in zoom-in-95 duration-200">
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <Eye size={16} />
-                      View Details
-                    </button>
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <Edit size={16} />
-                      Edit Data
-                    </button>
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <Settings size={16} />
-                      Manage Visa Rules
-                    </button>
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <FileText size={16} />
-                      Comparison Factors
-                    </button>
+                      <button 
+                        onClick={() => {
+                          const targetId = selectedCountries.length > 0 ? selectedCountries[0] : countries[0]?.id;
+                          if (targetId) {
+                            handleEditCountry(targetId, 'basic-info');
+                            setShowMoreMenu(false);
+                          } else {
+                            toast.error("Please select a country first");
+                          }
+                        }}
+                        className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                      >
+                        <Eye size={16} />
+                        View Details
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const targetId = selectedCountries.length > 0 ? selectedCountries[0] : countries[0]?.id;
+                          if (targetId) {
+                            handleEditCountry(targetId, 'basic-info');
+                            setShowMoreMenu(false);
+                          } else {
+                            toast.error("Please select a country first");
+                          }
+                        }}
+                        className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                      >
+                        <Edit size={16} />
+                        Edit Data
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const targetId = selectedCountries.length > 0 ? selectedCountries[0] : countries[0]?.id;
+                          if (targetId) {
+                            handleEditCountry(targetId, 'visa');
+                            setShowMoreMenu(false);
+                          } else {
+                            toast.error("Please select a country first");
+                          }
+                        }}
+                        className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                      >
+                        <Settings size={16} />
+                        Manage Visa Rules
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const targetId = selectedCountries.length > 0 ? selectedCountries[0] : countries[0]?.id;
+                          if (targetId) {
+                            handleEditCountry(targetId, 'costs');
+                            setShowMoreMenu(false);
+                          } else {
+                            toast.error("Please select a country first");
+                          }
+                        }}
+                        className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                      >
+                        <FileText size={16} />
+                        Comparison Factors
+                      </button>
                     <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
                       <ToggleLeft size={16} />
                       Enable/Disable
@@ -1447,15 +1468,71 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <button
-                          className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditCountry(country.id);
-                          }}
-                        >
-                          <Edit size={16} />
-                        </button>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-48 p-2" align="end">
+                            <div className="space-y-1">
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditCountry(country.id, 'basic-info');
+                                }}
+                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                              >
+                                <Edit size={14} />
+                                Edit Basic Info
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditCountry(country.id, 'visa');
+                                }}
+                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                              >
+                                <Settings size={14} />
+                                Manage Visa
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditCountry(country.id, 'costs');
+                                }}
+                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                              >
+                                <DollarSign size={14} />
+                                Manage Costs
+                              </button>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditCountry(country.id, 'academic');
+                                }}
+                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                              >
+                                <GraduationCap size={14} />
+                                Academic System
+                              </button>
+                              <div className="h-px bg-gray-100 my-1" />
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.location.href = `/universities?countryId=${country.id}`;
+                                }}
+                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                              >
+                                <Building size={14} />
+                                View Universities
+                              </button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                         <button
                           className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                           onClick={(e) => {
@@ -1541,41 +1618,7 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
 
       {/* Add Country Dialog Removed */}
 
-      {/* Edit Country Dialog */}
-      <Dialog open={!!editingCountry || isFetchingEdit} onOpenChange={(open) => {
-        if (!open) {
-          setEditingCountry(null);
-          setEditingCountryFormData(null);
-        }
-      }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Country</DialogTitle>
-          </DialogHeader>
-          {isFetchingEdit ? (
-            <div className="flex items-center justify-center py-12">
-              <span className="w-6 h-6 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mr-3" />
-              <span className="text-gray-500 text-sm">Loading country details...</span>
-            </div>
-          ) : (editingCountry && editingCountryFormData) && (
-            <CountryForm
-              isEdit
-              countryId={editingCountry.id}
-              initialData={editingCountryFormData}
-              onSuccess={() => {
-                setEditingCountry(null);
-                setEditingCountryFormData(null);
-                toast.success('Country updated successfully');
-                loadCountriesData();
-              }}
-              onCancel={() => {
-                setEditingCountry(null);
-                setEditingCountryFormData(null);
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Edit Country Dialog Removed - Now using page-based navigation */}
 
       {/* Delete Confirm Dialog */}
       <Dialog open={!!deleteConfirmCountry} onOpenChange={(open) => { if (!open) setDeleteConfirmCountry(null); }}>

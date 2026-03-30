@@ -4,6 +4,7 @@ import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { CustomSelect } from '../../common/CustomSelect';
 
 interface OfferDecisionFormProps {
   data: any;
@@ -63,24 +64,21 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             Which country is this offer from?
           </p>
-          <Select
+          <CustomSelect
             value={data.country || ''}
-            onValueChange={(value) => updateField('country', value)}
-          >
-            <SelectTrigger id="country">
-              <SelectValue placeholder="Select country" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="USA">USA</SelectItem>
-              <SelectItem value="Canada">Canada</SelectItem>
-              <SelectItem value="UK">UK</SelectItem>
-              <SelectItem value="Australia">Australia</SelectItem>
-              <SelectItem value="Germany">Germany</SelectItem>
-              <SelectItem value="Ireland">Ireland</SelectItem>
-              <SelectItem value="New Zealand">New Zealand</SelectItem>
-              <SelectItem value="Other">Other</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('country', value)}
+            options={[
+              { value: 'USA', label: 'USA' },
+              { value: 'Canada', label: 'Canada' },
+              { value: 'UK', label: 'UK' },
+              { value: 'Australia', label: 'Australia' },
+              { value: 'Germany', label: 'Germany' },
+              { value: 'Ireland', label: 'Ireland' },
+              { value: 'New Zealand', label: 'New Zealand' },
+              { value: 'Other', label: 'Other' }
+            ]}
+            placeholder="Select country"
+          />
         </div>
 
         <div>
@@ -112,18 +110,15 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             Is the offer conditional or unconditional?
           </p>
-          <Select
+          <CustomSelect
             value={data.offerType || ''}
-            onValueChange={(value) => updateField('offerType', value)}
-          >
-            <SelectTrigger id="offer-type">
-              <SelectValue placeholder="Select offer type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Conditional">Conditional</SelectItem>
-              <SelectItem value="Unconditional">Unconditional</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('offerType', value)}
+            options={[
+              { value: 'Conditional', label: 'Conditional' },
+              { value: 'Unconditional', label: 'Unconditional' }
+            ]}
+            placeholder="Select offer type"
+          />
         </div>
 
         <div>
@@ -156,18 +151,15 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             Is any deposit required to accept the offer?
           </p>
-          <Select
+          <CustomSelect
             value={data.depositRequired || ''}
-            onValueChange={(value) => updateField('depositRequired', value)}
-          >
-            <SelectTrigger id="deposit-required">
-              <SelectValue placeholder="Select option" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Yes">Yes</SelectItem>
-              <SelectItem value="No">No</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('depositRequired', value)}
+            options={[
+              { value: 'Yes', label: 'Yes' },
+              { value: 'No', label: 'No' }
+            ]}
+            placeholder="Select option"
+          />
         </div>
 
         <div>
@@ -229,18 +221,15 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             Is any scholarship included in the offer?
           </p>
-          <Select
+          <CustomSelect
             value={data.scholarshipOffered || ''}
-            onValueChange={(value) => updateField('scholarshipOffered', value)}
-          >
-            <SelectTrigger id="scholarship-offered">
-              <SelectValue placeholder="Select option" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Yes">Yes</SelectItem>
-              <SelectItem value="No">No</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('scholarshipOffered', value)}
+            options={[
+              { value: 'Yes', label: 'Yes' },
+              { value: 'No', label: 'No' }
+            ]}
+            placeholder="Select option"
+          />
         </div>
 
         <div>
@@ -272,20 +261,17 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             How relevant is this course to the student&apos;s background?
           </p>
-          <Select
+          <CustomSelect
             value={data.courseRelevance || ''}
-            onValueChange={(value) => updateField('courseRelevance', value)}
-          >
-            <SelectTrigger id="course-relevance">
-              <SelectValue placeholder="Select relevance level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Highly Relevant">Highly Relevant</SelectItem>
-              <SelectItem value="Moderately Relevant">Moderately Relevant</SelectItem>
-              <SelectItem value="Somewhat Relevant">Somewhat Relevant</SelectItem>
-              <SelectItem value="Not Relevant">Not Relevant</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('courseRelevance', value)}
+            options={[
+              { value: 'Highly Relevant', label: 'Highly Relevant' },
+              { value: 'Moderately Relevant', label: 'Moderately Relevant' },
+              { value: 'Somewhat Relevant', label: 'Somewhat Relevant' },
+              { value: 'Not Relevant', label: 'Not Relevant' }
+            ]}
+            placeholder="Select relevance level"
+          />
         </div>
 
         <div>
@@ -311,21 +297,18 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             What are the job prospects after completing this course?
           </p>
-          <Select
+          <CustomSelect
             value={data.employabilityOutlook || ''}
-            onValueChange={(value) => updateField('employabilityOutlook', value)}
-          >
-            <SelectTrigger id="employability-outlook">
-              <SelectValue placeholder="Select outlook" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Excellent">Excellent</SelectItem>
-              <SelectItem value="Good">Good</SelectItem>
-              <SelectItem value="Average">Average</SelectItem>
-              <SelectItem value="Below Average">Below Average</SelectItem>
-              <SelectItem value="Uncertain">Uncertain</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('employabilityOutlook', value)}
+            options={[
+              { value: 'Excellent', label: 'Excellent' },
+              { value: 'Good', label: 'Good' },
+              { value: 'Average', label: 'Average' },
+              { value: 'Below Average', label: 'Below Average' },
+              { value: 'Uncertain', label: 'Uncertain' }
+            ]}
+            placeholder="Select outlook"
+          />
         </div>
 
         <div>
@@ -335,20 +318,17 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             Does the course align with the student&apos;s target industry?
           </p>
-          <Select
+          <CustomSelect
             value={data.industryAlignment || ''}
-            onValueChange={(value) => updateField('industryAlignment', value)}
-          >
-            <SelectTrigger id="industry-alignment">
-              <SelectValue placeholder="Select alignment" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Perfectly Aligned">Perfectly Aligned</SelectItem>
-              <SelectItem value="Well Aligned">Well Aligned</SelectItem>
-              <SelectItem value="Partially Aligned">Partially Aligned</SelectItem>
-              <SelectItem value="Not Aligned">Not Aligned</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('industryAlignment', value)}
+            options={[
+              { value: 'Perfectly Aligned', label: 'Perfectly Aligned' },
+              { value: 'Well Aligned', label: 'Well Aligned' },
+              { value: 'Partially Aligned', label: 'Partially Aligned' },
+              { value: 'Not Aligned', label: 'Not Aligned' }
+            ]}
+            placeholder="Select alignment"
+          />
         </div>
       </div>
 
@@ -365,20 +345,17 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             How safe is this offer from a visa perspective?
           </p>
-          <Select
+          <CustomSelect
             value={data.visaSuccessProbability || ''}
-            onValueChange={(value) => updateField('visaSuccessProbability', value)}
-          >
-            <SelectTrigger id="visa-success-probability">
-              <SelectValue placeholder="Select probability" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Very High">Very High (90%+)</SelectItem>
-              <SelectItem value="High">High (70-90%)</SelectItem>
-              <SelectItem value="Medium">Medium (50-70%)</SelectItem>
-              <SelectItem value="Low">Low (&lt;50%)</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('visaSuccessProbability', value)}
+            options={[
+              { value: 'Very High', label: 'Very High (90%+)' },
+              { value: 'High', label: 'High (70-90%)' },
+              { value: 'Medium', label: 'Medium (50-70%)' },
+              { value: 'Low', label: 'Low (<50%)' }
+            ]}
+            placeholder="Select probability"
+          />
         </div>
 
         <div>
@@ -404,20 +381,17 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             Will the student&apos;s profile gaps be questioned?
           </p>
-          <Select
+          <CustomSelect
             value={data.gapSensitivity || ''}
-            onValueChange={(value) => updateField('gapSensitivity', value)}
-          >
-            <SelectTrigger id="gap-sensitivity">
-              <SelectValue placeholder="Select sensitivity" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="No Concern">No Concern</SelectItem>
-              <SelectItem value="Minor Concern">Minor Concern</SelectItem>
-              <SelectItem value="Moderate Concern">Moderate Concern</SelectItem>
-              <SelectItem value="Major Concern">Major Concern</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('gapSensitivity', value)}
+            options={[
+              { value: 'No Concern', label: 'No Concern' },
+              { value: 'Minor Concern', label: 'Minor Concern' },
+              { value: 'Moderate Concern', label: 'Moderate Concern' },
+              { value: 'Major Concern', label: 'Major Concern' }
+            ]}
+            placeholder="Select sensitivity"
+          />
         </div>
       </div>
 
@@ -434,21 +408,18 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             How interested is the student in this offer?
           </p>
-          <Select
+          <CustomSelect
             value={data.studentPreferenceLevel || ''}
-            onValueChange={(value) => updateField('studentPreferenceLevel', value)}
-          >
-            <SelectTrigger id="student-preference-level">
-              <SelectValue placeholder="Select preference level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="First Choice">First Choice</SelectItem>
-              <SelectItem value="Highly Interested">Highly Interested</SelectItem>
-              <SelectItem value="Moderately Interested">Moderately Interested</SelectItem>
-              <SelectItem value="Backup Option">Backup Option</SelectItem>
-              <SelectItem value="Not Interested">Not Interested</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('studentPreferenceLevel', value)}
+            options={[
+              { value: 'First Choice', label: 'First Choice' },
+              { value: 'Highly Interested', label: 'Highly Interested' },
+              { value: 'Moderately Interested', label: 'Moderately Interested' },
+              { value: 'Backup Option', label: 'Backup Option' },
+              { value: 'Not Interested', label: 'Not Interested' }
+            ]}
+            placeholder="Select preference level"
+          />
         </div>
 
         <div>
@@ -513,19 +484,16 @@ export const OfferDecisionForm: React.FC<OfferDecisionFormProps> = ({
           <p className="text-xs text-gray-500 mt-1 mb-2">
             Is another discussion or clarification needed?
           </p>
-          <Select
+          <CustomSelect
             value={data.followUpRequired || ''}
-            onValueChange={(value) => updateField('followUpRequired', value)}
-          >
-            <SelectTrigger id="follow-up-required">
-              <SelectValue placeholder="Select option" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Yes">Yes - Follow-up needed</SelectItem>
-              <SelectItem value="No">No - All clear</SelectItem>
-              <SelectItem value="Pending">Pending - Waiting for info</SelectItem>
-            </SelectContent>
-          </Select>
+            onChange={(value) => updateField('followUpRequired', value)}
+            options={[
+              { value: 'Yes', label: 'Yes - Follow-up needed' },
+              { value: 'No', label: 'No - All clear' },
+              { value: 'Pending', label: 'Pending - Waiting for info' }
+            ]}
+            placeholder="Select option"
+          />
         </div>
       </div>
     </div>

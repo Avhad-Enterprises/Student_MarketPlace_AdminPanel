@@ -46,7 +46,7 @@ import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { CustomSelect } from './common/CustomSelect';
 import { ConfirmDialog } from './ui/modals/ConfirmDialog';
-import { AddStudentModal } from './AddStudentModal';
+// Removed AddStudentModal import
 import { getAllStudents, Student, PaginationData, deleteStudent, getStudentMetrics, StudentMetrics, createStudent, updateStudent } from '../services/studentsService';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from './ui/skeleton';
@@ -404,7 +404,7 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect
           />
           <div className="flex-1">
             <h3
-              onClick={(e) => { e.stopPropagation(); onNavigate?.('student-detail'); }}
+              onClick={(e) => { e.stopPropagation(); onNavigate?.(`student-detail:${student.id}`); }}
               className="font-bold text-[#253154] text-base cursor-pointer hover:text-purple-600 hover:underline"
             >
               {student.first_name} {student.last_name}
@@ -472,8 +472,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
   const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [studentToArchive, setStudentToArchive] = useState<Student | null>(null);
-  const [studentToEdit, setStudentToEdit] = useState<Student | null>(null);
-  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
+  // Removed studentToEdit and isAddStudentModalOpen states
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [studentMetrics, setStudentMetrics] = useState<StudentMetrics | null>(null);
@@ -578,11 +577,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
 
   const handleEditStudent = (studentId: string) => {
     setOpenActionMenuId(null);
-    const student = students.find(s => s.id === studentId);
-    if (student) {
-      setStudentToEdit(student);
-      setIsAddStudentModalOpen(true);
-    }
+    router.push(`/students/add?id=${studentId}`);
   };
 
   const handleAddNote = (studentId: string) => {
@@ -1453,7 +1448,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
               student={student}
               onSelect={toggleStudentSelection}
               isSelected={selectedStudents.includes(student.id)}
-              onNavigate={() => handleViewStudent(student.id)}
+              onNavigate={onNavigate}
               onEdit={handleEditStudent}
               onArchive={handleArchiveStudent}
             />
@@ -1565,15 +1560,7 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
         )
       }
 
-      {/* Add Student Modal */}
-      <AddStudentModal
-        open={isAddStudentModalOpen}
-        onOpenChange={setIsAddStudentModalOpen}
-        onStudentAdded={() => {
-          fetchStudents();
-        }}
-        studentToEdit={studentToEdit}
-      />
+      {/* Removed AddStudentModal component */}
     </div >
   );
 };

@@ -9,6 +9,10 @@ export default function StudentProfilesPage() {
 
     const handleNavigate = (page: string) => {
         if (page === 'dashboard') router.push('/dashboard');
+        else if (page.startsWith('student-detail:')) {
+            const id = page.replace('student-detail:', '');
+            router.push(`/students/${id}?tab=overview`);
+        }
         else if (page.startsWith('students-')) {
             const sub = page.replace('students-', '');
             if (sub === 'all') router.push('/students');
@@ -20,7 +24,7 @@ export default function StudentProfilesPage() {
 
     return (
         <AdminLayout activePage="students-profiles">
-            <StudentProfilesOverviewPage />
+            <StudentProfilesOverviewPage onNavigate={handleNavigate} />
         </AdminLayout>
     );
 }

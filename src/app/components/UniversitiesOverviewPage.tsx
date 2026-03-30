@@ -4,11 +4,11 @@ import {
   MoreHorizontal, Plus, Search, Filter, ArrowUpDown, ArrowDown, Columns, Download, Upload, Eye, Edit,
   Calendar as CalendarIcon, ToggleLeft, Users, FileText, Calendar as CalendarAltIcon, ChevronDown,
   ChevronLeft, ChevronRight, Check, Printer, X, RefreshCw, Building2, GraduationCap, DollarSign,
-  TrendingUp, Settings, Archive, Copy, ArrowUp, Loader2, ToggleRight, Trash2
+  TrendingUp, Settings, Archive, Copy, ArrowUp, Loader2, ToggleRight, Trash2,
+  Globe, UserCheck, BookOpen, Heart, Image as ImageIcon, Target, Layout, Wallet, CreditCard
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as XLSX from 'xlsx';
-import { AddUniversityDialog } from './common/AddUniversityDialog';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
@@ -278,8 +278,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
     highOfferRate: 0
   });
 
-  const [showAddUniversityDialog, setShowAddUniversityDialog] = useState(false);
-  const [editingUniversity, setEditingUniversity] = useState<University | null>(null);
+
 
   // Fetch data
   const fetchUniversities = async () => {
@@ -398,28 +397,11 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   };
 
   const handleAddUniversity = () => {
-    if (onNavigate) {
-      onNavigate('add-university');
-    } else {
-      router.push('/universities/add');
-    }
+    router.push('/universities/add');
   };
 
-  const handleEditUniversity = (id: string) => {
-    const university = universities.find(u => u.id === id);
-    if (university) {
-      // Map backend snake_case to frontend camelCase expectations
-      const u: any = university;
-      const mappedUniversity = {
-        ...university,
-        country: u.country_name || u.country || '',
-        acceptanceRate: u.acceptance_rate || u.acceptanceRate || '',
-        applicationStatus: u.application_status || u.applicationStatus || 'open',
-        // Ensure other fields are present if needed
-      };
-      setEditingUniversity(mappedUniversity);
-      setShowAddUniversityDialog(true);
-    }
+  const handleEditUniversity = (id: string, tab: string = 'basic-info') => {
+    router.push(`/universities/add?id=${id}&tab=${tab}`);
   };
 
   const handleDeleteUniversity = async (id: string) => {
@@ -542,7 +524,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       try {
-        const payload = {
+        const payload: any = {
           name: row.universityName,
           city: row.city,
           country: row.country,
@@ -590,23 +572,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
     setShowImportDialog(false);
   };
 
-  const handleSaveUniversity = async (data: any) => {
-    try {
-      if (editingUniversity) {
-        await universityService.update(editingUniversity.id, data);
-        toast.success("University updated successfully");
-      } else {
-        await universityService.create(data);
-        toast.success("University added successfully");
-      }
-      await fetchUniversities();
-      setShowAddUniversityDialog(false);
-      setEditingUniversity(null);
-    } catch (error) {
-      console.error("Failed to save university:", error);
-      throw error; // Let the dialog handle the error display
-    }
-  };
+
 
   const handleBulkUpdateStatus = async (status: 'active' | 'disabled') => {
     try {
@@ -1012,12 +978,12 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
                       Manage Programs
                     </button>
                     <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <ToggleLeft size={16} />
-                      Enable/Disable
+                       <ToggleLeft size={16} />
+                       Enable/Disable
                     </button>
                     <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <Users size={16} />
-                      View Linked Applications
+                       <Users size={16} />
+                       View Linked Applications
                     </button>
                   </div>
                 </>
@@ -1265,24 +1231,71 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <button
-                          className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditUniversity(university.id);
-                          }}
-                        >
-                          <Edit size={16} />
-                        </button>
-                        <button
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteUniversity(university.id);
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              className="p-1.5 text-gray-400 hover:text-[#0e042f] hover:bg-gray-50 rounded-lg transition-all"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <MoreHorizontal size={18} />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" className="w-[200px] p-2 rounded-[20px] shadow-xl border-gray-100 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="flex flex-col gap-1">
+                              <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                                Quick Access
+                              </div>
+                              <button
+                                onClick={() => handleEditUniversity(university.id, 'basic-info')}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 text-blue-700 transition-colors group"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-blue-100/50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                                  <Globe size={14} />
+                                </div>
+                                <span className="text-sm font-semibold">Basic Info</span>
+                              </button>
+                              <button
+                                onClick={() => handleEditUniversity(university.id, 'admissions')}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-orange-50 text-orange-700 transition-colors group"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-orange-100/50 flex items-center justify-center group-hover:bg-orange-100 transition-colors">
+                                  <UserCheck size={14} />
+                                </div>
+                                <span className="text-sm font-semibold">Admissions</span>
+                              </button>
+                              <button
+                                onClick={() => handleEditUniversity(university.id, 'costs')}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-emerald-50 text-emerald-700 transition-colors group"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-emerald-100/50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                                  <TrendingUp size={14} />
+                                </div>
+                                <span className="text-sm font-semibold">Manage Costs</span>
+                              </button>
+                              <button
+                                onClick={() => handleEditUniversity(university.id, 'academic')}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 text-indigo-700 transition-colors group"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-indigo-100/50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                                  <GraduationCap size={14} />
+                                </div>
+                                <span className="text-sm font-semibold">Academic Sys</span>
+                              </button>
+
+                              <div className="my-1 h-px bg-gray-100 mx-2" />
+                              
+                              <button
+                                onClick={() => handleDeleteUniversity(university.id)}
+                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-red-600 transition-colors group text-left"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-red-100/50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
+                                  <Trash2 size={14} />
+                                </div>
+                                <span className="text-sm font-semibold">Delete Record</span>
+                              </button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </td>
                   </tr>
@@ -1388,18 +1401,6 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
         templateUrl="/templates/universities-import-template.xlsx"
         allowUpdate={true}
       />
-
-      {/* Add University Dialog */}
-      <AddUniversityDialog
-        open={showAddUniversityDialog}
-        onOpenChange={(open) => {
-          setShowAddUniversityDialog(open);
-          if (!open) setEditingUniversity(null);
-        }}
-        onAdd={handleSaveUniversity}
-        initialData={editingUniversity}
-        mode={editingUniversity ? 'edit' : 'add'}
-      />
-    </TooltipProvider >
+    </TooltipProvider>
   );
 };

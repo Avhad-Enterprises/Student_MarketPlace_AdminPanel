@@ -11,14 +11,16 @@ export default function CountriesPage() {
     const handleNavigate = (page: string) => {
         if (page === 'add-country') {
             router.push('/countries/add');
-        } else if (page === 'edit-country') {
-            // Logic for edit will go here, currently handled via props but navigation helps
         }
     };
 
+    const handleEditCountry = (id: string, tab: string = 'basic-info') => {
+        router.push(`/countries/add?id=${id}&tab=${tab}`);
+    };
+
     return (
-        <AdminLayout activePage="countries-list">
-            <CountriesOverviewPage onNavigate={handleNavigate} />
+        <AdminLayout activePage="countries-list" onNavigate={handleNavigate}>
+            <CountriesOverviewPage onNavigate={handleNavigate} onEditCountry={handleEditCountry} />
         </AdminLayout>
     );
 }

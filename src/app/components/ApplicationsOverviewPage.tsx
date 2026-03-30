@@ -136,7 +136,12 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
     }
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || {
+    bg: 'bg-gray-50',
+    text: 'text-gray-500',
+    border: 'border-gray-200',
+    label: status || 'Unknown'
+  };
 
   return (
     <span className={`px-3 py-1 rounded-lg text-[12px] font-medium border border-opacity-20 inline-flex w-[130px] items-center justify-center ${config.bg} ${config.text} ${config.border}`}>

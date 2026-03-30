@@ -1,4 +1,14 @@
 // RBAC Service - Role-Based Access Control for Finance/Invoice operations
+import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
+
+const getHeaders = () => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  };
+};
 
 export type UserRole = 'Admin' | 'Finance Manager' | 'Finance Staff' | 'Viewer';
 
@@ -289,6 +299,42 @@ export const PERMISSION_DESCRIPTIONS: Record<keyof Permission, string> = {
   canBypassApproval: 'Bypass approval requirements',
 };
 
+// API Services
+export const rbacApi = {
+  getRoles: async () => {
+    const response = await axios.get(`${API_BASE_URL}/api/roles`, { headers: getHeaders() });
+    return response.data.data;
+  },
+  createRole: async (data: any) => {
+    const response = await axios.post(`${API_BASE_URL}/api/roles`, data, { headers: getHeaders() });
+    return response.data.data;
+  },
+  updateRole: async (id: string, data: any) => {
+    const response = await axios.put(`${API_BASE_URL}/api/roles/${id}`, data, { headers: getHeaders() });
+    return response.data.data;
+  },
+  getUsers: async () => {
+    const response = await axios.get(`${API_BASE_URL}/api/users`, { headers: getHeaders() });
+    return response.data.data;
+  },
+  updateUser: async (id: string, data: any) => {
+    const response = await axios.put(`${API_BASE_URL}/api/users/${id}`, data, { headers: getHeaders() });
+    return response.data.data;
+  },
+  createUser: async (data: any) => {
+    const response = await axios.post(`${API_BASE_URL}/api/users`, data, { headers: getHeaders() });
+    return response.data.data;
+  },
+  deleteUser: async (id: string) => {
+    const response = await axios.delete(`${API_BASE_URL}/api/users/${id}`, { headers: getHeaders() });
+    return response.data;
+  },
+  deleteRole: async (id: string) => {
+    const response = await axios.delete(`${API_BASE_URL}/api/roles/${id}`, { headers: getHeaders() });
+    return response.data;
+  }
+};
+
 export default {
   getCurrentUser,
   setCurrentUser,
@@ -304,4 +350,5 @@ export default {
   getAllUsers,
   PERMISSION_DESCRIPTIONS,
   MOCK_USERS,
+  api: rbacApi,
 };

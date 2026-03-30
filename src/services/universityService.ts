@@ -27,6 +27,9 @@ export interface UniversityFormData {
     avg_gpa: string; // Range or textual
     english_requirement: string; // Textual overview
     min_ielts: number;
+    min_toefl: number;
+    min_gre: number;
+    min_gmat: number;
     
     // 3. STUDENT BODY
     total_students: number;
@@ -133,6 +136,16 @@ export const universityService = {
     update: async (id: string, data: Partial<UniversityFormData>) => {
         const token = localStorage.getItem('auth_token');
         const response = await axios.put(`${API_URL}/${id}`, data, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+        return response.data;
+    },
+
+    getById: async (id: string) => {
+        const token = localStorage.getItem('auth_token');
+        const response = await axios.get(`${API_URL}/${id}`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }

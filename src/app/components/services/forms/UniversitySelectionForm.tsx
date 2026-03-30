@@ -3,6 +3,7 @@ import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { CustomSelect } from '../../common/CustomSelect';
 
 interface UniversitySelectionFormProps {
   data: any;
@@ -27,11 +28,19 @@ export const UniversitySelectionForm: React.FC<UniversitySelectionFormProps> = (
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Which countries is the student interested in studying in?
         </p>
-        <Input
-          id="preferred-countries"
-          placeholder="e.g., USA, Canada, UK, Australia"
+        <CustomSelect
           value={data.preferredCountries || ''}
-          onChange={(e) => updateField('preferredCountries', e.target.value)}
+          onChange={(value) => updateField('preferredCountries', value)}
+          options={[
+            { value: 'usa', label: 'USA' },
+            { value: 'canada', label: 'Canada' },
+            { value: 'uk', label: 'United Kingdom' },
+            { value: 'australia', label: 'Australia' },
+            { value: 'germany', label: 'Germany' },
+            { value: 'france', label: 'France' },
+            { value: 'other', label: 'Other' }
+          ]}
+          placeholder="Select countries"
         />
       </div>
 
@@ -43,11 +52,16 @@ export const UniversitySelectionForm: React.FC<UniversitySelectionFormProps> = (
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Which intake(s) is the student targeting?
         </p>
-        <Input
-          id="preferred-intakes"
-          placeholder="e.g., Fall 2024, Spring 2025"
+        <CustomSelect
           value={data.preferredIntakes || ''}
-          onChange={(e) => updateField('preferredIntakes', e.target.value)}
+          onChange={(value) => updateField('preferredIntakes', value)}
+          options={[
+            { value: 'fall-2025', label: 'Fall 2025' },
+            { value: 'spring-2026', label: 'Spring 2026' },
+            { value: 'fall-2026', label: 'Fall 2026' },
+            { value: 'spring-2027', label: 'Spring 2027' }
+          ]}
+          placeholder="Select target intake"
         />
       </div>
 
@@ -59,20 +73,17 @@ export const UniversitySelectionForm: React.FC<UniversitySelectionFormProps> = (
         <p className="text-xs text-gray-500 mt-1 mb-2">
           UG / PG / Diploma / PhD
         </p>
-        <Select
+        <CustomSelect
           value={data.courseLevel || ''}
-          onValueChange={(value) => updateField('courseLevel', value)}
-        >
-          <SelectTrigger id="course-level">
-            <SelectValue placeholder="Select course level" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Undergraduate">Undergraduate (UG)</SelectItem>
-            <SelectItem value="Postgraduate">Postgraduate (PG)</SelectItem>
-            <SelectItem value="Diploma">Diploma</SelectItem>
-            <SelectItem value="PhD">PhD</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('courseLevel', value)}
+          options={[
+            { value: 'Undergraduate', label: 'Undergraduate (UG)' },
+            { value: 'Postgraduate', label: 'Postgraduate (PG)' },
+            { value: 'Diploma', label: 'Diploma' },
+            { value: 'PhD', label: 'PhD' }
+          ]}
+          placeholder="Select course level"
+        />
       </div>
 
       {/* Field(s) of Study */}
@@ -116,19 +127,16 @@ export const UniversitySelectionForm: React.FC<UniversitySelectionFormProps> = (
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Stay abroad / return / undecided
         </p>
-        <Select
+        <CustomSelect
           value={data.longTermPlan || ''}
-          onValueChange={(value) => updateField('longTermPlan', value)}
-        >
-          <SelectTrigger id="long-term-plan">
-            <SelectValue placeholder="Select long-term plan" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Stay Abroad">Stay Abroad</SelectItem>
-            <SelectItem value="Return Home">Return Home</SelectItem>
-            <SelectItem value="Undecided">Undecided</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('longTermPlan', value)}
+          options={[
+            { value: 'Stay Abroad', label: 'Stay Abroad' },
+            { value: 'Return Home', label: 'Return Home' },
+            { value: 'Undecided', label: 'Undecided' }
+          ]}
+          placeholder="Select long-term plan"
+        />
       </div>
 
       {/* Annual Budget Range */}
@@ -155,22 +163,19 @@ export const UniversitySelectionForm: React.FC<UniversitySelectionFormProps> = (
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Self / family / loan / sponsor
         </p>
-        <Select
+        <CustomSelect
           value={data.fundingSource || ''}
-          onValueChange={(value) => updateField('fundingSource', value)}
-        >
-          <SelectTrigger id="funding-source">
-            <SelectValue placeholder="Select funding source" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Self-funded">Self-funded</SelectItem>
-            <SelectItem value="Family">Family</SelectItem>
-            <SelectItem value="Education Loan">Education Loan</SelectItem>
-            <SelectItem value="Scholarship">Scholarship</SelectItem>
-            <SelectItem value="Sponsor">Sponsor</SelectItem>
-            <SelectItem value="Mixed">Mixed Sources</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('fundingSource', value)}
+          options={[
+            { value: 'Self-funded', label: 'Self-funded' },
+            { value: 'Family', label: 'Family' },
+            { value: 'Education Loan', label: 'Education Loan' },
+            { value: 'Scholarship', label: 'Scholarship' },
+            { value: 'Sponsor', label: 'Sponsor' },
+            { value: 'Mixed', label: 'Mixed Sources' }
+          ]}
+          placeholder="Select funding source"
+        />
       </div>
 
       {/* Family / Location Constraints */}
@@ -198,20 +203,17 @@ export const UniversitySelectionForm: React.FC<UniversitySelectionFormProps> = (
         <p className="text-xs text-gray-500 mt-1 mb-2">
           How urgent is the plan?
         </p>
-        <Select
+        <CustomSelect
           value={data.timelineUrgency || ''}
-          onValueChange={(value) => updateField('timelineUrgency', value)}
-        >
-          <SelectTrigger id="timeline-urgency">
-            <SelectValue placeholder="Select urgency level" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Low">Low - Flexible timeline</SelectItem>
-            <SelectItem value="Medium">Medium - Prefer specific intake</SelectItem>
-            <SelectItem value="High">High - Must apply soon</SelectItem>
-            <SelectItem value="Critical">Critical - Urgent application</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('timelineUrgency', value)}
+          options={[
+            { value: 'Low', label: 'Low - Flexible timeline' },
+            { value: 'Medium', label: 'Medium - Prefer specific intake' },
+            { value: 'High', label: 'High - Must apply soon' },
+            { value: 'Critical', label: 'Critical - Urgent application' }
+          ]}
+          placeholder="Select urgency level"
+        />
       </div>
 
       {/* Conversation Notes */}

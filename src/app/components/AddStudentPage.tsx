@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { ArrowLeft, AlertCircle, Save, TrendingUp, Globe, Calendar, User, GraduationCap, FileText, UserCheck, Building, MessageSquare, Plane, PlaneTakeoff, List, Target, Users, CheckCircle } from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
 import { CustomSelect } from './common/CustomSelect';
 import { DateInput } from './ui/date-input';
 import { toast } from 'sonner';
-import { createStudent } from '../services/studentsService';
-import { createApplication } from '../services/applicationsService';
+import { createStudent, getStudentById, updateStudent, Student as BackendStudent } from '../services/studentsService';
+import { createApplication, getAllApplications, updateApplication, Application as BackendApplication } from '../services/applicationsService';
 import { Plus, Trash2 } from 'lucide-react';
 
 export interface DraftApplication {
@@ -28,13 +29,34 @@ export interface DraftApplication {
   applicationType: string;
 }
 
+const safeJSONParse = (value: any) => {
+  try {
+    if (!value) return [];
+    if (Array.isArray(value)) return value;
+    if (typeof value === 'object') return value;
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return [];
+      return JSON.parse(trimmed);
+    }
+    return [];
+  } catch (e) {
+    console.error('Failed to parse JSON:', value);
+    return [];
+  }
+};
+
 interface AddStudentPageProps {
   onNavigate?: (page: string) => void;
+  studentId?: string;
 }
 
-export const AddStudentPage: React.FC<AddStudentPageProps> = ({ onNavigate }) => {
+export const AddStudentPage: React.FC<AddStudentPageProps> = ({ onNavigate, studentId }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('basic-info');
+  const [dbId, setDbId] = useState<string | null>(null);
+  const [displayStudentId, setDisplayStudentId] = useState<string>('');
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -110,8 +132,8 @@ export const AddStudentPage: React.FC<AddStudentPageProps> = ({ onNavigate }) =>
     salaryExpectations: '',
     stayBackInterest: false,
     careerDiscussionNotes: '',
-
-    // University Shortlisting
+    
+    // Shortlisting
     shortlistedUniversities: '',
     shortlistedCourseDetails: '',
     shortlistedCountry: '',
@@ -327,6 +349,299 @@ export const AddStudentPage: React.FC<AddStudentPageProps> = ({ onNavigate }) =>
     return Object.keys(newErrors).length === 0;
   };
 
+  // Helper to parse serialized application notes
+  const parseApplicationNotes = (notes: string | undefined): Partial<DraftApplication> => {
+    if (!notes) return {};
+    const result: Partial<DraftApplication> = {};
+    
+    const lines = notes.split('\n');
+    let currentSection = '';
+    
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed === '[Additional Application Data]') {
+        currentSection = 'data';
+        return;
+      }
+      if (trimmed === '[Notes]') {
+        currentSection = 'notes';
+        return;
+      }
+      
+      if (currentSection === 'data' && trimmed.includes(':')) {
+        const [key, ...valueParts] = trimmed.split(':');
+        const value = valueParts.join(':').trim();
+        const k = key.trim();
+        
+        switch (k) {
+          case 'Course': result.course = value === 'N/A' ? '' : value; break;
+          case 'Offer Status': result.offerStatus = value === 'N/A' ? '' : value; break;
+          case 'Previous Education': result.previousEducation = value === 'N/A' ? '' : value; break;
+          case 'GPA/Marks': result.gpa = value === 'N/A' ? '' : value; break;
+          case 'Test Scores': result.testScores = value === 'N/A' ? '' : value; break;
+          case 'Backlogs': result.backlogs = value === 'N/A' ? '' : value; break;
+          case 'Program': result.program = value === 'N/A' ? '' : value; break;
+          case 'Specialization': result.specialization = value === 'N/A' ? '' : value; break;
+          case 'Application Type': result.applicationType = value === 'N/A' ? '' : value; break;
+        }
+      } else if (currentSection === 'notes') {
+        if (!result.notes) result.notes = trimmed;
+        else result.notes += '\n' + trimmed;
+      }
+    });
+    
+    if (result.notes === 'None provided') result.notes = '';
+    
+    return result;
+  };
+
+  // Effect to load student data for editing
+  React.useEffect(() => {
+    if (studentId) {
+      const loadData = async () => {
+        setIsLoading(true);
+        try {
+          const student = await getStudentById(studentId);
+          console.log('[DEBUG] Student data fetched from API:', JSON.stringify(student, null, 2));
+
+          if (student) {
+            setDbId(student.id);
+            setDisplayStudentId(student.student_id || '');
+            console.log('[DEBUG] Identifiers set - dbId:', student.id, 'displayStudentId:', student.student_id);
+
+            // Map student data to formData
+            setFormData(prev => ({
+              ...prev,
+              firstName: student.first_name || '',
+              lastName: student.last_name || '',
+              email: student.email || '',
+              dateOfBirth: (() => {
+                if (!student.date_of_birth) return '';
+                try {
+                  const date = typeof student.date_of_birth === 'string' ? parseISO(student.date_of_birth) : new Date(student.date_of_birth);
+                  return isValid(date) ? format(date, 'yyyy-MM-dd') : '';
+                } catch (e) {
+                  return '';
+                }
+              })(),
+              countryCode: student.country_code || '+1',
+              phoneNumber: student.phone_number || '',
+              nationality: student.nationality || '',
+              currentCountry: student.current_country || '',
+              primaryDestination: student.primary_destination || '',
+              intendedIntake: student.intended_intake || '',
+              currentStage: student.current_stage || '',
+              assignedCounselor: student.assigned_counselor || '',
+              riskLevel: student.risk_level || 'low',
+              leadSource: student.lead_source || '',
+              campaign: student.campaign || '',
+              countryPreferences: safeJSONParse(student.country_preferences),
+              notes: student.notes || '',
+              
+              highestQualification: student.highest_qualification || '',
+              fieldOfStudy: student.field_of_study || '',
+              currentInstitution: student.current_institution || '',
+              graduationYear: student.graduation_year || '',
+              gpa: student.gpa || '',
+              firstTouchDate: student.first_touch_date || '',
+              conversionPathSummary: student.conversion_path_summary || '',
+              preferredCourseLevel: student.preferred_course_level || '',
+              budgetRange: student.budget_range || '',
+              intakePreference: student.intake_preference || '',
+              testScores: student.test_scores || '',
+              
+              studentIntent: student.student_intent || '',
+              interestedServices: safeJSONParse(student.interested_services),
+              communicationPreference: student.communication_preference || '',
+              timezone: student.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+              
+              planningCountries: student.planning_countries || '',
+              planningIntake: student.planning_intake || '',
+              planningCourseLevel: student.planning_course_level || '',
+              planningFieldOfStudy: student.planning_field_of_study || '',
+              careerGoal: student.career_goal || '',
+              longTermPlan: student.long_term_plan || '',
+              annualBudget: student.annual_budget || '',
+              fundingSource: student.funding_source || '',
+              familyConstraints: student.family_constraints || '',
+              timelineUrgency: student.timeline_urgency || '',
+              consultationNotes: student.consultation_notes || '',
+              
+              evalGradingSystem: student.eval_grading_system || '',
+              evalInstitutionTier: student.eval_institution_tier || '',
+              evalBacklogs: student.eval_backlogs || '',
+              evalWorkExp: student.eval_work_exp || '',
+              evalFieldRelevance: student.eval_field_relevance || '',
+              evalInternships: student.eval_internships || '',
+              evalResearch: student.eval_research || '',
+              evalGapYears: student.eval_gap_years || '',
+              evalAdditionalNotes: student.eval_additional_notes || '',
+              
+              eligibilityPrerequisites: !!student.eligibility_prerequisites,
+              eligibilityBridgeCourse: !!student.eligibility_bridge_course,
+              eligibilityEnglishTest: !!student.eligibility_english_test,
+              eligibilityFundsReady: !!student.eligibility_funds_ready,
+              eligibilitySponsorIdentified: !!student.eligibility_sponsor_identified,
+              eligibilityLoanRequired: !!student.eligibility_loan_required,
+              eligibilityGapExplanation: !!student.eligibility_gap_explanation,
+              visaRisk: student.visa_risk || '',
+              visaNotes: student.visa_notes || '',
+              
+              intendedJobRole: student.intended_job_role || '',
+              preferredIndustry: student.preferred_industry || '',
+              careerCountryPreference: student.career_country_preference || '',
+              jobMarketAwareness: student.job_market_awareness || '',
+              salaryExpectations: student.salary_expectations || '',
+              stayBackInterest: !!student.stay_back_interest,
+              careerDiscussionNotes: student.career_discussion_notes || '',
+              
+              shortlistedUniversities: student.shortlisted_universities || '',
+              shortlistedCourseDetails: student.shortlisted_course_details || '',
+              shortlistedCountry: student.shortlisted_country || '',
+              shortlistedPriority: student.shortlisted_priority || '',
+              shortlistedIntake: student.shortlisted_intake || '',
+              shortlistedBudgetFit: student.shortlisted_budget_fit || '',
+              shortlistedEligibilityFit: student.shortlisted_eligibility_fit || '',
+              shortlistedVisaSafety: student.shortlisted_visa_safety || '',
+              
+              appStrategyOrder: student.app_strategy_order || '',
+              appStrategyType: student.app_strategy_type || '',
+              appStrategyDeadlineAwareness: student.app_strategy_deadline_awareness || '',
+              appStrategyDeadlineRisk: student.app_strategy_deadline_risk || '',
+              appStrategySopApproach: student.app_strategy_sop_approach || '',
+              appStrategyCustomizationLevel: student.app_strategy_customization_level || '',
+              appStrategyLorType: student.app_strategy_lor_type || '',
+              appStrategyLorCount: student.app_strategy_lor_count || '',
+              appStrategyNotes: student.app_strategy_notes || '',
+              
+              sopVersion: student.sop_version || '',
+              sopDraftStatus: student.sop_draft_status || '',
+              sopAssignedEditor: student.sop_assigned_editor || '',
+              sopStructureQuality: student.sop_structure_quality || '',
+              sopContentRelevance: student.sop_content_relevance || '',
+              sopLanguageClarity: student.sop_language_clarity || '',
+              sopFeedbackNotes: student.sop_feedback_notes || '',
+              sopRevisionCount: student.sop_revision_count || '',
+              
+              lorCountRequired: student.lor_count_required || '',
+              lorRecommenderName: student.lor_recommender_name || '',
+              lorRecommenderRelation: student.lor_recommender_relation || '',
+              lorRecommenderEmail: student.lor_recommender_email || '',
+              lorCurrentStatus: student.lor_current_status || '',
+              lorCoordinationNotes: student.lor_coordination_notes || '',
+              
+              submissionSopUploaded: !!student.submission_sop_uploaded,
+              submissionLorsUploaded: !!student.submission_lors_uploaded,
+              submissionTranscriptsUploaded: !!student.submission_transcripts_uploaded,
+              submissionFeePaid: !!student.submission_fee_paid,
+              submissionPortal: student.submission_portal || '',
+              submissionConfirmationReceived: !!student.submission_confirmation_received,
+              submissionErrorsFaced: student.submission_errors_faced || '',
+              submissionResolutionNotes: student.submission_resolution_notes || '',
+              
+              visaTargetCountry: student.visa_target_country || '',
+              visaType: student.visa_type || '',
+              visaStartDate: student.visa_start_date || '',
+              visaUniversityName: student.visa_university_name || '',
+              visaOfferUploaded: !!student.visa_offer_uploaded,
+              visaCasStatus: student.visa_cas_status || '',
+              visaFundsProofAvailable: !!student.visa_funds_proof_available,
+              visaFundsSource: student.visa_funds_source || '',
+              visaLoanStatus: student.visa_loan_status || '',
+              visaBankStatementDuration: student.visa_bank_statement_duration || '',
+              visaPassportValidity: student.visa_passport_validity || '',
+              visaTranscriptsUploaded: !!student.visa_transcripts_uploaded,
+              visaLanguageReportUploaded: !!student.visa_language_report_uploaded,
+              visaMedicalUploaded: !!student.visa_medical_uploaded,
+              visaFormFilled: !!student.visa_form_filled,
+              visaBiometricsRequired: !!student.visa_biometrics_required,
+              visaAppointmentBooked: !!student.visa_appointment_booked,
+              visaAppointmentDate: student.visa_appointment_date || '',
+              visaInterviewRequired: !!student.visa_interview_required,
+              visaInterviewPrepDone: !!student.visa_interview_prep_done,
+              visaMockInterviewNotes: student.visa_mock_interview_notes || '',
+              visaSpecialCaseNotes: student.visa_special_case_notes || '',
+              visaInternalRemarks: student.visa_internal_remarks || '',
+              
+              compVisaStartDate: student.comp_visa_start_date || '',
+              compVisaExpiryDate: student.comp_visa_expiry_date || '',
+              compMultipleEntry: !!student.comp_multiple_entry,
+              compWorkRestrictions: student.comp_work_restrictions || '',
+              compAttendanceReq: student.comp_attendance_req || '',
+              compAddressReporting: !!student.comp_address_reporting,
+              compExtensionEligible: !!student.comp_extension_eligible,
+              compExtensionType: student.comp_extension_type || '',
+              compRenewalWindow: student.comp_renewal_window || '',
+              compCheckinsRequired: !!student.comp_checkins_required,
+              compLastReviewDate: student.comp_last_review_date || '',
+              compIssuesNoted: student.comp_issues_noted || '',
+              compPswInterest: !!student.comp_psw_interest,
+              compEligibilityAwareness: !!student.comp_eligibility_awareness,
+              compNotes: student.comp_notes || '',
+
+              predepTravelDate: student.predep_travel_date || '',
+              predepFlightBooked: !!student.predep_flight_booked,
+              predepAirlineName: student.predep_airline_name || '',
+              predepDepartureAirport: student.predep_departure_airport || '',
+              predepArrivalAirport: student.predep_arrival_airport || '',
+              predepAccommodationType: student.predep_accommodation_type || '',
+              predepAccommodationConfirmed: !!student.predep_accommodation_confirmed,
+              predepAddress: student.predep_address || '',
+              predepInitialStayDuration: student.predep_initial_stay_duration || '',
+              predepInsuranceArranged: !!student.predep_insurance_arranged,
+              predepForexReady: !!student.predep_forex_ready,
+              predepDocsCollected: !!student.predep_docs_collected,
+              predepEmergencyContact: student.predep_emergency_contact || '',
+              predepOrientationAttended: !!student.predep_orientation_attended,
+              predepRulesExplained: !!student.predep_rules_explained,
+              predepReportingInstructionsShared: !!student.predep_reporting_instructions_shared,
+              predepPackingGuidanceShared: !!student.predep_packing_guidance_shared,
+              predepRestrictedItemsExplained: !!student.predep_restricted_items_explained,
+              predepWeatherAwareness: !!student.predep_weather_awareness,
+              predepNotes: student.predep_notes || '',
+            }));
+
+            setAccountStatus(student.account_status === true || (student.account_status as any) === 'true' || (student.account_status as any) === 1);
+
+            // Fetch applications
+            const appsResponse = await getAllApplications({ student_id: studentId });
+            if (appsResponse && appsResponse.data && appsResponse.data.length > 0) {
+              const mappedApps: DraftApplication[] = appsResponse.data.map((app: BackendApplication) => {
+                const parsedNotes = parseApplicationNotes(app.notes);
+                return {
+                  id: app.id,
+                  universityName: app.university_name || '',
+                  country: app.country || '',
+                  course: parsedNotes.course || '',
+                  intake: app.intake || '',
+                  previousEducation: parsedNotes.previousEducation || '',
+                  gpa: parsedNotes.gpa || '',
+                  testScores: parsedNotes.testScores || '',
+                  notes: parsedNotes.notes || '',
+                  status: app.status || '',
+                  offerStatus: parsedNotes.offerStatus || '',
+                  counselor: app.counselor || '',
+                  backlogs: parsedNotes.backlogs || '',
+                  program: parsedNotes.program || '',
+                  specialization: parsedNotes.specialization || '',
+                  applicationType: parsedNotes.applicationType || ''
+                };
+              });
+              setDraftApplications(mappedApps);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load student data:', error);
+          toast.error('Failed to load student data');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadData();
+    }
+  }, [studentId]);
+
+
   const handleSubmit = async () => {
     if (!validateForm()) {
       toast.error('Please fix the errors before submitting');
@@ -334,16 +649,211 @@ export const AddStudentPage: React.FC<AddStudentPageProps> = ({ onNavigate }) =>
     }
 
     setIsSubmitting(true);
+    console.log('[DEBUG] Form data before submission:', formData);
 
     try {
-      const payload = {
-        ...formData,
-        riskLevel: formData.riskLevel,
+      const payload: any = {
+        firstName: formData.firstName || null,
+        lastName: formData.lastName || null,
+        email: formData.email || null,
+        dateOfBirth: formData.dateOfBirth || null,
+        countryCode: formData.countryCode || null,
+        phoneNumber: formData.phoneNumber || null,
+        nationality: formData.nationality || null,
+        currentCountry: formData.currentCountry || null,
+        primaryDestination: formData.primaryDestination || null,
+        intendedIntake: formData.intendedIntake || null,
+        currentStage: formData.currentStage || null,
+        assignedCounselor: formData.assignedCounselor || null,
+        riskLevel: formData.riskLevel || 'low',
+        leadSource: formData.leadSource || null,
+        campaign: formData.campaign || null,
+        countryPreferences: formData.countryPreferences,
+        notes: formData.notes || null,
+        
+        highestQualification: formData.highestQualification || null,
+        fieldOfStudy: formData.fieldOfStudy || null,
+        currentInstitution: formData.currentInstitution || null,
+        graduationYear: formData.graduationYear || null,
+        gpa: formData.gpa || null,
+        
+        firstTouchDate: formData.firstTouchDate || null,
+        conversionPathSummary: formData.conversionPathSummary || null,
+        
+        preferredCourseLevel: formData.preferredCourseLevel || null,
+        budgetRange: formData.budgetRange || null,
+        intakePreference: formData.intakePreference || null,
+        testScores: formData.testScores || null,
+        
+        studentIntent: formData.studentIntent || null,
+        interestedServices: formData.interestedServices,
+        communicationPreference: formData.communicationPreference || null,
+        timezone: formData.timezone || null,
+        
+        planningCountries: formData.planningCountries || null,
+        planningIntake: formData.planningIntake || null,
+        planningCourseLevel: formData.planningCourseLevel || null,
+        planningFieldOfStudy: formData.planningFieldOfStudy || null,
+        careerGoal: formData.careerGoal || null,
+        longTermPlan: formData.longTermPlan || null,
+        annualBudget: formData.annualBudget || null,
+        fundingSource: formData.fundingSource || null,
+        familyConstraints: formData.familyConstraints || null,
+        timelineUrgency: formData.timelineUrgency || null,
+        consultationNotes: formData.consultationNotes || null,
+        
+        evalGradingSystem: formData.evalGradingSystem || null,
+        evalInstitutionTier: formData.evalInstitutionTier || null,
+        evalBacklogs: formData.evalBacklogs || null,
+        evalWorkExp: formData.evalWorkExp || null,
+        evalFieldRelevance: formData.evalFieldRelevance || null,
+        evalInternships: formData.evalInternships || null,
+        evalResearch: formData.evalResearch || null,
+        evalGapYears: formData.evalGapYears || null,
+        evalAdditionalNotes: formData.evalAdditionalNotes || null,
+        
+        eligibilityPrerequisites: (formData as any).eligibilityPrerequisites ? 1 : 0,
+        eligibilityBridgeCourse: (formData as any).eligibilityBridgeCourse ? 1 : 0,
+        eligibilityEnglishTest: (formData as any).eligibilityEnglishTest ? 1 : 0,
+        eligibilityFundsReady: (formData as any).eligibilityFundsReady ? 1 : 0,
+        eligibilitySponsorIdentified: (formData as any).eligibilitySponsorIdentified ? 1 : 0,
+        eligibilityLoanRequired: (formData as any).eligibilityLoanRequired ? 1 : 0,
+        eligibilityGapExplanation: (formData as any).eligibilityGapExplanation ? 1 : 0,
+        visaRisk: formData.visaRisk || null,
+        visaNotes: formData.visaNotes || null,
+        
+        intendedJobRole: formData.intendedJobRole || null,
+        preferredIndustry: formData.preferredIndustry || null,
+        careerCountryPreference: formData.careerCountryPreference || null,
+        jobMarketAwareness: formData.jobMarketAwareness || null,
+        salaryExpectations: formData.salaryExpectations || null,
+        stayBackInterest: formData.stayBackInterest ? 1 : 0,
+        careerDiscussionNotes: formData.careerDiscussionNotes || null,
+        
+        shortlistedUniversities: formData.shortlistedUniversities || null,
+        shortlistedCourseDetails: formData.shortlistedCourseDetails || null,
+        shortlistedCountry: formData.shortlistedCountry || null,
+        shortlistedPriority: formData.shortlistedPriority || null,
+        shortlistedIntake: formData.shortlistedIntake || null,
+        shortlistedBudgetFit: formData.shortlistedBudgetFit || null,
+        shortlistedEligibilityFit: formData.shortlistedEligibilityFit || null,
+        shortlistedVisaSafety: formData.shortlistedVisaSafety || null,
+        
+        appStrategyOrder: formData.appStrategyOrder || null,
+        appStrategyType: formData.appStrategyType || null,
+        appStrategyDeadlineAwareness: formData.appStrategyDeadlineAwareness || null,
+        appStrategyDeadlineRisk: formData.appStrategyDeadlineRisk || null,
+        appStrategySopApproach: (formData as any).appStrategySopApproach || null,
+        appStrategyCustomizationLevel: (formData as any).appStrategyCustomizationLevel || null,
+        appStrategyLorType: (formData as any).appStrategyLorType || null,
+        appStrategyLorCount: (formData as any).appStrategyLorCount || null,
+        appStrategyNotes: formData.appStrategyNotes || null,
+        
+        sopVersion: (formData as any).sopVersion || null,
+        sopDraftStatus: (formData as any).sopDraftStatus || null,
+        sopAssignedEditor: (formData as any).sopAssignedEditor || null,
+        sopStructureQuality: (formData as any).sopStructureQuality || null,
+        sopContentRelevance: (formData as any).sopContentRelevance || null,
+        sopLanguageClarity: (formData as any).sopLanguageClarity || null,
+        sopFeedbackNotes: (formData as any).sopFeedbackNotes || null,
+        sopRevisionCount: (formData as any).sopRevisionCount || null,
+        
+        lorCountRequired: (formData as any).lorCountRequired || null,
+        lorRecommenderName: (formData as any).lorRecommenderName || null,
+        lorRecommenderRelation: (formData as any).lorRecommenderRelation || null,
+        lorRecommenderEmail: (formData as any).lorRecommenderEmail || null,
+        lorCurrentStatus: (formData as any).lorCurrentStatus || null,
+        lorCoordinationNotes: (formData as any).lorCoordinationNotes || null,
+        
+        submissionSopUploaded: (formData as any).submissionSopUploaded ? 1 : 0,
+        submissionLorsUploaded: (formData as any).submissionLorsUploaded ? 1 : 0,
+        submissionTranscriptsUploaded: (formData as any).submissionTranscriptsUploaded ? 1 : 0,
+        submissionFeePaid: (formData as any).submissionFeePaid ? 1 : 0,
+        submissionPortal: (formData as any).submissionPortal || null,
+        submissionConfirmationReceived: (formData as any).submissionConfirmationReceived ? 1 : 0,
+        submissionErrorsFaced: (formData as any).submissionErrorsFaced || null,
+        submissionResolutionNotes: (formData as any).submissionResolutionNotes || null,
+
+        visaTargetCountry: (formData as any).visaTargetCountry || null,
+        visaType: (formData as any).visaType || null,
+        visaStartDate: (formData as any).visaStartDate || null,
+        visaUniversityName: (formData as any).visaUniversityName || null,
+        visaOfferUploaded: (formData as any).visaOfferUploaded ? 1 : 0,
+        visaCasStatus: (formData as any).visaCasStatus || null,
+        visaFundsProofAvailable: (formData as any).visaFundsProofAvailable ? 1 : 0,
+        visaFundsSource: (formData as any).visaFundsSource || null,
+        visaLoanStatus: (formData as any).visaLoanStatus || null,
+        visaBankStatementDuration: (formData as any).visaBankStatementDuration || null,
+        visaPassportValidity: (formData as any).visaPassportValidity || null,
+        visaTranscriptsUploaded: (formData as any).visaTranscriptsUploaded ? 1 : 0,
+        visaLanguageReportUploaded: (formData as any).visaLanguageReportUploaded ? 1 : 0,
+        visaMedicalUploaded: (formData as any).visaMedicalUploaded ? 1 : 0,
+        visaFormFilled: (formData as any).visaFormFilled ? 1 : 0,
+        visaBiometricsRequired: (formData as any).visaBiometricsRequired ? 1 : 0,
+        visaAppointmentBooked: (formData as any).visaAppointmentBooked ? 1 : 0,
+        visaAppointmentDate: (formData as any).visaAppointmentDate || null,
+        visaInterviewRequired: (formData as any).visaInterviewRequired ? 1 : 0,
+        visaInterviewPrepDone: (formData as any).visaInterviewPrepDone ? 1 : 0,
+        visaMockInterviewNotes: (formData as any).visaMockInterviewNotes || null,
+        visaSpecialCaseNotes: (formData as any).visaSpecialCaseNotes || null,
+        visaInternalRemarks: (formData as any).visaInternalRemarks || null,
+
+        compVisaStartDate: (formData as any).compVisaStartDate || null,
+        compVisaExpiryDate: (formData as any).compVisaExpiryDate || null,
+        compMultipleEntry: (formData as any).compMultipleEntry ? 1 : 0,
+        compWorkRestrictions: (formData as any).compWorkRestrictions || null,
+        compAttendanceReq: (formData as any).compAttendanceReq || null,
+        compAddressReporting: (formData as any).compAddressReporting ? 1 : 0,
+        compExtensionEligible: (formData as any).compExtensionEligible ? 1 : 0,
+        compExtensionType: (formData as any).compExtensionType || null,
+        compRenewalWindow: (formData as any).compRenewalWindow || null,
+        compCheckinsRequired: (formData as any).compCheckinsRequired ? 1 : 0,
+        compLastReviewDate: (formData as any).compLastReviewDate || null,
+        compIssuesNoted: (formData as any).compIssuesNoted || null,
+        compPswInterest: (formData as any).compPswInterest ? 1 : 0,
+        compEligibilityAwareness: (formData as any).compEligibilityAwareness ? 1 : 0,
+        compNotes: (formData as any).compNotes || null,
+
+        predepTravelDate: (formData as any).predepTravelDate || null,
+        predepFlightBooked: (formData as any).predepFlightBooked ? 1 : 0,
+        predepAirlineName: (formData as any).predepAirlineName || null,
+        predepDepartureAirport: (formData as any).predepDepartureAirport || null,
+        predepArrivalAirport: (formData as any).predepArrivalAirport || null,
+        predepAccommodationType: (formData as any).predepAccommodationType || null,
+        predepAccommodationConfirmed: (formData as any).predepAccommodationConfirmed ? 1 : 0,
+        predepAddress: (formData as any).predepAddress || null,
+        predepInitialStayDuration: (formData as any).predepInitialStayDuration || null,
+        predepInsuranceArranged: (formData as any).predepInsuranceArranged ? 1 : 0,
+        predepForexReady: (formData as any).predepForexReady ? 1 : 0,
+        predepDocsCollected: (formData as any).predepDocsCollected ? 1 : 0,
+        predepEmergencyContact: (formData as any).predepEmergencyContact || null,
+        predepOrientationAttended: (formData as any).predepOrientationAttended ? 1 : 0,
+        predepRulesExplained: (formData as any).predepRulesExplained ? 1 : 0,
+        predepReportingInstructionsShared: (formData as any).predepReportingInstructionsShared ? 1 : 0,
+        predepPackingGuidanceShared: (formData as any).predepPackingGuidanceShared ? 1 : 0,
+        predepRestrictedItemsExplained: (formData as any).predepRestrictedItemsExplained ? 1 : 0,
+        predepWeatherAwareness: (formData as any).predepWeatherAwareness ? 1 : 0,
+        predepNotes: (formData as any).predepNotes || null,
+        
         accountStatus: accountStatus,
       };
+      
+      console.log('[DEBUG] Final update payload (stringified):', JSON.stringify(payload, null, 2));
+      console.log('[DEBUG] Using student ID for update:', dbId || studentId);
 
-      const createdStudent = await createStudent(payload);
-      const studentDBid = createdStudent.id || createdStudent.student_id;
+      let studentDBid: string;
+      
+      if (studentId) {
+        // Use dbId (UUID/ID) if available, otherwise fallback to studentId prop
+        const response = await updateStudent(dbId || studentId, payload);
+        console.log('[DEBUG] Update response:', response);
+        studentDBid = dbId || studentId;
+        toast.info('Student information updated successfully');
+      } else {
+        const createdStudent = await createStudent(payload);
+        studentDBid = createdStudent.id || createdStudent.student_id;
+        toast.info('New student created');
+      }
       
       // Save draft applications
       if (draftApplications.some(app => app.universityName.trim() !== '')) {
@@ -364,7 +874,7 @@ Application Type: ${app.applicationType || 'N/A'}
 [Notes]
 ${app.notes || 'None provided'}`;
 
-          await createApplication({
+          const appData: any = {
             studentDbId: studentDBid,
             universityName: app.universityName,
             country: app.country,
@@ -372,17 +882,30 @@ ${app.notes || 'None provided'}`;
             status: app.status || 'in-progress',
             counselor: app.counselor,
             notes: serializedNotes
-          });
+          };
+
+          // If application has a UUID-like ID, it's an existing application
+          if (app.id && app.id.length > 20) {
+            await updateApplication(app.id, appData);
+          } else {
+            await createApplication(appData);
+          }
         }
       }
 
-      toast.success('Student Profile & Applications saved successfully');
+      toast.success(studentId ? 'Student Profile & Applications updated successfully' : 'Student Profile & Applications saved successfully');
       setIsSubmitting(false);
       onNavigate?.('students-all');
     } catch (error: any) {
-      console.error('Failed to create student:', error);
-      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to create student';
-      toast.error(`Failed to create student: ${errorMsg}`);
+      console.error('Failed to save student:', error);
+      let errorMsg = 'Failed to save student';
+      if (error.response?.data) {
+        const data = error.response.data;
+        errorMsg = data.message || data.error || (typeof data === 'string' ? data : JSON.stringify(data));
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      toast.error(`Failed to save student: ${errorMsg}`);
       setIsSubmitting(false);
     }
   };
@@ -413,6 +936,14 @@ ${app.notes || 'None provided'}`;
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#f8f9fb] custom-scrollbar-light">
+      {isLoading && (
+        <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+            <p className="text-lg font-medium text-purple-900">Loading student profile...</p>
+          </div>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="mb-6 sm:mb-8">
@@ -425,8 +956,8 @@ ${app.notes || 'None provided'}`;
           </button>
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-[32px] font-bold text-[#0f172b] mb-1 sm:mb-2">Add New Student</h1>
-              <p className="text-sm sm:text-base text-[#62748e]">Create a student profile to begin applications and services</p>
+              <h1 className="text-2xl sm:text-[32px] font-bold text-[#0f172b] mb-1 sm:mb-2">{studentId ? 'Edit Student Profile' : 'Add New Student'}</h1>
+              <p className="text-sm sm:text-base text-[#62748e]">{studentId ? 'Update student details, applications, and compliance records' : 'Create a student profile to begin applications and services'}</p>
             </div>
 
             {/* Action Buttons - Top Right */}
@@ -457,18 +988,18 @@ ${app.notes || 'None provided'}`;
               </button>
               <button
                 onClick={handleSubmit}
-                disabled={isSubmitting}
+                disabled={isSubmitting || isLoading}
                 className="px-6 py-3 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-purple-900/20 text-base"
               >
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Creating...
+                    {studentId ? 'Saving...' : 'Creating...'}
                   </>
                 ) : (
                   <>
                     <Save size={18} />
-                    Create Student
+                    {studentId ? 'Save Changes' : 'Create Student'}
                   </>
                 )}
               </button>
@@ -619,8 +1150,8 @@ ${app.notes || 'None provided'}`;
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Student ID</label>
-                  <input type="text" value="Auto-generated on save" disabled className="w-full h-[44px] px-4 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed text-base" />
-                  <p className="text-xs text-[#62748e] mt-1.5">Generated on save</p>
+                  <input type="text" value={displayStudentId || "Auto-generated on save"} disabled className="w-full h-[44px] px-4 border border-gray-200 rounded-xl bg-gray-50 text-gray-500 cursor-not-allowed text-base" />
+                  <p className="text-xs text-[#62748e] mt-1.5">{studentId ? 'Existing student identifier' : 'Generated on save'}</p>
                 </div>
               </div>
             </div>

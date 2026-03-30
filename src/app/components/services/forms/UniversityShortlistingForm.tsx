@@ -3,6 +3,7 @@ import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { CustomSelect } from '../../common/CustomSelect';
 
 interface UniversityShortlistingFormProps {
   data: any;
@@ -61,11 +62,19 @@ export const UniversityShortlistingForm: React.FC<UniversityShortlistingFormProp
         <p className="text-xs text-gray-500 mt-1 mb-2">
           University country
         </p>
-        <Input
-          id="shortlist-country"
-          placeholder="e.g., USA, Canada, UK"
+        <CustomSelect
           value={data.shortlistCountry || ''}
-          onChange={(e) => updateField('shortlistCountry', e.target.value)}
+          onChange={(value) => updateField('shortlistCountry', value)}
+          options={[
+            { value: 'usa', label: 'USA' },
+            { value: 'canada', label: 'Canada' },
+            { value: 'uk', label: 'United Kingdom' },
+            { value: 'australia', label: 'Australia' },
+            { value: 'germany', label: 'Germany' },
+            { value: 'france', label: 'France' },
+            { value: 'other', label: 'Other' }
+          ]}
+          placeholder="Select country"
         />
       </div>
 
@@ -77,19 +86,16 @@ export const UniversityShortlistingForm: React.FC<UniversityShortlistingFormProp
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Dream / target / safe
         </p>
-        <Select
+        <CustomSelect
           value={data.priorityLevel || ''}
-          onValueChange={(value) => updateField('priorityLevel', value)}
-        >
-          <SelectTrigger id="priority-level">
-            <SelectValue placeholder="Select priority level" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Dream">Dream - Ambitious</SelectItem>
-            <SelectItem value="Target">Target - Realistic</SelectItem>
-            <SelectItem value="Safe">Safe - Backup</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('priorityLevel', value)}
+          options={[
+            { value: 'Dream', label: 'Dream - Ambitious' },
+            { value: 'Target', label: 'Target - Realistic' },
+            { value: 'Safe', label: 'Safe - Backup' }
+          ]}
+          placeholder="Select priority level"
+        />
       </div>
 
       {/* Intake */}
@@ -100,11 +106,16 @@ export const UniversityShortlistingForm: React.FC<UniversityShortlistingFormProp
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Planned intake
         </p>
-        <Input
-          id="shortlist-intake"
-          placeholder="e.g., Fall 2024, Spring 2025"
+        <CustomSelect
           value={data.shortlistIntake || ''}
-          onChange={(e) => updateField('shortlistIntake', e.target.value)}
+          onChange={(value) => updateField('shortlistIntake', value)}
+          options={[
+            { value: 'fall-2025', label: 'Fall 2025' },
+            { value: 'spring-2026', label: 'Spring 2026' },
+            { value: 'fall-2026', label: 'Fall 2026' },
+            { value: 'spring-2027', label: 'Spring 2027' }
+          ]}
+          placeholder="Select intake"
         />
       </div>
 
@@ -116,19 +127,16 @@ export const UniversityShortlistingForm: React.FC<UniversityShortlistingFormProp
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Yes / No
         </p>
-        <Select
+        <CustomSelect
           value={data.budgetFit || ''}
-          onValueChange={(value) => updateField('budgetFit', value)}
-        >
-          <SelectTrigger id="budget-fit">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes - Within Budget</SelectItem>
-            <SelectItem value="Tight">Tight - At Upper Limit</SelectItem>
-            <SelectItem value="No">No - Over Budget</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('budgetFit', value)}
+          options={[
+            { value: 'Yes', label: 'Yes - Within Budget' },
+            { value: 'Tight', label: 'Tight - At Upper Limit' },
+            { value: 'No', label: 'No - Over Budget' }
+          ]}
+          placeholder="Select option"
+        />
       </div>
 
       {/* Eligibility Fit */}
@@ -139,19 +147,16 @@ export const UniversityShortlistingForm: React.FC<UniversityShortlistingFormProp
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Yes / No
         </p>
-        <Select
+        <CustomSelect
           value={data.eligibilityFit || ''}
-          onValueChange={(value) => updateField('eligibilityFit', value)}
-        >
-          <SelectTrigger id="eligibility-fit">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes - Meets Requirements</SelectItem>
-            <SelectItem value="Borderline">Borderline</SelectItem>
-            <SelectItem value="No">No - Below Requirements</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('eligibilityFit', value)}
+          options={[
+            { value: 'Yes', label: 'Yes - Meets Requirements' },
+            { value: 'Borderline', label: 'Borderline' },
+            { value: 'No', label: 'No - Below Requirements' }
+          ]}
+          placeholder="Select option"
+        />
       </div>
 
       {/* Visa Safety Consideration */}
@@ -162,19 +167,16 @@ export const UniversityShortlistingForm: React.FC<UniversityShortlistingFormProp
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Yes / No
         </p>
-        <Select
+        <CustomSelect
           value={data.visaSafety || ''}
-          onValueChange={(value) => updateField('visaSafety', value)}
-        >
-          <SelectTrigger id="visa-safety">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Low Risk">Low Risk</SelectItem>
-            <SelectItem value="Medium Risk">Medium Risk</SelectItem>
-            <SelectItem value="High Risk">High Risk</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('visaSafety', value)}
+          options={[
+            { value: 'Low Risk', label: 'Low Risk' },
+            { value: 'Medium Risk', label: 'Medium Risk' },
+            { value: 'High Risk', label: 'High Risk' }
+          ]}
+          placeholder="Select option"
+        />
       </div>
     </div>
   );

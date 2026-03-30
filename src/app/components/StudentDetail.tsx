@@ -65,8 +65,12 @@ import {
   Radio,
   X,
   Archive,
-  RefreshCw
+  RefreshCw,
+  Trophy,
+  StickyNote,
+  Activity
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -85,7 +89,7 @@ import { CustomSelect } from "@/components/common/CustomSelect";
 import { SegmentedControl } from "@/components/common/SegmentedControl";
 import { NotificationPanel } from "@/components/common/NotificationPanel";
 import { useNotifications } from "@/components/common/useNotifications";
-import { EditStudentDrawer } from "@/components/EditStudentDrawer";
+// Removed EditStudentDrawer import
 import { ServiceDetailsDrawer } from "@/components/ServiceDetailsDrawer";
 import { ServiceDetailModal } from "@/components/services/ServiceDetailModal";
 import { UpdateServiceStatusModal } from "@/components/UpdateServiceStatusModal";
@@ -113,7 +117,7 @@ import {
 } from '@/components/MissingStubs_StudentDetail';
 import { mockDocuments, mockPaymentsForTable, mockTimelineEvents } from '@/components/studentDetailMockData';
 import { getStudentById, updateStudent, Student as BackendStudent } from '../services/studentsService';
-import { getAllApplications, Application as BackendApplication } from '../services/applicationsService';
+import { getAllApplications, createApplication, Application as BackendApplication } from '../services/applicationsService';
 import { createActivity, getActivitiesByStudentId, Activity as BackendActivity } from '../services/activitiesService';
 
 interface StudentDetailProps {
@@ -123,9 +127,10 @@ interface StudentDetailProps {
 }
 
 export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab = 'overview', studentId }) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showEditDrawer, setShowEditDrawer] = useState(false);
+  // Removed showEditDrawer state
   const [userRole] = useState<'admin' | 'editor' | 'viewer'>('admin');
 
   // Student data state
@@ -172,6 +177,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
         .then(response => {
           // getStudentById directly returns the Student object because the service extracts it
           const data = response as any;
+          console.log('[DEBUG] StudentDetail - Fetched Student:', data);
           setStudent(data);
           if (data.current_stage) {
             setStudentStatus(data.current_stage);
@@ -180,37 +186,67 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
             name: data.assigned_counselor || 'Unassigned',
             initials: (data.assigned_counselor || 'U').substring(0, 2).toUpperCase()
           });
+          
+          // Now fetch applications once we have the actual student object
+          setAppsLoading(true);
+          const displayId = data.student_id;
+          const fullName = `${data.first_name} ${data.last_name}`;
+          
+          console.log('[DEBUG] Fetching applications for Student:', displayId, fullName);
+          
+          // Try fetching by display ID first (STU-...)
+          getAllApplications({ student_id: displayId })
+            .then(appResponse => {
+              console.log('[DEBUG] getAllApplications (by display ID) response:', appResponse);
+              
+              let results = appResponse.data;
+              
+              // If empty, try searching by name (some backend configurations use search for this)
+              if (results.length === 0) {
+                console.log('[DEBUG] No apps found by display ID, trying name search:', fullName);
+                return getAllApplications({ search: fullName });
+              }
+              return Promise.resolve(appResponse);
+            })
+            .then(finalResponse => {
+              console.log('[DEBUG] Final application results:', finalResponse.data);
+              const mappedApps = finalResponse.data.map((app: BackendApplication) => {
+                let course = 'Not Specified';
+                let offerStatus = 'Pending';
+
+                if (app.notes) {
+                  const courseMatch = app.notes.match(/Course:\s*(.*)/);
+                  const offerMatch = app.notes.match(/Offer Status:\s*(.*)/);
+                  if (courseMatch) course = courseMatch[1].trim();
+                  if (offerMatch) offerStatus = offerMatch[1].trim();
+                }
+
+                return {
+                  id: app.id,
+                  university: app.university_name,
+                  course: course,
+                  country: app.country,
+                  intake: app.intake,
+                  appStatus: app.status.charAt(0).toUpperCase() + app.status.slice(1).replace('-', ' '),
+                  offerStatus: offerStatus,
+                  lastUpdated: app.updated_at ? format(new Date(app.updated_at), 'yyyy-MM-dd') : 'N/A',
+                  assignedCounselor: app.counselor || 'Unassigned',
+                  counselorInitials: (app.counselor || 'U').substring(0, 2).toUpperCase(),
+                  createdDate: app.created_at ? format(new Date(app.created_at), 'yyyy-MM-dd') : 'N/A'
+                };
+              });
+              setApplications(mappedApps);
+            })
+            .catch(err => {
+              console.error('Error fetching applications:', err);
+            })
+            .finally(() => setAppsLoading(false));
         })
         .catch(err => {
           console.error('Error fetching student:', err);
           toast.error('Failed to load student details');
         })
         .finally(() => setLoading(false));
-
-      // Fetch applications
-      setAppsLoading(true);
-      getAllApplications({ student_id: studentId })
-        .then(response => {
-          const mappedApps = response.data.map((app: BackendApplication) => ({
-            id: app.id,
-            university: app.university_name,
-            course: 'Not Specified', // Backend doesn't seem to have course field in Application interface yet, or it&apos;s hidden. 
-            // I'll check Application interface in applicationsService again if needed, but for now I'll use a placeholder or check notes.
-            country: app.country,
-            intake: app.intake,
-            appStatus: app.status.charAt(0).toUpperCase() + app.status.slice(1).replace('-', ' '),
-            offerStatus: 'Pending', // Placeholder as not in backend interface
-            lastUpdated: app.updated_at ? format(new Date(app.updated_at), 'yyyy-MM-dd') : 'N/A',
-            assignedCounselor: app.counselor || 'Unassigned',
-            counselorInitials: (app.counselor || 'U').substring(0, 2).toUpperCase(),
-            createdDate: app.created_at ? format(new Date(app.created_at), 'yyyy-MM-dd') : 'N/A'
-          }));
-          setApplications(mappedApps);
-        })
-        .catch(err => {
-          console.error('Error fetching applications:', err);
-        })
-        .finally(() => setAppsLoading(false));
 
       // Fetch activities
       setActivitiesLoading(true);
@@ -298,6 +334,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
   const [serviceDetailModal, setServiceDetailModal] = useState<{
     isOpen: boolean;
     service: any;
+    onSave?: (data: any) => void;
   }>({ isOpen: false, service: null });
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -345,7 +382,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
     status: 'draft',
     offerStatus: 'pending',
     counselor: '',
-    type: 'Regular'
+    type: 'Regular',
+    program: '',
+    specialization: '',
+    gpa: '',
+    testScores: '',
+    backlogs: '',
+    notes: ''
   });
 
   const [uploadDocFormData, setUploadDocFormData] = useState({
@@ -414,11 +457,524 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
   const [auditLogModalOpen, setAuditLogModalOpen] = useState(false);
   const [archiveStudentModalOpen, setArchiveStudentModalOpen] = useState(false);
 
+  // Service Form Mappings & Persistence
+  const getServiceInitialData = (serviceName: string) => {
+    if (!student) return {};
+    switch (serviceName) {
+      case 'University Selection Consultation':
+        return {
+          preferredCountries: student.planning_countries,
+          preferredIntakes: student.planning_intake,
+          courseLevel: student.planning_course_level,
+          fieldOfStudy: student.planning_field_of_study,
+          careerGoal: student.career_goal,
+          longTermPlan: student.long_term_plan,
+          annualBudget: student.annual_budget,
+          fundingSource: student.funding_source,
+          constraints: student.family_constraints,
+          timelineUrgency: student.timeline_urgency,
+          conversationNotes: student.consultation_notes,
+        };
+      case 'Profile Evaluation':
+        return {
+          highestQualification: student.highest_qualification,
+          gpaPercentage: student.gpa,
+          gradingSystem: student.eval_grading_system,
+          institutionTier: student.eval_institution_tier,
+          backlogs: student.eval_backlogs,
+          workExperience: student.eval_work_exp,
+          fieldRelevance: student.eval_field_relevance,
+          gapYears: student.eval_gap_years,
+          internshipsProjects: student.eval_internships,
+          researchPublications: student.eval_research,
+          additionalNotes: student.eval_additional_notes,
+        };
+      case 'Eligibility & Readiness Check':
+        return {
+          meetsPrerequisites: student.eligibility_prerequisites,
+          bridgeCourseRequired: student.eligibility_bridge_course,
+          englishTestRequired: student.eligibility_english_test,
+          fundsReady: student.eligibility_funds_ready,
+          sponsorIdentified: student.eligibility_sponsor_identified,
+          loanRequired: student.eligibility_loan_required,
+          gapExplanationRequired: student.eligibility_gap_explanation,
+          visaRisk: student.visa_risk,
+          readinessNotes: student.visa_notes,
+        };
+      case 'Career Outcome Insights':
+        return {
+          intendedJobRole: student.intended_job_role,
+          preferredIndustry: student.preferred_industry,
+          countryPreference: student.career_country_preference,
+          marketAwareness: student.job_market_awareness,
+          salaryExpectations: student.salary_expectations,
+          stayBackInterest: student.stay_back_interest,
+          discussionNotes: student.career_discussion_notes,
+        };
+      case 'University Shortlisting':
+        return {
+          shortlistedUniversities: student.shortlisted_universities,
+          courseDetails: student.shortlisted_course_details,
+          country: student.shortlisted_country,
+          priority: student.shortlisted_priority,
+          intake: student.shortlisted_intake,
+          budgetFit: student.shortlisted_budget_fit,
+          eligibilityFit: student.shortlisted_eligibility_fit,
+          visaSafety: student.shortlisted_visa_safety,
+        };
+      case 'Application Strategy':
+        return {
+          applicationOrder: student.app_strategy_order,
+          applicationType: student.app_strategy_type,
+          deadlineWeightage: student.app_strategy_deadline_awareness,
+          deadlineRisk: student.app_strategy_deadline_risk,
+          sopApproach: student.app_strategy_sop_approach,
+          customizationLevel: student.app_strategy_customization_level,
+          lorType: student.app_strategy_lor_type,
+          lorCount: student.app_strategy_lor_count,
+          strategyNotes: student.app_strategy_notes,
+        };
+      case 'SOP Review & Editing':
+        return {
+          sopVersion: student.sop_version,
+          draftStatus: student.sop_draft_status,
+          assignedEditor: student.sop_assigned_editor,
+          structureQuality: student.sop_structure_quality,
+          contentRelevance: student.sop_content_relevance,
+          languageClarity: student.sop_language_clarity,
+          feedbackNotes: student.sop_feedback_notes,
+          revisionCount: student.sop_revision_count,
+        };
+      case 'LOR Coordination':
+        return {
+          lorRequired: student.lor_count_required,
+          recommenderName: student.lor_recommender_name,
+          recommenderRelation: student.lor_recommender_relation,
+          recommenderEmail: student.lor_recommender_email,
+          currentStatus: student.lor_current_status,
+          coordinationNotes: student.lor_coordination_notes,
+        };
+      case 'Application Submission Support':
+        return {
+          sopUploaded: student.submission_sop_uploaded === 1 ? 'Yes' : student.submission_sop_uploaded === 0 ? 'No' : '',
+          lorsUploaded: student.submission_lors_uploaded === 1 ? 'All Uploaded' : student.submission_lors_uploaded === 0 ? 'Not Uploaded' : '',
+          transcriptsUploaded: student.submission_transcripts_uploaded === 1 ? 'Yes' : student.submission_transcripts_uploaded === 0 ? 'No' : '',
+          feePaid: student.submission_fee_paid === 1 ? 'Yes' : student.submission_fee_paid === 0 ? 'No' : '',
+          applicationPortal: student.submission_portal,
+          confirmationReceived: student.submission_confirmation_received === 1 ? 'Yes' : student.submission_confirmation_received === 0 ? 'No' : '',
+          submissionDate: student.submission_date,
+          errorsFaced: student.submission_errors_faced,
+          resolutionNotes: student.submission_resolution_notes,
+        };
+      case 'Offer Review & Decision':
+        return {
+          offerReceivedFrom: student.offer_university_name,
+          courseName: student.offer_course_name,
+          country: student.offer_country,
+          intake: student.offer_intake,
+          offerType: student.offer_type,
+          conditionsMentioned: student.offer_conditions,
+          offerDeadline: student.offer_deadline,
+          depositRequired: student.offer_deposit_required ? 'Yes' : 'No',
+          depositAmount: student.offer_deposit_amount,
+          tuitionFeeAnnual: student.offer_tuition_fee,
+          estimatedLivingCost: student.offer_living_cost,
+          scholarshipOffered: student.offer_scholarship,
+          totalFirstYearCost: student.offer_total_cost,
+          courseRelevance: student.offer_course_relevance,
+          universityRanking: student.offer_university_ranking,
+          employabilityOutlook: student.offer_employability_outlook,
+          industryAlignment: student.offer_industry_alignment,
+          visaSuccessProbability: student.offer_visa_probability,
+          countrySpecificRisks: student.offer_country_risks,
+          gapSensitivity: student.offer_gap_sensitivity,
+          studentPreferenceLevel: student.offer_preference_level,
+          familyConcernsRaised: student.offer_family_concerns,
+          studentQuestionsDoubts: student.offer_student_questions,
+          discussionSummary: student.offer_discussion_summary,
+        };
+      case 'Visa Application Assistance':
+        return {
+          targetCountry: student.visa_target_country,
+          visaType: student.visa_type,
+          visaStartDate: student.visa_start_date,
+          universityName: student.visa_university_name,
+          offerUploaded: student.visa_offer_uploaded,
+          casStatus: student.visa_cas_status,
+          fundsProofAvailable: student.visa_funds_proof_available,
+          fundsSource: student.visa_funds_source,
+          loanStatus: student.visa_loan_status,
+          bankStatementDuration: student.visa_bank_statement_duration,
+          passportValidity: student.visa_passport_validity,
+          transcriptsUploaded: student.visa_transcripts_uploaded,
+          languageReportUploaded: student.visa_language_report_uploaded,
+          medicalUploaded: student.visa_medical_uploaded,
+          formFilled: student.visa_form_filled,
+          biometricsRequired: student.visa_biometrics_required,
+          appointmentBooked: student.visa_appointment_booked,
+          appointmentDate: student.visa_appointment_date,
+          interviewRequired: student.visa_interview_required,
+          interviewPrepDone: student.visa_interview_prep_done,
+          mockInterviewNotes: student.visa_mock_interview_notes,
+          specialCaseNotes: student.visa_special_case_notes,
+          internalRemarks: student.visa_internal_remarks,
+        };
+      case 'Compliance & Renewals':
+        return {
+          visaStartDate: student.comp_visa_start_date,
+          visaExpiryDate: student.comp_visa_expiry_date,
+          multipleEntry: student.comp_multiple_entry,
+          workRestrictions: student.comp_work_restrictions,
+          attendanceRequirements: student.comp_attendance_req,
+          addressReporting: student.comp_address_reporting,
+          extensionEligible: student.comp_extension_eligible,
+          extensionType: student.comp_extension_type,
+          renewalWindow: student.comp_renewal_window,
+          checkinsRequired: student.comp_checkins_required,
+          lastReviewDate: student.comp_last_review_date,
+          issuesNoted: student.comp_issues_noted,
+          pswInterest: student.comp_psw_interest,
+          eligibilityAwareness: student.comp_eligibility_awareness,
+          complianceNotes: student.comp_notes,
+        };
+      case 'Pre-Departure Support':
+        return {
+          plannedTravelDate: student.predep_travel_date,
+          flightBooked: student.predep_flight_booked === 1 ? 'yes' : student.predep_flight_booked === 0 ? 'no' : '',
+          airlineName: student.predep_airline_name,
+          departureAirport: student.predep_departure_airport,
+          arrivalAirport: student.predep_arrival_airport,
+          accommodationType: student.predep_accommodation_type,
+          accommodationConfirmed: student.predep_accommodation_confirmed === 1 ? 'yes' : student.predep_accommodation_confirmed === 0 ? 'no' : '',
+          addressAvailable: student.predep_address ? 'yes' : 'no', // Map from presence of address
+          initialStayDuration: student.predep_initial_stay_duration,
+          travelInsuranceArranged: student.predep_insurance_arranged === 1 ? 'yes' : student.predep_insurance_arranged === 0 ? 'no' : '',
+          forexCardReady: student.predep_forex_ready === 1 ? 'yes' : student.predep_forex_ready === 0 ? 'no' : '',
+          importantDocsCollected: student.predep_docs_collected === 1 ? 'yes' : student.predep_docs_collected === 0 ? 'no' : '',
+          emergencyContactShared: student.predep_emergency_contact ? 'yes' : 'no',
+          orientationAttended: student.predep_orientation_attended === 1 ? 'yes' : student.predep_orientation_attended === 0 ? 'no' : '',
+          countryRulesExplained: student.predep_rules_explained === 1 ? 'yes' : student.predep_rules_explained === 0 ? 'no' : '',
+          reportingInstructionsShared: student.predep_reporting_instructions_shared === 1 ? 'yes' : student.predep_reporting_instructions_shared === 0 ? 'no' : '',
+          packingGuidanceShared: student.predep_packing_guidance_shared === 1 ? 'yes' : student.predep_packing_guidance_shared === 0 ? 'no' : '',
+          restrictedItemsExplained: student.predep_restricted_items_explained === 1 ? 'yes' : 'no',
+          weatherAwareness: student.predep_weather_awareness === 1 ? 'yes' : 'no',
+          preDepartureNotes: student.predep_notes,
+        };
+      default:
+        return {};
+    }
+  };
+
+  const handleServiceSave = async (serviceName: string, data: any) => {
+    if (!studentId || !student) return;
+
+    try {
+      let payload: Partial<BackendStudent> = {};
+
+      switch (serviceName) {
+        case 'University Selection Consultation':
+          payload = {
+            planning_countries: data.preferredCountries,
+            planning_intake: data.preferredIntakes,
+            planning_course_level: data.courseLevel,
+            planning_field_of_study: data.fieldOfStudy,
+            career_goal: data.careerGoal,
+            long_term_plan: data.longTermPlan,
+            annual_budget: data.annualBudget,
+            funding_source: data.fundingSource,
+            family_constraints: data.constraints,
+            timeline_urgency: data.timelineUrgency,
+            consultation_notes: data.conversationNotes,
+          };
+          break;
+        case 'Profile Evaluation':
+          payload = {
+            highest_qualification: data.highestQualification,
+            gpa: data.gpaPercentage,
+            eval_grading_system: data.gradingSystem,
+            eval_institution_tier: data.institutionTier,
+            eval_backlogs: data.backlogs,
+            eval_work_exp: data.workExperience,
+            eval_field_relevance: data.fieldRelevance,
+            eval_gap_years: data.gapYears,
+            eval_internships: data.internshipsProjects,
+            eval_research: data.researchPublications,
+            eval_additional_notes: data.additionalNotes,
+          };
+          break;
+        case 'Eligibility & Readiness Check':
+          payload = {
+            eligibility_prerequisites: data.meetsPrerequisites ? 1 : 0,
+            eligibility_bridge_course: data.bridgeCourseRequired ? 1 : 0,
+            eligibility_english_test: data.englishTestRequired ? 1 : 0,
+            eligibility_funds_ready: data.fundsReady ? 1 : 0,
+            eligibility_sponsor_identified: data.sponsorIdentified ? 1 : 0,
+            eligibility_loan_required: data.loanRequired ? 1 : 0,
+            eligibility_gap_explanation: data.gapExplanationRequired ? 1 : 0,
+            visa_risk: data.visaRisk,
+            visa_notes: data.readinessNotes,
+          };
+          break;
+        case 'Career Outcome Insights':
+          payload = {
+            intended_job_role: data.intendedJobRole,
+            preferred_industry: data.preferredIndustry,
+            career_country_preference: data.countryPreference,
+            job_market_awareness: data.marketAwareness,
+            salary_expectations: data.salaryExpectations,
+            stay_back_interest: data.stayBackInterest ? 1 : 0,
+            career_discussion_notes: data.discussionNotes,
+          };
+          break;
+        case 'University Shortlisting':
+          payload = {
+            shortlisted_universities: data.shortlistedUniversities,
+            shortlisted_course_details: data.courseDetails,
+            shortlisted_country: data.country,
+            shortlisted_priority: data.priority,
+            shortlisted_intake: data.intake,
+            shortlisted_budget_fit: data.budgetFit,
+            shortlisted_eligibility_fit: data.eligibilityFit,
+            shortlisted_visa_safety: data.visaSafety,
+          };
+          break;
+        case 'Application Strategy':
+          payload = {
+            app_strategy_order: data.applicationOrder,
+            app_strategy_type: data.applicationType,
+            app_strategy_deadline_awareness: data.deadlineWeightage,
+            app_strategy_deadline_risk: data.deadlineRisk,
+            app_strategy_sop_approach: data.sopApproach,
+            app_strategy_customization_level: data.customizationLevel,
+            app_strategy_lor_type: data.lorType,
+            app_strategy_lor_count: data.lorCount,
+            app_strategy_notes: data.strategyNotes,
+          };
+          break;
+        case 'SOP Review & Editing':
+          payload = {
+            sop_version: data.sopVersion,
+            sop_draft_status: data.draftStatus,
+            sop_assigned_editor: data.assignedEditor,
+            sop_structure_quality: data.structureQuality,
+            sop_content_relevance: data.contentRelevance,
+            sop_language_clarity: data.languageClarity,
+            sop_feedback_notes: data.feedbackNotes,
+            sop_revision_count: data.revisionCount,
+          };
+          break;
+        case 'LOR Coordination':
+          payload = {
+            lor_count_required: data.lorRequired,
+            lor_recommender_name: data.recommenderName,
+            lor_recommender_relation: data.recommenderRelation,
+            lor_recommender_email: data.recommenderEmail,
+            lor_current_status: data.currentStatus,
+            lor_coordination_notes: data.coordinationNotes,
+          };
+          break;
+        case 'Application Submission Support':
+          payload = {
+            submission_sop_uploaded: data.sopUploaded === 'Yes' ? 1 : 0,
+            submission_lors_uploaded: data.lorsUploaded === 'All Uploaded' ? 1 : 0,
+            submission_transcripts_uploaded: data.transcriptsUploaded === 'Yes' ? 1 : 0,
+            submission_fee_paid: data.feePaid === 'Yes' ? 1 : 0,
+            submission_portal: data.applicationPortal,
+            submission_confirmation_received: data.confirmationReceived === 'Yes' ? 1 : 0,
+            submission_date: data.submissionDate,
+            submission_errors_faced: data.errorsFaced,
+            submission_resolution_notes: data.resolutionNotes,
+          };
+          break;
+        case 'Offer Review & Decision':
+          payload = {
+            offer_university_name: data.offerReceivedFrom,
+            offer_course_name: data.courseName,
+            offer_country: data.country,
+            offer_intake: data.intake,
+            offer_type: data.offerType,
+            offer_conditions: data.conditionsMentioned,
+            offer_deadline: data.offerDeadline,
+            offer_deposit_required: data.depositRequired === 'Yes' ? 1 : 0,
+            offer_deposit_amount: data.depositAmount,
+            offer_tuition_fee: data.tuitionFeeAnnual,
+            offer_living_cost: data.estimatedLivingCost,
+            offer_scholarship: data.scholarshipOffered,
+            offer_total_cost: data.totalFirstYearCost,
+            offer_course_relevance: data.courseRelevance,
+            offer_university_ranking: data.universityRanking,
+            offer_employability_outlook: data.employabilityOutlook,
+            offer_industry_alignment: data.industryAlignment,
+            offer_visa_probability: data.visaSuccessProbability,
+            offer_country_risks: data.countrySpecificRisks,
+            offer_gap_sensitivity: data.gapSensitivity,
+            offer_preference_level: data.studentPreferenceLevel,
+            offer_family_concerns: data.familyConcernsRaised,
+            offer_student_questions: data.studentQuestionsDoubts,
+            offer_discussion_summary: data.discussionSummary,
+          };
+          break;
+        case 'Visa Application Assistance':
+          payload = {
+            visa_target_country: data.targetCountry,
+            visa_type: data.visaType,
+            visa_start_date: data.visaStartDate,
+            visa_university_name: data.universityName,
+            visa_offer_uploaded: data.offerUploaded ? 1 : 0,
+            visa_cas_status: data.casStatus,
+            visa_funds_proof_available: data.fundsProofAvailable ? 1 : 0,
+            visa_funds_source: data.fundsSource,
+            visa_loan_status: data.loanStatus,
+            visa_bank_statement_duration: data.bankStatementDuration,
+            visa_passport_validity: data.passportValidity,
+            visa_transcripts_uploaded: data.transcriptsUploaded ? 1 : 0,
+            visa_language_report_uploaded: data.languageReportUploaded ? 1 : 0,
+            visa_medical_uploaded: data.medicalUploaded ? 1 : 0,
+            visa_form_filled: data.formFilled ? 1 : 0,
+            visa_biometrics_required: data.biometricsRequired ? 1 : 0,
+            visa_appointment_booked: data.appointmentBooked ? 1 : 0,
+            visa_appointment_date: data.appointmentDate,
+            visa_interview_required: data.interviewRequired ? 1 : 0,
+            visa_interview_prep_done: data.interviewPrepDone ? 1 : 0,
+            visa_mock_interview_notes: data.mockInterviewNotes,
+            visa_special_case_notes: data.specialCaseNotes,
+            visa_internal_remarks: data.internalRemarks,
+          };
+          break;
+        case 'Compliance Renewals':
+          payload = {
+            comp_visa_start_date: data.visaStartDate,
+            comp_visa_expiry_date: data.visaExpiryDate,
+            comp_multiple_entry: data.multipleEntry ? 1 : 0,
+            comp_work_restrictions: data.workRestrictions,
+            comp_attendance_req: data.attendanceRequirements,
+            comp_address_reporting: data.addressReporting ? 1 : 0,
+            comp_extension_eligible: data.extensionEligible ? 1 : 0,
+            comp_extension_type: data.extensionType,
+            comp_renewal_window: data.renewalWindow,
+            comp_checkins_required: data.checkinsRequired ? 1 : 0,
+            comp_last_review_date: data.lastReviewDate,
+            comp_issues_noted: data.issuesNoted,
+            comp_psw_interest: data.pswInterest ? 1 : 0,
+            comp_eligibility_awareness: data.eligibilityAwareness ? 1 : 0,
+            comp_notes: data.complianceNotes,
+          };
+          break;
+        case 'Pre-Departure Support':
+          payload = {
+            predep_travel_date: data.plannedTravelDate,
+            predep_flight_booked: data.flightBooked === 'yes' ? 1 : 0,
+            predep_airline_name: data.airlineName,
+            predep_departure_airport: data.departureAirport,
+            predep_arrival_airport: data.arrivalAirport,
+            predep_accommodation_type: data.accommodationType,
+            predep_accommodation_confirmed: data.accommodationConfirmed === 'yes' ? 1 : 0,
+            predep_address: data.addressAvailable === 'yes' ? 'Address Available' : '', // Placeholder since form has no address field
+            predep_initial_stay_duration: data.initialStayDuration,
+            predep_insurance_arranged: data.travelInsuranceArranged === 'yes' ? 1 : 0,
+            predep_forex_ready: data.forexCardReady === 'yes' ? 1 : 0,
+            predep_docs_collected: data.importantDocsCollected === 'yes' ? 1 : 0,
+            predep_emergency_contact: data.emergencyContactShared === 'yes' ? 'Shared' : '',
+            predep_orientation_attended: data.orientationAttended === 'yes' ? 1 : 0,
+            predep_rules_explained: data.countryRulesExplained === 'yes' ? 1 : 0,
+            predep_reporting_instructions_shared: data.reportingInstructionsShared === 'yes' ? 1 : 0,
+            predep_packing_guidance_shared: data.packingGuidanceShared === 'yes' ? 1 : 0,
+            predep_restricted_items_explained: data.restrictedItemsExplained === 'yes' ? 1 : 0,
+            predep_weather_awareness: data.weatherAwareness === 'yes' ? 1 : 0,
+            predep_notes: data.preDepartureNotes,
+          };
+          break;
+      }
+
+      await updateStudent(studentId, payload);
+      
+      // Update local state
+      setStudent(prev => prev ? { ...prev, ...payload } : null);
+      
+      toast.success(`${serviceName} saved successfully`);
+    } catch (error) {
+      console.error(`Error saving ${serviceName}:`, error);
+      toast.error(`Failed to save ${serviceName}`);
+    }
+  };
+
   // Handle Add Note button - navigate to Internal Notes tab
   const handleAddNote = () => {
     setActiveTab('notes');
     // Scroll to top of content area
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSaveApplication = async () => {
+    if (!student || !newAppFormData.university || !newAppFormData.course) {
+      toast.error('Please fill in required fields');
+      return;
+    }
+
+    try {
+      // Serialize extra fields into notes (matching AddStudentPage.tsx pattern if possible, 
+      // but here we just append to notes if the backend doesn't support them yet)
+      const extendedNotes = `
+[Application Details]
+Course: ${newAppFormData.course}
+Intake: ${newAppFormData.intake}
+University: ${newAppFormData.university}
+Country: ${newAppFormData.country}
+Type: ${newAppFormData.type}
+Program: ${newAppFormData.program || 'N/A'}
+Specialization: ${newAppFormData.specialization || 'N/A'}
+GPA: ${newAppFormData.gpa || 'N/A'}
+Test Scores: ${newAppFormData.testScores || 'N/A'}
+Backlogs: ${newAppFormData.backlogs || 'None'}
+Status: ${newAppFormData.status}
+Offer Status: ${newAppFormData.offerStatus}
+Counselor: ${newAppFormData.counselor}
+
+User Notes:
+${newAppFormData.notes || 'None'}
+      `.trim();
+
+      const payload = {
+        studentDbId: student.id,
+        universityName: newAppFormData.university,
+        country: newAppFormData.country,
+        intake: newAppFormData.intake,
+        status: newAppFormData.status || 'in-progress',
+        counselor: newAppFormData.counselor,
+        notes: extendedNotes
+      };
+
+      await createApplication(payload);
+      toast.success('Application added successfully');
+      setShowAddApplicationModal(false);
+      
+      // Refresh applications list
+      setAppsLoading(true);
+      const appsResponse = await getAllApplications({ student_id: student.id });
+      setApplications(appsResponse.data);
+      setAppsLoading(false);
+
+      // Reset form
+      setNewAppFormData({
+        university: '',
+        country: '',
+        intake: '',
+        course: '',
+        status: 'draft',
+        offerStatus: 'pending',
+        notes: '',
+        counselor: '',
+        type: 'Regular',
+        program: '',
+        specialization: '',
+        gpa: '',
+        testScores: '',
+        backlogs: ''
+      });
+    } catch (error) {
+      console.error('Error saving application:', error);
+      toast.error('Failed to save application');
+    }
   };
 
   // Timeline filtering logic
@@ -540,6 +1096,135 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
       }
     };
     return colorMap[colorScheme] || colorMap.gray;
+  };
+
+  const renderServiceActions = (serviceId: number, serviceName: string, description: string, status: string, category: string, assignedTo?: string, startedOn?: string, lastUpdate?: string) => {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
+            <MoreVertical size={16} className="text-gray-400" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-56 p-1" align="end">
+          <div className="flex flex-col gap-0.5">
+            {/* Primary Actions */}
+            <button 
+              onClick={() => setUpdateStatusModal({ isOpen: true, serviceName, currentStatus: status })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                <RefreshCw size={14} className="text-gray-500 group-hover:text-purple-600" />
+              </div>
+              Update Status
+            </button>
+
+            <button 
+              onClick={() => setServiceDetailModal({
+                isOpen: true,
+                service: { 
+                  name: serviceName, 
+                  description, 
+                  status, 
+                  category, 
+                  assignedTo: assignedTo || 'Unassigned', 
+                  startedOn: startedOn || 'N/A', 
+                  lastUpdate: lastUpdate || 'N/A', 
+                  initialData: getServiceInitialData(serviceName) 
+                },
+                onSave: (data) => handleServiceSave(serviceName, data)
+              })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                <Edit size={14} className="text-gray-500 group-hover:text-purple-600" />
+              </div>
+              Edit Service Details
+            </button>
+
+            <button 
+              onClick={() => setReassignCounselorDrawer({ 
+                isOpen: true, 
+                serviceName, 
+                currentCounselor: assignedTo ? { name: assignedTo, initials: assignedTo.substring(0, 2).toUpperCase(), assignedSince: startedOn || 'N/A' } : null 
+              })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                <User size={14} className="text-gray-500 group-hover:text-purple-600" />
+              </div>
+              <div className="text-left leading-tight">
+                Assign / Change<br />Counselor
+              </div>
+            </button>
+
+            <button 
+              onClick={() => setAddNoteModal({ isOpen: true, serviceName })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                <StickyNote size={14} className="text-gray-500 group-hover:text-purple-600" />
+              </div>
+              Add Note
+            </button>
+
+            <button 
+              onClick={() => setAttachDocumentsDrawer({ isOpen: true, serviceName })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                <Upload size={14} className="text-gray-500 group-hover:text-purple-600" />
+              </div>
+              Attach Documents
+            </button>
+
+            <button 
+              onClick={() => setActivityLogDrawer({ isOpen: true, serviceName })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                <Activity size={14} className="text-gray-500 group-hover:text-purple-600" />
+              </div>
+              View Activity Log
+            </button>
+
+            {/* Separator */}
+            <div className="my-1.5 h-px bg-gray-100 mx-2" />
+
+            {/* Secondary / Management Actions */}
+            <button 
+              onClick={() => setSetPriorityModal({ isOpen: true, serviceName, serviceId })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-50 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-amber-50 group-hover:bg-amber-100 transition-colors">
+                <Tag size={14} className="text-amber-600" />
+              </div>
+              Set Priority
+            </button>
+
+            <button 
+              onClick={() => setPauseServiceModal({ isOpen: true, serviceName, serviceId })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-blue-50 group-hover:bg-blue-100 transition-colors">
+                <Clock size={14} className="text-blue-600" />
+              </div>
+              {pausedServices[serviceId]?.isPaused ? 'Resume Service' : 'Pause Service'}
+            </button>
+
+            <button 
+              onClick={() => setArchiveServiceModal({ isOpen: true, serviceName, serviceId })}
+              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-all group"
+            >
+              <div className="p-1.5 rounded-md bg-red-50 group-hover:bg-red-100 transition-colors">
+                <Archive size={14} className="text-red-500" />
+              </div>
+              Archive Service
+            </button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
   };
 
   const toggleGroup = (groupId: string) => {
@@ -754,12 +1439,6 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
               </div>
               <DialogTitle className="text-2xl font-bold">{document.name}</DialogTitle>
             </DialogHeader>
-            <button
-              onClick={onClose}
-              className="absolute top-6 right-6 text-white/60 hover:text-white transition-colors"
-            >
-              <X size={20} />
-            </button>
           </div>
 
           <div className="p-8">
@@ -1041,7 +1720,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
 
     { id: 'overview', label: 'Overview' },
     { id: 'applications', label: 'Applications' },
-    { id: 'services', label: 'Services & Lifecycle' },
+    { id: 'services', label: 'Services & Lifestyle' },
     { id: 'documents', label: 'Documents' },
     { id: 'communications', label: 'Communications' },
     { id: 'activity', label: 'Activity & Behavior' },
@@ -1111,7 +1790,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 rounded-lg">
                     <TrendingUp size={12} className="text-blue-600" />
-                    <span className="text-xs font-semibold text-blue-700">{student?.lead_source || 'Organic Search'}</span>
+                    <span className="text-xs font-semibold text-blue-700">{student?.lead_source || 'Not Provided'}</span>
                   </div>
                   <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 rounded-lg">
                     <Calendar size={12} className="text-gray-500" />
@@ -1164,7 +1843,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
               {/* Action Cluster */}
               <div className="flex items-center gap-2 p-1 bg-gray-50 rounded-xl border border-gray-200/50">
                 <button
-                  onClick={() => setShowEditDrawer(true)}
+                  onClick={() => router.push(`/students/add?id=${studentId}`)}
                   className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-semibold flex items-center gap-2 text-gray-700"
                 >
                   <Edit size={15} />
@@ -1180,7 +1859,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 <MoreActionsMenu
                   open={showMoreActionsMenu}
                   onOpenChange={setShowMoreActionsMenu}
-                  onEditStudent={() => setShowEditDrawer(true)}
+                  onEditStudent={() => router.push(`/students/add?id=${studentId}`)}
                   onChangeStatus={() => setChangeStatusModalOpen(true)}
                   onChangeCounselor={() => setChangeCounselorModalOpen(true)}
                   onViewAuditLog={() => setAuditLogModalOpen(true)}
@@ -1266,8 +1945,12 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                     </div>
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Last Activity</span>
                   </div>
-                  <div className="text-base font-bold text-gray-900 mb-0.5">Viewed Offer Letter</div>
-                  <div className="text-[10px] text-amber-600 font-semibold">● 2 days ago</div>
+                  <div className="text-base font-bold text-gray-900 mb-0.5 truncate">
+                    {activities.length > 0 ? activities[0].title : 'No Activity Yet'}
+                  </div>
+                  <div className="text-[10px] text-amber-600 font-semibold">
+                    ● {activities.length > 0 ? format(new Date(activities[0].created_at), 'MMM dd, yyyy') : 'No Recent Activity'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1321,24 +2004,28 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-purple-500/20">
                     {student ? `${student.first_name[0]}${student.last_name[0]}`.toUpperCase() : '...'}
                   </div>
-                  <div className="flex-1 space-y-4">
+                  <div className="flex-1 space-y-4 min-w-0">
                     <div>
                       <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Full Name</div>
                       <div className="font-semibold text-gray-900 text-lg">{student ? `${student.first_name} ${student.last_name}` : '...'}</div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Email</div>
-                        <div className="text-sm text-gray-700">{student?.email || '...'}</div>
+                    <div className="space-y-4">
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Email</div>
+                        <div className="text-sm text-gray-700 break-all">{student?.email || '...'}</div>
                       </div>
-                      <div>
-                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Phone</div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Phone</div>
                         <div className="text-sm text-gray-700">{student?.phone_number || 'Not Provided'}</div>
                       </div>
                     </div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-6 pt-6 border-t border-gray-50">
+                  <div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Estimated Budget</div>
+                    <div className="font-medium text-gray-900 text-emerald-600">{student?.budget_range || 'Not Provided'}</div>
+                  </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date of Birth</div>
                     <div className="font-medium text-gray-900">{student?.date_of_birth ? format(new Date(student.date_of_birth), 'MMMM dd, yyyy') : 'Not Provided'}</div>
@@ -1348,11 +2035,11 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                     <div className="font-medium text-gray-900">{student?.nationality || 'Not Provided'}</div>
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Current City</div>
-                    <div className="font-medium text-gray-900">{student?.current_country || 'Not Provided'}</div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Primary Destination</div>
+                    <div className="font-medium text-gray-900">{student?.primary_destination || 'Not Provided'}</div>
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Country</div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Current Country</div>
                     <div className="font-medium text-gray-900">{student?.current_country || 'Not Provided'}</div>
                   </div>
                 </div>
@@ -1369,25 +2056,25 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 <div className="space-y-5">
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Highest Qualification</div>
-                    <div className="font-medium text-gray-900">Bachelor&apos;s Degree</div>
+                    <div className="font-medium text-gray-900">{student?.highest_qualification || 'Not Provided'}</div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Field of Study</div>
-                    <div className="font-medium text-gray-900">Computer Science</div>
+                    <div className="font-medium text-gray-900">{student?.field_of_study || 'Not Provided'}</div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Current Institution</div>
-                      <div className="text-sm text-gray-700">IIT Delhi</div>
+                      <div className="text-sm text-gray-700">{student?.current_institution || 'Not Provided'}</div>
                     </div>
                     <div>
                       <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Graduation Year</div>
-                      <div className="text-sm text-gray-700">2023</div>
+                      <div className="text-sm text-gray-700">{student?.graduation_year || 'Not Provided'}</div>
                     </div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">GPA / Percentage</div>
-                    <div className="font-medium text-gray-900">8.7 / 10.0</div>
+                    <div className="font-medium text-gray-900">{student?.gpa || 'Not Provided'}</div>
                   </div>
                 </div>
               </div>
@@ -1425,26 +2112,22 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Preferred Course Level</div>
-                    <div className="font-medium text-gray-900">Master&apos;s Degree</div>
+                    <div className="font-medium text-gray-900">{student?.preferred_course_level || 'Not Provided'}</div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Budget Range</div>
-                    <div className="font-medium text-gray-900">$30,000 - $50,000 / year</div>
+                    <div className="font-medium text-gray-900 text-emerald-600">{student?.budget_range || 'Not Provided'}</div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Intake Preference</div>
-                    <div className="font-medium text-gray-900">{student?.intended_intake || 'Not Specified'}</div>
+                    <div className="font-medium text-gray-900">{student?.intake_preference || 'Not Provided'}</div>
                   </div>
                   <div className="pt-5 border-t border-gray-50">
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Test Scores</div>
                     <div className="space-y-3">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium text-gray-700">IELTS</span>
-                        <span className="font-semibold text-gray-900">7.5 Overall</span>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium text-gray-700">GRE</span>
-                        <span className="font-semibold text-gray-900">325 (Q: 168, V: 157)</span>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700 block mb-1">Standardized Tests</span>
+                        <span className="font-semibold text-gray-900">{student?.test_scores || 'Not Provided'}</span>
                       </div>
                     </div>
                   </div>
@@ -1462,30 +2145,21 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                 <div className="space-y-5">
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Lead Source</div>
-                    <div className="font-medium text-gray-900">Organic Search</div>
+                    <div className="font-medium text-gray-900">{student?.lead_source || 'Not Provided'}</div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Campaign / Referrer</div>
-                    <div className="font-medium text-gray-900">Google - Study Abroad USA</div>
+                    <div className="font-medium text-gray-900">{student?.campaign || 'Not Provided'}</div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">First Touch Date</div>
-                    <div className="font-medium text-gray-900">January 10, 2024</div>
+                    <div className="font-medium text-gray-900">{student?.first_touch_date ? format(new Date(student.first_touch_date), 'MMMM dd, yyyy') : 'Not Provided'}</div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Conversion Path Summary</div>
                     <div className="bg-gradient-to-br from-gray-50 to-gray-50/50 rounded-xl p-4 space-y-2.5 border border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>
-                        <span className="text-sm text-gray-700">Organic Search → Landing Page</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>
-                        <span className="text-sm text-gray-700">University Comparison Tool</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full shadow-sm"></div>
-                        <span className="text-sm text-gray-700">Signup Form → Converted</span>
+                      <div className="text-sm text-gray-700 leading-relaxed font-medium">
+                        {student?.conversion_path_summary || 'Not Provided'}
                       </div>
                     </div>
                   </div>
@@ -1664,10 +2338,10 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
           </div>
         )}
 
-        {/* TAB 3: SERVICES & LIFECYCLE */}
+        {/* TAB 3: SERVICES & LIFESTYLE */}
         {activeTab === 'services' && (
           <div className="space-y-6">
-            {/* UNIFIED: Journey Progress + Lifecycle Status - Single Combined Section */}
+            {/* UNIFIED: Journey Progress + Lifestyle Status - Single Combined Section */}
             <div className="group relative bg-gradient-to-br from-white to-gray-50/30 rounded-xl p-6 shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100/50 overflow-hidden">
               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-gray-100/40 to-transparent rounded-bl-full"></div>
 
@@ -1679,7 +2353,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                   </div>
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Student Journey Progress</h3>
                 </div>
-                <p className="text-xs text-gray-500 ml-9">Live mission control view of lifecycle stages</p>
+                <p className="text-xs text-gray-500 ml-9">Live mission control view of lifestyle stages</p>
               </div>
 
               <div className="relative mb-6">
@@ -1939,26 +2613,16 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-600">Jan 20, 2024</div>
                           <div className="col-span-2 text-sm text-gray-600">Jan 28, 2024</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[1] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "University Selection Consultation",
-                                    description: "Best-fit university identification",
-                                    status: pausedServices[1]?.isPaused ? "On Hold" : "Completed",
-                                    category: "Planning & Application",
-                                    assignedTo: "Sarah Johnson",
-                                    startedOn: "Jan 20, 2024",
-                                    lastUpdate: "Jan 28, 2024",
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              1,
+                              "University Selection Consultation",
+                              "Best-fit university identification",
+                              pausedServices[1]?.isPaused ? "On Hold" : "Completed",
+                              "Planning & Application",
+                              "Sarah Johnson",
+                              "Jan 20, 2024",
+                              "Jan 28, 2024"
+                            )}
                           </div>
                         </div>
                       )}
@@ -1994,26 +2658,16 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-600">Jan 16, 2024</div>
                           <div className="col-span-2 text-sm text-gray-600">Jan 18, 2024</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[2] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Profile Evaluation",
-                                    description: "Academic & professional assessment",
-                                    status: pausedServices[2]?.isPaused ? "On Hold" : "Completed",
-                                    category: "Planning & Application",
-                                    assignedTo: "Sarah Johnson",
-                                    startedOn: "Jan 16, 2024",
-                                    lastUpdate: "Jan 18, 2024",
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              2,
+                              "Profile Evaluation",
+                              "Academic & professional assessment",
+                              pausedServices[2]?.isPaused ? "On Hold" : "Completed",
+                              "Planning & Application",
+                              "Sarah Johnson",
+                              "Jan 16, 2024",
+                              "Jan 18, 2024"
+                            )}
                           </div>
                         </div>
                       )}
@@ -2049,26 +2703,16 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-600">Feb 1, 2024</div>
                           <div className="col-span-2 text-sm text-amber-600 font-medium">2 hours ago</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[3] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Eligibility & Readiness Check",
-                                    description: "Qualification verification",
-                                    status: pausedServices[3]?.isPaused ? "On Hold" : "In Progress",
-                                    category: "Planning & Application",
-                                    assignedTo: "Lisa Taylor",
-                                    startedOn: "Feb 1, 2024",
-                                    lastUpdate: "2 hours ago",
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              3,
+                              "Eligibility & Readiness Check",
+                              "Qualification verification",
+                              pausedServices[3]?.isPaused ? "On Hold" : "In Progress",
+                              "Planning & Application",
+                              "Lisa Taylor",
+                              "Feb 1, 2024",
+                              "2 hours ago"
+                            )}
                           </div>
                         </div>
                       )}
@@ -2098,23 +2742,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[4] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Career Outcome Insights",
-                                    description: "Post-graduation employment trends",
-                                    status: pausedServices[4]?.isPaused ? "On Hold" : "Not Started",
-                                    category: "Planning & Application",
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              4,
+                              "Career Outcome Insights",
+                              "Post-graduation employment trends",
+                              pausedServices[4]?.isPaused ? "On Hold" : "Not Started",
+                              "Planning & Application"
+                            )}
                           </div>
                         </div>
                       )}
@@ -2144,23 +2778,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[5] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "University Shortlisting",
-                                    description: "Final target selection",
-                                    status: pausedServices[5]?.isPaused ? "On Hold" : "Not Started",
-                                    category: "Planning & Application",
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              5,
+                              "University Shortlisting",
+                              "Final target selection",
+                              pausedServices[5]?.isPaused ? "On Hold" : "Not Started",
+                              "Planning & Application"
+                            )}
                           </div>
                         </div>
                       )}
@@ -2190,26 +2814,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[6] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Application Strategy",
-                                    description: "Timeline & approach planning",
-                                    status: "Not Started",
-                                    category: "Planning & Application",
-                                    assignedTo: null,
-                                    startedOn: null,
-                                    lastUpdate: null,
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              6,
+                              "Application Strategy",
+                              "Timeline & approach planning",
+                              pausedServices[6]?.isPaused ? "On Hold" : "Not Started",
+                              "Planning & Application"
+                            )}
                           </div>
                         </div>
                       )}
@@ -2245,26 +2856,16 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-600">Feb 5, 2024</div>
                           <div className="col-span-2 text-sm text-amber-600 font-medium">3 days ago</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[7] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "SOP Review & Editing",
-                                    description: "Statement of purpose refinement",
-                                    status: "In Progress",
-                                    category: "Planning & Application",
-                                    assignedTo: "Mike Davis",
-                                    startedOn: "Feb 5, 2024",
-                                    lastUpdate: "3 days ago",
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              7,
+                              "SOP Review & Editing",
+                              "Statement of purpose refinement",
+                              pausedServices[7]?.isPaused ? "On Hold" : "In Progress",
+                              "Planning & Application",
+                              "Mike Davis",
+                              "Feb 5, 2024",
+                              "3 days ago"
+                            )}
                           </div>
                         </div>
                       )}
@@ -2294,26 +2895,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[8] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "LOR Coordination",
-                                    description: "Recommendation letter management",
-                                    status: "Not Started",
-                                    category: "Planning & Application",
-                                    assignedTo: null,
-                                    startedOn: null,
-                                    lastUpdate: null,
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              8,
+                              "LOR Coordination",
+                              "Recommendation letter management",
+                              pausedServices[8]?.isPaused ? "On Hold" : "Not Started",
+                              "Planning & Application"
+                            )}
                           </div>
                         </div>
                       )}
@@ -2343,26 +2931,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-2 text-sm text-gray-400">—</div>
                           <div className="col-span-1 text-center relative">
-                            <button
-                              ref={(el) => (serviceActionRefs.current[9] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Application Submission Support",
-                                    description: "Final review & submission",
-                                    status: "Not Started",
-                                    category: "Planning & Application",
-                                    assignedTo: null,
-                                    startedOn: null,
-                                    lastUpdate: null,
-                                  },
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              9,
+                              "Application Submission Support",
+                              "Final review & submission",
+                              pausedServices[9]?.isPaused ? "On Hold" : "Not Started",
+                              "Planning & Application"
+                            )}
                           </div>
                         </div>
                       )}
@@ -2440,22 +3015,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                             <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold border border-gray-200">Not Started</span>
-                            <button
-                              ref={(el) => (serviceActionRefs.current[10] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Offer Review & Decision",
-                                    status: "Not Started",
-                                    description: "Analysis and guidance on acceptance decisions"
-                                  }
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              10,
+                              "Offer Review & Decision Support",
+                              "Analysis and guidance on acceptance decisions",
+                              pausedServices[10]?.isPaused ? "On Hold" : "Not Started",
+                              "Offer & Decision"
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-6 text-xs">
@@ -2546,22 +3112,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                             <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold border border-gray-200">Not Started</span>
-                            <button
-                              ref={(el) => (serviceActionRefs.current[11] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Visa Application Assistance",
-                                    status: "Not Started",
-                                    description: "Complete support for student visa application process"
-                                  }
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              11,
+                              "Visa Application Assistance",
+                              "Complete support for student visa application process",
+                              pausedServices[11]?.isPaused ? "On Hold" : "Not Started",
+                              "Visa & Compliance"
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-6 text-xs">
@@ -2595,22 +3152,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                             <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold border border-gray-200">Not Started</span>
-                            <button
-                              ref={(el) => (serviceActionRefs.current[12] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Compliance Renewals",
-                                    status: "Not Started",
-                                    description: "Ongoing visa compliance and renewal support"
-                                  }
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              12,
+                              "Compliance & Renewals",
+                              "Ongoing visa compliance and renewal support",
+                              pausedServices[12]?.isPaused ? "On Hold" : "Not Started",
+                              "Visa & Compliance"
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-6 text-xs">
@@ -2701,22 +3249,13 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0 ml-4">
                             <span className="px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold border border-gray-200">Not Started</span>
-                            <button
-                              ref={(el) => (serviceActionRefs.current[13] = el)}
-                              onClick={() => {
-                                setServiceDetailModal({
-                                  isOpen: true,
-                                  service: {
-                                    name: "Pre-Departure Support",
-                                    status: "Not Started",
-                                    description: "Orientation and preparation for international travel and settling in"
-                                  }
-                                });
-                              }}
-                              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreVertical size={16} className="text-gray-400" />
-                            </button>
+                            {renderServiceActions(
+                              13,
+                              "Pre-Departure Support",
+                              "Orientation and preparation for international travel and settling in",
+                              pausedServices[13]?.isPaused ? "On Hold" : "Not Started",
+                              "Arrival & Life Setup"
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-6 text-xs">
@@ -4899,250 +5438,294 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
         )}
       </div>
 
-      {/* Add Application Modal */}
       <Dialog open={showAddApplicationModal} onOpenChange={setShowAddApplicationModal}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Add Application</DialogTitle>
-            <DialogDescription>
-              Add a new university application for this student
-            </DialogDescription>
-          </DialogHeader>
-          <div className="overflow-y-auto custom-scrollbar-light max-h-[calc(90vh-200px)]">
-            <div className="grid grid-cols-2 gap-6 py-4">
-              {/* Left Column */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    University <span className="text-red-500">*</span>
-                  </label>
-                  <CustomSelect
-                    placeholder="Select University"
-                    value={newAppFormData.university}
-                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, university: val }))}
-                    options={[
-                      { value: "", label: "Select University" },
-                      { value: "toronto", label: "University of Toronto" },
-                      { value: "harvard", label: "Harvard University" },
-                      { value: "stanford", label: "Stanford University" },
-                      { value: "mit", label: "MIT" },
-                      { value: "oxford", label: "Oxford University" }
-                    ]}
-                  />
+        <DialogContent className="sm:max-w-5xl w-full max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white hover:border-purple-500/20 transition-all border-none shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[32px]">
+          {/* Elegant Header */}
+          <div className="bg-[#0e042f] px-8 py-5 text-white relative flex items-center justify-between">
+            <div className="relative z-10">
+              <div className="flex items-center gap-5 mb-1">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 via-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg shadow-purple-500/30 ring-4 ring-white/10">
+                  <Plus className="text-white" size={24} strokeWidth={2.5} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Country <span className="text-red-500">*</span>
-                  </label>
-                  <CustomSelect
-                    placeholder="Select Country"
-                    value={newAppFormData.country}
-                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, country: val }))}
-                    options={[
-                      { value: "", label: "Select Country" },
-                      { value: "canada", label: "Canada" },
-                      { value: "usa", label: "United States" },
-                      { value: "uk", label: "United Kingdom" },
-                      { value: "australia", label: "Australia" },
-                      { value: "germany", label: "Germany" }
-                    ]}
-                  />
+                  <DialogTitle className="text-2xl font-black tracking-tight mb-0.5">New Application</DialogTitle>
+                  <p className="text-purple-200/40 text-sm font-bold tracking-widest uppercase">Drafting application for {student ? `${student.first_name} ${student.last_name}` : 'the student'}</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Course <span className="text-red-500">*</span>
-                  </label>
-                  <CustomSelect
-                    placeholder="Select Course"
-                    value={newAppFormData.course}
-                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, course: val }))}
-                    options={[
-                      { value: "", label: "Select Course" },
-                      { value: "cs", label: "Computer Science" },
-                      { value: "business", label: "Business Administration" },
-                      { value: "mech-eng", label: "Mechanical Engineering" },
-                      { value: "data-science", label: "Data Science" },
-                      { value: "medicine", label: "Medicine" }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Intake <span className="text-red-500">*</span>
-                  </label>
-                  <CustomSelect
-                    placeholder="Select Intake"
-                    value={newAppFormData.intake}
-                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, intake: val }))}
-                    options={[
-                      { value: "", label: "Select Intake" },
-                      { value: "fall-2025", label: "Fall 2025" },
-                      { value: "spring-2026", label: "Spring 2026" },
-                      { value: "summer-2026", label: "Summer 2026" },
-                      { value: "fall-2026", label: "Fall 2026" }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Previous Education
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., Bachelor of Engineering"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    GPA / Marks
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., 3.8/4.0 or 85%"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Test Scores
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., IELTS 7.5, GRE 320"
-                  />
-                </div>
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Application Status <span className="text-red-500">*</span>
-                  </label>
-                  <CustomSelect
-                    placeholder="Select Status"
-                    value={newAppFormData.status}
-                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, status: val }))}
-                    options={[
-                      { value: "", label: "Select Status" },
-                      { value: "draft", label: "Draft" },
-                      { value: "submitted", label: "Submitted" },
-                      { value: "accepted", label: "Accepted" },
-                      { value: "rejected", label: "Rejected" }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Offer Status <span className="text-red-500">*</span>
-                  </label>
-                  <CustomSelect
-                    placeholder="Select Status"
-                    value={newAppFormData.offerStatus}
-                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, offerStatus: val }))}
-                    options={[
-                      { value: "", label: "Select Status" },
-                      { value: "na", label: "N/A" },
-                      { value: "pending", label: "Pending" },
-                      { value: "received", label: "Offer Received" },
-                      { value: "accepted", label: "Offer Accepted" }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assigned Counselor <span className="text-red-500">*</span>
-                  </label>
-                  <CustomSelect
-                    placeholder="Select Counselor"
-                    value={newAppFormData.counselor}
-                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, counselor: val }))}
-                    options={[
-                      { value: "", label: "Select Counselor" },
-                      { value: "sarah", label: "Sarah Johnson" },
-                      { value: "mike", label: "Mike Davis" },
-                      { value: "emma", label: "Emma Wilson" },
-                      { value: "james", label: "James Chen" }
-                    ]}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Backlogs
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., None or 2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Program
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., Master of Science"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Specialization
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    placeholder="e.g., Artificial Intelligence"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Application Type
-                  </label>
-                  <CustomSelect
-                    placeholder="Select Type"
-                    value={newAppFormData.type}
-                    onChange={(val) => setNewAppFormData(prev => ({ ...prev, type: val }))}
-                    options={[
-                      { value: "Regular", label: "Regular" },
-                      { value: "Early Decision", label: "Early Decision" },
-                      { value: "Rolling", label: "Rolling" }
-                    ]}
-                  />
-                </div>
-              </div>
-
-              {/* Full Width Notes */}
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notes
-                </label>
-                <textarea
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
-                  rows={4}
-                  placeholder="Add any additional notes..."
-                />
               </div>
             </div>
+            <div className="w-40 h-40 bg-purple-500/20 rounded-full blur-[80px] absolute -right-10 -top-10 animate-pulse"></div>
           </div>
-          <DialogFooter>
+
+          <div className="p-7 flex-1 overflow-y-auto custom-scrollbar-light space-y-6 bg-[#fbfbfc]">
+            {/* Grid Layout for Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              
+              {/* Card 1: Primary Details */}
+              <div className="bg-white rounded-[1.5rem] p-7 shadow-[0_2px_20px_rgba(0,0,0,0.02)] border border-gray-100/50 hover:shadow-[0_10px_40px_rgba(0,0,0,0.05)] transition-all duration-500 group">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-[#0e042f] group-hover:text-white transition-all duration-300 shadow-inner">
+                    <Building size={20} />
+                  </div>
+                  <h3 className="font-extrabold text-[#0e042f] text-lg tracking-tight">Primary Details</h3>
+                </div>
+                
+                <div className="space-y-8">
+                  <div className="space-y-2.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Target University <span className="text-indigo-500">*</span></label>
+                    <div className="relative">
+                      <CustomSelect
+                        placeholder="Search and Select University"
+                        value={newAppFormData.university}
+                        onChange={(val) => setNewAppFormData(prev => ({ ...prev, university: val }))}
+                        options={[
+                          { value: "university-of-toronto", label: "University of Toronto" },
+                          { value: "mcgill-university", label: "McGill University" },
+                          { value: "university-of-british-columbia", label: "University of British Columbia" },
+                          { value: "harvard-university", label: "Harvard University" },
+                          { value: "stanford-university", label: "Stanford University" },
+                          { value: "mit", label: "MIT" },
+                          { value: "oxford-university", label: "University of Oxford" },
+                          { value: "cambridge-university", label: "University of Cambridge" }
+                        ]}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Country <span className="text-indigo-500">*</span></label>
+                      <CustomSelect
+                        placeholder="Country"
+                        value={newAppFormData.country}
+                        onChange={(val) => setNewAppFormData(prev => ({ ...prev, country: val }))}
+                        options={[
+                          { value: "Canada", label: "Canada" },
+                          { value: "USA", label: "United States" },
+                          { value: "UK", label: "United Kingdom" },
+                          { value: "Australia", label: "Australia" },
+                          { value: "Germany", label: "Germany" },
+                          { value: "Ireland", label: "Ireland" }
+                        ]}
+                      />
+                    </div>
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Intake Term <span className="text-indigo-500">*</span></label>
+                      <CustomSelect
+                        placeholder="Intake"
+                        value={newAppFormData.intake}
+                        onChange={(val) => setNewAppFormData(prev => ({ ...prev, intake: val }))}
+                        options={[
+                          { value: "Fall 2025", label: "Fall 2025" },
+                          { value: "Spring 2026", label: "Spring 2026" },
+                          { value: "Summer 2026", label: "Summer 2026" },
+                          { value: "Fall 2026", label: "Fall 2026" }
+                        ]}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Course / Major <span className="text-indigo-500">*</span></label>
+                    <div className="relative group/input">
+                      <BookOpen className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/input:text-purple-600 transition-colors" size={18} />
+                      <input
+                        type="text"
+                        value={newAppFormData.course}
+                        onChange={(e) => setNewAppFormData(prev => ({ ...prev, course: e.target.value }))}
+                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-[6px] focus:ring-purple-500/5 focus:border-purple-500/50 transition-all text-sm font-bold text-[#0e042f] placeholder:text-slate-300"
+                        placeholder="e.g. M.S. in Computer Science"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Academic Benchmarks */}
+              <div className="bg-white rounded-[1.5rem] p-7 shadow-[0_2px_20px_rgba(0,0,0,0.02)] border border-gray-100/50 hover:shadow-[0_10px_40px_rgba(0,0,0,0.05)] transition-all duration-500 group">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300 shadow-inner">
+                    <Trophy size={20} />
+                  </div>
+                  <h3 className="font-extrabold text-[#0e042f] text-lg tracking-tight">Academic Benchmarks</h3>
+                </div>
+
+                <div className="space-y-8">
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">GPA / Score</label>
+                      <div className="relative group/input">
+                        <BarChart3 className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/input:text-emerald-500 transition-colors" size={18} />
+                        <input
+                          type="text"
+                          value={newAppFormData.gpa}
+                          onChange={(e) => setNewAppFormData(prev => ({ ...prev, gpa: e.target.value }))}
+                          className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-[6px] focus:ring-emerald-500/5 focus:border-emerald-500/50 transition-all text-sm font-bold text-[#0e042f] placeholder:text-slate-300"
+                          placeholder="e.g. 3.8/4.0"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Backlogs</label>
+                      <div className="relative group/input">
+                        <AlertCircle className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/input:text-rose-500 transition-colors" size={18} />
+                        <input
+                          type="text"
+                          value={newAppFormData.backlogs}
+                          onChange={(e) => setNewAppFormData(prev => ({ ...prev, backlogs: e.target.value }))}
+                          className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-[6px] focus:ring-rose-500/5 focus:border-rose-500/50 transition-all text-sm font-bold text-[#0e042f] placeholder:text-slate-300"
+                          placeholder="None or count"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Test Scores</label>
+                    <div className="relative group/input">
+                      <Target className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/input:text-emerald-500 transition-colors" size={18} />
+                      <input
+                        type="text"
+                        value={newAppFormData.testScores}
+                        onChange={(e) => setNewAppFormData(prev => ({ ...prev, testScores: e.target.value }))}
+                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-[6px] focus:ring-emerald-500/5 focus:border-emerald-500/50 transition-all text-sm font-bold text-[#0e042f] placeholder:text-slate-300"
+                        placeholder="IELTS 7.5, GRE 320..."
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Program Level</label>
+                      <input
+                        type="text"
+                        value={newAppFormData.program}
+                        onChange={(e) => setNewAppFormData(prev => ({ ...prev, program: e.target.value }))}
+                        className="w-full px-6 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-[6px] focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-sm font-bold text-[#0e042f] placeholder:text-slate-300"
+                        placeholder="e.g. Master's"
+                      />
+                    </div>
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Specialization</label>
+                      <input
+                        type="text"
+                        value={newAppFormData.specialization}
+                        onChange={(e) => setNewAppFormData(prev => ({ ...prev, specialization: e.target.value }))}
+                        className="w-full px-6 py-4 bg-slate-50/50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-[6px] focus:ring-blue-500/5 focus:border-blue-500/50 transition-all text-sm font-bold text-[#0e042f] placeholder:text-slate-300"
+                        placeholder="e.g. AI/ML"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Application Strategy & Status (Full Width) */}
+              <div className="lg:col-span-2 bg-white rounded-[1.5rem] p-7 shadow-[0_2px_20px_rgba(0,0,0,0.02)] border border-gray-100/50 hover:shadow-[0_10px_40px_rgba(0,0,0,0.05)] transition-all duration-500">
+                <div className="flex flex-col gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-inner">
+                      <Zap size={20} />
+                    </div>
+                    <h3 className="font-extrabold text-[#0e042f] text-lg tracking-tight">Strategy & Assignment</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Application Type</label>
+                      <SegmentedControl
+                        options={[
+                          { value: "Regular", label: "Regular" },
+                          { value: "Early", label: "Early" },
+                          { value: "Rolling", label: "Rolling" }
+                        ]}
+                        defaultValue={newAppFormData.type}
+                        onChange={(val) => setNewAppFormData(prev => ({ ...prev, type: val }))}
+                        name="appType"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Application Status <span className="text-indigo-500">*</span></label>
+                      <CustomSelect
+                        placeholder="Select Status"
+                        value={newAppFormData.status}
+                        onChange={(val) => setNewAppFormData(prev => ({ ...prev, status: val }))}
+                        options={[
+                          { value: "draft", label: "Draft" },
+                          { value: "submitted", label: "Submitted" },
+                          { value: "under-review", label: "Under Review" },
+                          { value: "accepted", label: "Accepted" },
+                          { value: "rejected", label: "Rejected" },
+                          { value: "waitlisted", label: "Waitlisted" }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Offer Status <span className="text-indigo-500">*</span></label>
+                      <CustomSelect
+                        placeholder="Offer Status"
+                        value={newAppFormData.offerStatus}
+                        onChange={(val) => setNewAppFormData(prev => ({ ...prev, offerStatus: val }))}
+                        options={[
+                          { value: "na", label: "N/A" },
+                          { value: "pending", label: "Pending" },
+                          { value: "received", label: "Offer Received" },
+                          { value: "conditional", label: "Conditional Offer" },
+                          { value: "accepted", label: "Offer Accepted" }
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-2.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-1">Assigned Counselor <span className="text-indigo-500">*</span></label>
+                      <CustomSelect
+                        placeholder="Select Assigned Expert"
+                        value={newAppFormData.counselor}
+                        onChange={(val) => setNewAppFormData(prev => ({ ...prev, counselor: val }))}
+                        options={[
+                          { value: "Sarah Johnson", label: "Sarah Johnson (Senior Expert)" },
+                          { value: "Mike Davis", label: "Mike Davis (Visa Specialist)" },
+                          { value: "Emma Wilson", label: "Emma Wilson (Academic Lead)" },
+                          { value: "James Chen", label: "James Chen (Global Counsel)" }
+                        ]}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: Additional Insights (Full Width) */}
+              <div className="lg:col-span-2 bg-slate-50/50 rounded-[1.5rem] p-7 border border-slate-100 shadow-inner">
+                <div className="flex items-center gap-3 mb-6">
+                  <StickyNote size={20} className="text-[#0e042f]" />
+                  <h3 className="font-extrabold text-[#0e042f] text-lg tracking-tight">Internal Notes & Context</h3>
+                </div>
+                <textarea
+                  value={newAppFormData.notes}
+                  onChange={(e) => setNewAppFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  className="w-full px-6 py-5 bg-white border border-slate-100 rounded-2xl focus:outline-none focus:ring-[6px] focus:ring-purple-500/5 focus:border-purple-500/50 transition-all text-sm font-bold text-[#0e042f] placeholder:text-slate-300 resize-none shadow-sm"
+                  rows={4}
+                  placeholder="Share any specific student background, internal goals, or next steps for the admissions team..."
+                />
+              </div>
+
+            </div>
+          </div>
+
+          {/* Unified Footer */}
+          <DialogFooter className="px-8 py-6 bg-slate-50 border-t border-slate-100 flex items-center justify-between sm:justify-between rounded-b-[32px]">
             <button
               onClick={() => setShowAddApplicationModal(false)}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              className="px-10 py-4 text-sm font-black text-slate-400 bg-white border border-slate-200 rounded-2xl hover:bg-slate-50 hover:text-slate-600 transition-all shadow-sm active:scale-95"
             >
-              Cancel
+              Discard Changes
             </button>
             <button
-              onClick={() => {
-                // Handle save logic here
-                setShowAddApplicationModal(false);
-              }}
-              className="px-4 py-2 bg-[#0e042f] text-white rounded-lg hover:bg-[#1a0a4a] transition-colors"
+              onClick={handleSaveApplication}
+              className="px-10 py-4 text-sm font-black text-white bg-[#0e042f] rounded-2xl hover:shadow-[0_20px_40px_rgba(14,4,47,0.4)] hover:-translate-y-1 transition-all active:scale-95 flex items-center gap-4 group"
             >
-              Save Application
+              <CheckCircle size={22} strokeWidth={3} className="group-hover:rotate-12 transition-transform" />
+              Confirm & Save Record
             </button>
           </DialogFooter>
         </DialogContent>
@@ -5250,27 +5833,7 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
         </DialogContent>
       </Dialog>
 
-      {/* Edit Student Drawer */}
-      <EditStudentDrawer
-        isOpen={showEditDrawer}
-        onClose={() => setShowEditDrawer(false)}
-        student={student}
-        onSave={(updatedStudent: any) => {
-          setStudent(updatedStudent);
-          // Update derived status if it&apos;s based on account_status
-          setStudentStatus(updatedStudent.account_status ? 'Active' : 'Inactive');
-
-          // Create activity record
-          if (studentId) {
-            createActivity({
-              student_db_id: studentId,
-              title: 'Student Profile Edited',
-              content: 'Updated student profile information via Edit Student Drawer.',
-              type: 'Profile'
-            }).catch(err => console.error('Failed to create edit activity', err));
-          }
-        }}
-      />
+      {/* Removed EditStudentDrawer component */}
 
       {/* Service Details Drawer */}
       <ServiceDetailsDrawer
@@ -5418,13 +5981,8 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
         isOpen={serviceDetailModal.isOpen}
         onClose={() => setServiceDetailModal({ isOpen: false, service: null })}
         service={serviceDetailModal.service || {}}
-        studentName="Michael Chen"
-        onSave={(data) => {
-          console.log('Service data saved:', data);
-          setToastMessage('Service details updated successfully.');
-          setShowToast(true);
-          setTimeout(() => setShowToast(false), 3000);
-        }}
+        studentName={student ? `${student.first_name} ${student.last_name}` : 'Student'}
+        onSave={serviceDetailModal.onSave}
       />
 
       {/* Application Detail Modal */}

@@ -23,6 +23,7 @@ interface CountryFormProps {
     initialData?: CountryFormData;
     countryId?: string;
     isEdit?: boolean;
+    initialTab?: string;
     onSuccess?: () => void;
     onCancel?: () => void;
 }
@@ -31,12 +32,13 @@ export const CountryForm: React.FC<CountryFormProps> = ({
     initialData,
     countryId,
     isEdit = false,
+    initialTab = 'basic-info',
     onSuccess,
     onCancel
 }) => {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('basic-info');
+    const [activeTab, setActiveTab] = useState(initialTab);
     
     const [formData, setFormData] = useState<CountryFormData>(initialData || {
         country_name: '',

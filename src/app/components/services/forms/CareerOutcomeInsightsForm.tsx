@@ -3,6 +3,7 @@ import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { CustomSelect } from '../../common/CustomSelect';
 
 interface CareerOutcomeInsightsFormProps {
   data: any;
@@ -59,11 +60,20 @@ export const CareerOutcomeInsightsForm: React.FC<CareerOutcomeInsightsFormProps>
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Post-study work country
         </p>
-        <Input
-          id="career-country-preference"
-          placeholder="e.g., USA, Canada, Home Country"
+        <CustomSelect
           value={data.careerCountryPreference || ''}
-          onChange={(e) => updateField('careerCountryPreference', e.target.value)}
+          onChange={(value) => updateField('careerCountryPreference', value)}
+          options={[
+            { value: 'usa', label: 'USA' },
+            { value: 'canada', label: 'Canada' },
+            { value: 'uk', label: 'United Kingdom' },
+            { value: 'australia', label: 'Australia' },
+            { value: 'germany', label: 'Germany' },
+            { value: 'france', label: 'France' },
+            { value: 'home-country', label: 'Home Country' },
+            { value: 'other', label: 'Other' }
+          ]}
+          placeholder="Select country"
         />
       </div>
 
@@ -75,20 +85,17 @@ export const CareerOutcomeInsightsForm: React.FC<CareerOutcomeInsightsFormProps>
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Yes / No
         </p>
-        <Select
+        <CustomSelect
           value={data.jobMarketAwareness || ''}
-          onValueChange={(value) => updateField('jobMarketAwareness', value)}
-        >
-          <SelectTrigger id="job-market-awareness">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="High">High - Well-informed</SelectItem>
-            <SelectItem value="Moderate">Moderate - Some knowledge</SelectItem>
-            <SelectItem value="Low">Low - Limited awareness</SelectItem>
-            <SelectItem value="None">None - No awareness</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => updateField('jobMarketAwareness', value)}
+          options={[
+            { value: 'High', label: 'High - Well-informed' },
+            { value: 'Moderate', label: 'Moderate - Some knowledge' },
+            { value: 'Low', label: 'Low - Limited awareness' },
+            { value: 'None', label: 'None - No awareness' }
+          ]}
+          placeholder="Select option"
+        />
       </div>
 
       {/* Salary Expectations */}
@@ -115,21 +122,18 @@ export const CareerOutcomeInsightsForm: React.FC<CareerOutcomeInsightsFormProps>
         <p className="text-xs text-gray-500 mt-1 mb-2">
           Yes / No
         </p>
-        <Select
-          value={data.prInterest || ''}
-          onValueChange={(value) => updateField('prInterest', value)}
-        >
-          <SelectTrigger id="pr-interest">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes - High Priority">Yes - High Priority</SelectItem>
-            <SelectItem value="Yes - Interested">Yes - Interested</SelectItem>
-            <SelectItem value="Maybe">Maybe</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="Undecided">Undecided</SelectItem>
-          </SelectContent>
-        </Select>
+        <CustomSelect
+          value={data.stayBackInterest || ''}
+          onChange={(value) => updateField('stayBackInterest', value)}
+          options={[
+            { value: 'Yes - High Priority', label: 'Yes - High Priority' },
+            { value: 'Yes - Interested', label: 'Yes - Interested' },
+            { value: 'Maybe', label: 'Maybe' },
+            { value: 'No', label: 'No' },
+            { value: 'Undecided', label: 'Undecided' }
+          ]}
+          placeholder="Select option"
+        />
       </div>
 
       {/* Career Discussion Notes */}

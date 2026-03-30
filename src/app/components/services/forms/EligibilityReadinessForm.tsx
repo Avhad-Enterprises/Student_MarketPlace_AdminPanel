@@ -2,7 +2,8 @@ import React from 'react';
 import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Textarea } from '../../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { CustomSelect } from '../../common/CustomSelect';
+import { ClipboardCheck, Languages, Banknote, ShieldAlert, FileText } from 'lucide-react';
 
 interface EligibilityReadinessFormProps {
   data: any;
@@ -17,277 +18,212 @@ export const EligibilityReadinessForm: React.FC<EligibilityReadinessFormProps> =
     onChange({ ...data, [field]: value });
   };
 
+  const SectionHeader = ({ icon: Icon, title }: { icon: any, title: string }) => (
+    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
+      <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600">
+        <Icon size={18} />
+      </div>
+      <h3 className="text-lg font-bold text-[#253154] tracking-tight">{title}</h3>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Meets Course Prerequisites */}
-      <div>
-        <Label htmlFor="meets-prerequisites" className="text-sm font-medium text-gray-900">
-          Meets Course Prerequisites
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Yes / No
-        </p>
-        <Select
-          value={data.meetsPrerequisites || ''}
-          onValueChange={(value) => updateField('meetsPrerequisites', value)}
-        >
-          <SelectTrigger id="meets-prerequisites">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="Partially">Partially</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {/* A. Academic Readiness */}
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={ClipboardCheck} title="Academic Readiness" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Meets Course Prerequisites</Label>
+            <CustomSelect
+              value={data.meetsPrerequisites || ''}
+              onChange={(value) => updateField('meetsPrerequisites', value)}
+              options={[
+                { value: "Yes", label: "Yes" },
+                { value: "No", label: "No" },
+                { value: "Partially", label: "Partially" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
 
-      {/* Bridge Course Required */}
-      <div>
-        <Label htmlFor="bridge-course" className="text-sm font-medium text-gray-900">
-          Bridge Course Required
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Yes / No
-        </p>
-        <Select
-          value={data.bridgeCourse || ''}
-          onValueChange={(value) => updateField('bridgeCourse', value)}
-        >
-          <SelectTrigger id="bridge-course">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="Maybe">Maybe</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* English Test Required */}
-      <div>
-        <Label htmlFor="english-test-required" className="text-sm font-medium text-gray-900">
-          English Test Required
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Yes / No
-        </p>
-        <Select
-          value={data.englishTestRequired || ''}
-          onValueChange={(value) => updateField('englishTestRequired', value)}
-        >
-          <SelectTrigger id="english-test-required">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Test Type */}
-      {data.englishTestRequired === 'Yes' && (
-        <div>
-          <Label htmlFor="test-type" className="text-sm font-medium text-gray-900">
-            Test Type
-          </Label>
-          <p className="text-xs text-gray-500 mt-1 mb-2">
-            IELTS / TOEFL / PTE
-          </p>
-          <Select
-            value={data.testType || ''}
-            onValueChange={(value) => updateField('testType', value)}
-          >
-            <SelectTrigger id="test-type">
-              <SelectValue placeholder="Select test type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="IELTS">IELTS</SelectItem>
-              <SelectItem value="TOEFL">TOEFL</SelectItem>
-              <SelectItem value="PTE">PTE</SelectItem>
-              <SelectItem value="Duolingo">Duolingo</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Bridge Course Required</Label>
+            <CustomSelect
+              value={data.bridgeCourse || ''}
+              onChange={(value) => updateField('bridgeCourse', value)}
+              options={[
+                { value: "Yes", label: "Yes" },
+                { value: "No", label: "No" },
+                { value: "Maybe", label: "Maybe" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
         </div>
-      )}
+      </section>
 
-      {/* Test Status */}
-      {data.englishTestRequired === 'Yes' && (
-        <div>
-          <Label htmlFor="test-status" className="text-sm font-medium text-gray-900">
-            Test Status
-          </Label>
-          <p className="text-xs text-gray-500 mt-1 mb-2">
-            Not started / booked / completed
-          </p>
-          <Select
-            value={data.testStatus || ''}
-            onValueChange={(value) => updateField('testStatus', value)}
-          >
-            <SelectTrigger id="test-status">
-              <SelectValue placeholder="Select test status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Not Started">Not Started</SelectItem>
-              <SelectItem value="Preparing">Preparing</SelectItem>
-              <SelectItem value="Booked">Booked</SelectItem>
-              <SelectItem value="Completed">Completed</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* B. Language Proficiency */}
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={Languages} title="Language Proficiency" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">English Test Required</Label>
+            <CustomSelect
+              value={data.englishTestRequired || ''}
+              onChange={(value) => updateField('englishTestRequired', value)}
+              options={[
+                { value: "Yes", label: "Yes" },
+                { value: "No", label: "No" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
+
+          {data.englishTestRequired === 'Yes' && (
+            <>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Test Type</Label>
+                <CustomSelect
+                  value={data.testType || ''}
+                  onChange={(value) => updateField('testType', value)}
+                  options={[
+                    { value: "IELTS", label: "IELTS" },
+                    { value: "TOEFL", label: "TOEFL" },
+                    { value: "PTE", label: "PTE" },
+                    { value: "Duolingo", label: "Duolingo" }
+                  ]}
+                  placeholder="Select test type"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Test Status</Label>
+                <CustomSelect
+                  value={data.testStatus || ''}
+                  onChange={(value) => updateField('testStatus', value)}
+                  options={[
+                    { value: "Not Started", label: "Not Started" },
+                    { value: "Preparing", label: "Preparing" },
+                    { value: "Booked", label: "Booked" },
+                    { value: "Completed", label: "Completed" }
+                  ]}
+                  placeholder="Select test status"
+                />
+              </div>
+
+              {data.testStatus === 'Completed' && (
+                <div className="space-y-2 md:col-span-2 animate-in slide-in-from-top-2 duration-300">
+                  <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Score Available</Label>
+                  <CustomSelect
+                    value={data.scoreAvailable || ''}
+                    onChange={(value) => updateField('scoreAvailable', value)}
+                    options={[
+                      { value: "Yes", label: "Yes" },
+                      { value: "No", label: "No" }
+                    ]}
+                    placeholder="Select option"
+                  />
+                </div>
+              )}
+            </>
+          )}
         </div>
-      )}
+      </section>
 
-      {/* Score Available */}
-      {data.testStatus === 'Completed' && (
-        <div>
-          <Label htmlFor="score-available" className="text-sm font-medium text-gray-900">
-            Score Available
-          </Label>
-          <p className="text-xs text-gray-500 mt-1 mb-2">
-            Yes / No
-          </p>
-          <Select
-            value={data.scoreAvailable || ''}
-            onValueChange={(value) => updateField('scoreAvailable', value)}
-          >
-            <SelectTrigger id="score-available">
-              <SelectValue placeholder="Select option" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Yes">Yes</SelectItem>
-              <SelectItem value="No">No</SelectItem>
-            </SelectContent>
-          </Select>
+      {/* C. Financial Readiness */}
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={Banknote} title="Financial Readiness" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Proof of Funds Ready</Label>
+            <CustomSelect
+              value={data.proofOfFunds || ''}
+              onChange={(value) => updateField('proofOfFunds', value)}
+              options={[
+                { value: "Yes", label: "Yes" },
+                { value: "No", label: "No" },
+                { value: "In Progress", label: "In Progress" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sponsor Identified</Label>
+            <CustomSelect
+              value={data.sponsorIdentified || ''}
+              onChange={(value) => updateField('sponsorIdentified', value)}
+              options={[
+                { value: "Yes", label: "Yes" },
+                { value: "No", label: "No" },
+                { value: "Not Applicable", label: "Not Applicable" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
+
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Loan Required</Label>
+            <CustomSelect
+              value={data.loanRequired || ''}
+              onChange={(value) => updateField('loanRequired', value)}
+              options={[
+                { value: "Yes", label: "Yes" },
+                { value: "No", label: "No" },
+                { value: "Maybe", label: "Maybe" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
         </div>
-      )}
+      </section>
 
-      {/* Proof of Funds Ready */}
-      <div>
-        <Label htmlFor="proof-of-funds" className="text-sm font-medium text-gray-900">
-          Proof of Funds Ready
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Yes / No
-        </p>
-        <Select
-          value={data.proofOfFunds || ''}
-          onValueChange={(value) => updateField('proofOfFunds', value)}
-        >
-          <SelectTrigger id="proof-of-funds">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="In Progress">In Progress</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {/* D. Visa Risk & Compliance */}
+      <section className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm transition-all hover:shadow-md">
+        <SectionHeader icon={ShieldAlert} title="Visa Risk & Compliance" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Gap Explanation Required for Visa</Label>
+            <CustomSelect
+              value={data.gapExplanationVisa || ''}
+              onChange={(value) => updateField('gapExplanationVisa', value)}
+              options={[
+                { value: "Yes", label: "Yes" },
+                { value: "No", label: "No" },
+                { value: "Not Applicable", label: "Not Applicable" }
+              ]}
+              placeholder="Select option"
+            />
+          </div>
 
-      {/* Sponsor Identified */}
-      <div>
-        <Label htmlFor="sponsor-identified" className="text-sm font-medium text-gray-900">
-          Sponsor Identified
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Yes / No
-        </p>
-        <Select
-          value={data.sponsorIdentified || ''}
-          onValueChange={(value) => updateField('sponsorIdentified', value)}
-        >
-          <SelectTrigger id="sponsor-identified">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="Not Applicable">Not Applicable</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Country-specific Visa Risk Details</Label>
+            <Textarea
+              rows={3}
+              placeholder="Describe any visa-related concerns or specific country risks..."
+              value={data.visaRisk || ''}
+              onChange={(e) => updateField('visaRisk', e.target.value)}
+              className="bg-gray-50/50 border-gray-200 focus:bg-white focus:border-purple-300 transition-all"
+            />
+          </div>
+        </div>
+      </section>
 
-      {/* Loan Required */}
-      <div>
-        <Label htmlFor="loan-required" className="text-sm font-medium text-gray-900">
-          Loan Required
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Yes / No
-        </p>
-        <Select
-          value={data.loanRequired || ''}
-          onValueChange={(value) => updateField('loanRequired', value)}
-        >
-          <SelectTrigger id="loan-required">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="Maybe">Maybe</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Gap Explanation Required for Visa */}
-      <div>
-        <Label htmlFor="gap-explanation-visa" className="text-sm font-medium text-gray-900">
-          Gap Explanation Required for Visa
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Yes / No
-        </p>
-        <Select
-          value={data.gapExplanationVisa || ''}
-          onValueChange={(value) => updateField('gapExplanationVisa', value)}
-        >
-          <SelectTrigger id="gap-explanation-visa">
-            <SelectValue placeholder="Select option" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="Yes">Yes</SelectItem>
-            <SelectItem value="No">No</SelectItem>
-            <SelectItem value="Not Applicable">Not Applicable</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Country-specific Visa Risk */}
-      <div>
-        <Label htmlFor="visa-risk" className="text-sm font-medium text-gray-900">
-          Country-specific Visa Risk
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Details
-        </p>
-        <Textarea
-          id="visa-risk"
-          rows={3}
-          placeholder="Describe any visa-related concerns or risks..."
-          value={data.visaRisk || ''}
-          onChange={(e) => updateField('visaRisk', e.target.value)}
-        />
-      </div>
-
-      {/* Visa Notes */}
-      <div>
-        <Label htmlFor="visa-notes" className="text-sm font-medium text-gray-900">
-          Visa Notes
-        </Label>
-        <p className="text-xs text-gray-500 mt-1 mb-2">
-          Important points
-        </p>
-        <Textarea
-          id="visa-notes"
-          rows={4}
-          placeholder="Add important visa-related notes..."
-          value={data.visaNotes || ''}
-          onChange={(e) => updateField('visaNotes', e.target.value)}
-        />
-      </div>
+      {/* E. Additional Notes */}
+      <section className="bg-purple-50/30 p-6 rounded-2xl border border-purple-100/50 space-y-6">
+        <SectionHeader icon={FileText} title="Additional Notes" />
+        <div className="space-y-2">
+          <Label className="text-xs font-bold text-purple-700 uppercase tracking-wider">General Visa & Readiness Notes</Label>
+          <Textarea
+            rows={4}
+            placeholder="Add any other important readiness or eligibility considerations..."
+            value={data.visaNotes || ''}
+            onChange={(e) => updateField('visaNotes', e.target.value)}
+            className="bg-white border-purple-100 focus:border-purple-300 focus:ring-purple-200"
+          />
+        </div>
+      </section>
     </div>
   );
 };
