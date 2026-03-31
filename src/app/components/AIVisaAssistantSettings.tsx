@@ -26,7 +26,7 @@ interface Props {
     setSettings: React.Dispatch<React.SetStateAction<AiVisaSettings>>;
 }
 
-const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings }) => {
+export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings }) => {
     const handleChange = (field: keyof AiVisaSettings, value: any) => {
         setSettings((prev: AiVisaSettings) => ({ ...prev, [field]: value }));
     };
@@ -287,4 +287,4 @@ const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings }) => 
     );
 };
 
-export default AIVisaAssistantSettings;
+

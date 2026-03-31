@@ -70,7 +70,7 @@ import { comparisonRulesService, ComparisonRules } from '@/services/comparisonRu
 import { aiVisaSettingsService, AiVisaSettings } from '@/services/aiVisaSettingsService';
 import { authService } from '@/services/authService';
 import rbacService from '@/services/rbacService';
-import AIVisaAssistantSettings from './AIVisaAssistantSettings';
+import { AIVisaAssistantSettings } from './AIVisaAssistantSettings';
 import CommunicationsSettings from './CommunicationsSettings';
 import { communicationSettingsService, CommunicationSettings } from '@/services/communicationSettingsService';
 import { deliverySafetySettingsService, DeliverySafetySettings } from '@/services/deliverySafetySettingsService';
