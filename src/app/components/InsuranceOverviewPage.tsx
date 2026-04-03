@@ -18,7 +18,7 @@ import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
 import { CustomCheckbox, StatusBadge } from './service-marketplace/CommonUI';
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
-import { ImportDialog, ImportField } from './common/ImportDialog';
+import { ImportDialog, ImportField, ImportMode } from './common/ImportDialog';
 import { AddInsuranceDialog } from './common/AddInsuranceDialog';
 import { getAllInsurance, getInsuranceMetrics, createInsurance, updateInsurance, deleteInsurance, Insurance as InsuranceType } from '@/app/services/insuranceService';
 
@@ -342,7 +342,7 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
     }
   };
 
-  const handleImport = async (data: any[], mode: 'add' | 'update') => {
+  const handleImport = async (data: any[], mode: ImportMode) => {
     console.log('Importing data:', data, 'mode:', mode);
     let successCount = 0;
     let failCount = 0;
@@ -366,7 +366,7 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
           popularity: 0
         };
 
-        if (mode === 'update' && row.id) {
+        if ((mode === 'update' || mode === 'merge') && row.id) {
           await updateInsurance(row.id, payload);
         } else {
           await createInsurance(payload);
