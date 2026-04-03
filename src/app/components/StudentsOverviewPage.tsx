@@ -37,10 +37,12 @@ import {
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
+
+import { GlobalDateFilter } from './common/GlobalDateFilter';
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
@@ -458,8 +460,8 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
   });
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(2024, 0, 1),
-    to: new Date(2024, 11, 31),
+    from: subDays(new Date(), 30),
+    to: new Date(),
   });
 
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
@@ -903,29 +905,23 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
         {/* Header Section */}
         <div className="flex items-center justify-between mb-6">
           {/* Date Range Picker */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm">
-                <CalendarIcon size={18} className="text-[#253154]" />
-                <span className="text-sm text-[#253154] font-medium">
-                  {dateRange?.from && dateRange?.to
-                    ? `${format(dateRange.from, 'MMM dd, yyyy')} - ${format(dateRange.to, 'MMM dd, yyyy')}`
-                    : 'Select date range'}
-                </span>
-                <div className="h-4 w-px bg-gray-200 mx-1" />
-                <RefreshCw size={18} className="text-[#253154]" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-white" align="start">
-              <CalendarComponent
-                mode="range"
-                selected={dateRange}
-                onSelect={setDateRange}
-                numberOfMonths={2}
-                className="rounded-xl border-0"
-              />
-            </PopoverContent>
-          </Popover>
+          <div className="flex items-center gap-3">
+            <GlobalDateFilter
+              date={dateRange}
+              onDateChange={setDateRange}
+              className="w-full md:w-[300px]"
+            />
+            <button
+              onClick={() => {
+                fetchStudents();
+                fetchMetrics();
+                toast.success('Data refreshed');
+              }}
+              className="p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all hover:rotate-180 duration-500 shadow-sm"
+            >
+              <RefreshCw size={20} className="text-[#253154]" />
+            </button>
+          </div>
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
@@ -1236,8 +1232,16 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                   ))
                 ) : students.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
-                      No students found.
+                    <td colSpan={10} className="px-6 py-24 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center">
+                          <Users className="text-gray-300" size={24} />
+                        </div>
+                        <p className="text-gray-500 font-medium">No data available</p>
+                        <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                          There are no student records matching your current filters.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -1387,47 +1391,49 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50/50">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">Rows per page:</span>
-              <CustomSelect
-                value={rowsPerPage.toString()}
-                onChange={(value) => {
-                  setRowsPerPage(Number(value));
-                  setCurrentPage(1);
-                }}
-                options={[
-                  { value: '10', label: '10' },
-                  { value: '25', label: '25' },
-                  { value: '50', label: '50' },
-                  { value: '100', label: '100' },
-                ]}
-                className="w-20"
-              />
-            </div>
-
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {pagination.totalPages}
-              </span>
+          {students.length > 0 && (
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50/50">
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft size={20} className="text-[#253154]" />
-                </button>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
-                  disabled={currentPage === pagination.totalPages}
-                  className="p-2 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight size={20} className="text-[#253154]" />
-                </button>
+                <span className="text-sm text-gray-600">Rows per page:</span>
+                <CustomSelect
+                  value={rowsPerPage.toString()}
+                  onChange={(value) => {
+                    setRowsPerPage(Number(value));
+                    setCurrentPage(1);
+                  }}
+                  options={[
+                    { value: '10', label: '10' },
+                    { value: '25', label: '25' },
+                    { value: '50', label: '50' },
+                    { value: '100', label: '100' },
+                  ]}
+                  className="w-20"
+                />
+              </div>
+
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {pagination.totalPages}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="p-2 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft size={20} className="text-[#253154]" />
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                    disabled={currentPage === pagination.totalPages}
+                    className="p-2 rounded-lg hover:bg-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight size={20} className="text-[#253154]" />
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Mobile Card View */}
@@ -1455,25 +1461,27 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
           ))}
 
           {/* Mobile Pagination */}
-          <div className="flex items-center justify-between pt-4">
-            <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="px-4 py-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <span className="text-sm text-gray-600">
-              Page {currentPage} of {pagination.totalPages}
-            </span>
-            <button
-              onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
-              disabled={currentPage === pagination.totalPages}
-              className="px-4 py-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </div>
+          {students.length > 0 && (
+            <div className="flex items-center justify-between pt-4">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+                disabled={currentPage === pagination.totalPages}
+                className="px-4 py-2 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                <ChevronRight size={20} />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

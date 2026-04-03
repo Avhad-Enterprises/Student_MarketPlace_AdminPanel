@@ -34,13 +34,14 @@ import {
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { useRouter } from 'next/navigation';
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
 
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import {
@@ -306,8 +307,8 @@ export const ApplicationsOverviewPage: React.FC = () => {
   // State management
 
   const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(2024, 0, 1),
-    to: new Date(2024, 11, 31)
+    from: subDays(new Date(), 29),
+    to: new Date()
   });
   const [activeMobileMenu, setActiveMobileMenu] = useState<'none' | 'import' | 'search'>('none');
   const [selectedApplications, setSelectedApplications] = useState<string[]>([]);
@@ -888,104 +889,16 @@ export const ApplicationsOverviewPage: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
 
-        {/* Desktop Action Bar */}
-        <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          {/* Left: Date Picker */}
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                  <CalendarIcon size={20} className="text-[#253154]" />
-                  <span className="font-medium text-[#253154] text-[14px]">
-                    {date?.from && date?.to
-                      ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}`
-                      : 'Select date range'}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" />
-            <button
-              onClick={handleRefresh}
-              className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"
-            >
-              <RefreshCw size={20} className="text-[#253154]" />
-            </button>
-          </div>
-
-          {/* Right: Action Buttons */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Download size={20} strokeWidth={1.5} />
-              Export
-            </button>
-            <button
-              onClick={() => setShowImportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Upload size={20} strokeWidth={1.5} />
-              Import
-            </button>
-            <button
-              onClick={() => router.push('/students/applications/add')}
-              className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
-            >
-              <Plus size={20} strokeWidth={1.5} />
-              Add New
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Action Bar */}
-        <div className="flex md:hidden flex-col gap-4 mb-6">
-          {/* Date Range Pill */}
-          <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-            <div className="flex items-center gap-3">
-              <CalendarIcon size={18} className="text-[#253154]" />
-              <span className="text-sm font-medium text-[#253154]">
-                {date?.from && date?.to
-                  ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}`
-                  : 'Select range'}
-              </span>
-            </div>
-            <button
-              onClick={handleRefresh}
-              className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500"
-            >
-              <RefreshCw size={18} className="text-[#253154]" />
-            </button>
-          </div>
-
-          {/* Button Row */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => router.push('/students/applications/add')}
-              className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium"
-            >
-              <Plus size={20} />
-              Add New
-            </button>
-            <button
-              onClick={() => setActiveMobileMenu(activeMobileMenu === 'import' ? 'none' : 'import')}
-              className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center"
-            >
-              <MoreHorizontal size={22} className="text-[#253154]" />
-            </button>
-          </div>
-        </div>
+        <ServicePageHeader 
+          title="Applications" 
+          dateRange={date} 
+          onDateChange={setDate}
+          onRefresh={handleRefresh}
+          onExport={() => setShowExportDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+          onAdd={() => setShowAddDialog(true)}
+          addLabel="Add Application"
+        />
 
         {/* Metrics Section - Desktop Grid */}
         <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
@@ -1409,172 +1322,210 @@ export const ApplicationsOverviewPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {applications.map((application) => (
-                  <tr
-                    key={application.id}
-                    className={`hover:bg-gray-50 transition-colors group ${selectedApplications.includes(application.id) ? 'bg-purple-50/30' : ''}`}
-                  >
-                    <td className="px-6 py-4">
-                      <CustomCheckbox
-                        checked={selectedApplications.includes(application.id)}
-                        onChange={() => handleToggleApplication(application.id)}
-                      />
-                    </td>
-                    {visibleColumns.includes('id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{application.id}</td>}
-                    {visibleColumns.includes('student') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.studentName}</td>}
-                    {visibleColumns.includes('university') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.university}</td>}
-                    {visibleColumns.includes('country') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.country}</td>}
-                    {visibleColumns.includes('intake') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.intake}</td>}
-                    {visibleColumns.includes('status') && <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={application.status} /></td>}
-                    {visibleColumns.includes('counselor') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.counselor}</td>}
-                    {visibleColumns.includes('submission') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{application.submissionDate}</td>}
-                    {visibleColumns.includes('decision') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{application.decisionDate}</td>}
-                    {visibleColumns.includes('updated') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{application.lastUpdated}</td>}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end">
-                        <Popover open={activeMenuId === application.id} onOpenChange={(open) => setActiveMenuId(open ? application.id : null)}>
-                          <PopoverTrigger asChild>
-                            <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                              <MoreHorizontal size={18} className="text-gray-400" />
+                  {applications.length > 0 ? (
+                    applications.map(application => (
+                      <tr
+                        key={application.id}
+                        className={`hover:bg-gray-50 transition-colors cursor-pointer group ${selectedApplications.includes(application.id) ? 'bg-purple-50/30' : ''}`}
+                        onClick={() => handleViewApplication(application)}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <CustomCheckbox
+                            checked={selectedApplications.includes(application.id)}
+                            onChange={() => handleToggleApplication(application.id)}
+                          />
+                        </td>
+                        {visibleColumns.includes('id') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#253154] uppercase">{application.id}</td>
+                        )}
+                        {visibleColumns.includes('student') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#253154]">{application.studentName}</td>
+                        )}
+                        {visibleColumns.includes('university') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.university}</td>
+                        )}
+                        {visibleColumns.includes('country') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.country}</td>
+                        )}
+                        {visibleColumns.includes('intake') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.intake}</td>
+                        )}
+                        {visibleColumns.includes('status') && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <StatusBadge status={application.status} />
+                          </td>
+                        )}
+                        {visibleColumns.includes('counselor') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.counselor || '-'}</td>
+                        )}
+                        {visibleColumns.includes('submission') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.submissionDate}</td>
+                        )}
+                        {visibleColumns.includes('decision') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{application.decisionDate}</td>
+                        )}
+                        {visibleColumns.includes('updated') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium italic">{application.lastUpdated}</td>
+                        )}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => { e.stopPropagation(); }}>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleViewApplication(application); }}
+                              className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                              title="View Details"
+                            >
+                              <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
                             </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-48 p-2 bg-white rounded-xl shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200" align="end">
-                            <div className="space-y-1">
-                              <button
-                                onClick={() => { handleViewApplication(application); setActiveMenuId(null); }}
-                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                              >
-                                <Eye size={16} />
-                                <span>View Application</span>
-                              </button>
-                              <button
-                                onClick={() => { handleEditApplication(application); setActiveMenuId(null); }}
-                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                              >
-                                <Edit size={16} />
-                                <span>Edit Application</span>
-                              </button>
-                              <button
-                                onClick={() => { toast.info('Upload Documents is coming soon'); setActiveMenuId(null); }}
-                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                              >
-                                <FileUp size={16} />
-                                <span>Upload Documents</span>
-                              </button>
-                              <button
-                                onClick={() => { handleRowChangeStatus(application); setActiveMenuId(null); }}
-                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                              >
-                                <Edit size={16} />
-                                <span>Change Status</span>
-                              </button>
-                              <button
-                                onClick={() => { handleRowAssignCounselor(application); setActiveMenuId(null); }}
-                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                              >
-                                <UserCog size={16} />
-                                <span>Assign Counselor</span>
-                              </button>
-                              <button
-                                onClick={() => { handleViewTimeline(application); setActiveMenuId(null); }}
-                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                              >
-                                <Clock size={16} />
-                                <span>View Timeline</span>
-                              </button>
-                              <div className="h-px bg-gray-100 my-1" />
-                              <button
-                                onClick={() => { handleCloseApplication(application); setActiveMenuId(null); }}
-                                className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-red-50 flex items-center gap-2 text-red-600"
-                              >
-                                <XCircle size={16} />
-                                <span>Close Application</span>
-                              </button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleEditApplication(application); }}
+                              className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                              title="Edit"
+                            >
+                              <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleViewTimeline(application); }}
+                              className="p-2 hover:bg-amber-50 rounded-lg transition-colors group"
+                              title="Timeline"
+                            >
+                              <Clock size={18} className="text-gray-400 group-hover:text-amber-600" />
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleCloseApplication(application); }}
+                              className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                              title="Close Application"
+                            >
+                              <XCircle size={18} className="text-gray-400 group-hover:text-red-500" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={visibleColumns.length + 2} className="px-6 py-24 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                          <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                            <FileText size={24} className="text-gray-300" />
+                          </div>
+                          <p className="text-gray-500 font-medium">No data available</p>
+                          <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                            There are no applications matching your current filters.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
               </tbody>
             </table>
           </div>
 
           {/* Mobile Card View */}
           <div className="md:hidden flex flex-col gap-3 p-4">
-            {applications.map((application) => (
-              <MobileApplicationCard
-                key={application.id}
-                application={application}
-                isSelected={selectedApplications.includes(application.id)}
-                onToggleSelect={() => handleToggleApplication(application.id)}
-                onView={handleViewApplication}
-                onEdit={handleEditApplication}
-                onClose={handleCloseApplication}
-              />
-            ))}
+            {applications.length > 0 ? (
+              applications.map(application => (
+                <MobileApplicationCard
+                  key={application.id}
+                  application={application}
+                  isSelected={selectedApplications.includes(application.id)}
+                  onToggleSelect={() => handleToggleApplication(application.id)}
+                  onView={handleViewApplication}
+                  onEdit={handleEditApplication}
+                  onClose={handleCloseApplication}
+                />
+              ))
+            ) : (
+              <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center space-y-3">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                  <FileText size={24} className="text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">No data available</p>
+                <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                  There are no applications matching your current filters.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Pagination Bar */}
-          <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
-              <div className="relative">
-                <button
-                  onClick={() => setShowRowsMenu(!showRowsMenu)}
-                  className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700"
-                >
-                  {rowsPerPage}
-                  <ChevronDown size={14} className="text-gray-400" />
-                </button>
-                {showRowsMenu && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowRowsMenu(false)} />
-                    <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-100 z-20 p-1 animate-in slide-in-from-bottom-1 duration-200">
-                      {[5, 10, 25, 50].map(rows => (
-                        <button
-                          key={rows}
-                          onClick={() => {
-                            setRowsPerPage(rows);
-                            setPagination(prev => ({ ...prev, page: 1 }));
-                            setShowRowsMenu(false);
-                          }}
-                          className={`w-full px-3 py-1.5 text-xs font-medium rounded ${rowsPerPage === rows
-                            ? 'bg-purple-50 text-purple-700'
-                            : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                          {rows}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+          {applications.length > 0 && (
+            <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowRowsMenu(!showRowsMenu)}
+                    className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm flex items-center justify-center gap-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    {rowsPerPage}
+                    <ChevronDown size={14} className="text-gray-400" />
+                  </button>
+                  {showRowsMenu && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowRowsMenu(false)} />
+                      <div className="absolute bottom-full left-0 mb-2 bg-white rounded-xl shadow-xl border border-gray-100 z-20 p-1 w-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        {[10, 20, 50, 100].map((rows) => (
+                          <button
+                            key={rows}
+                            onClick={() => {
+                              setRowsPerPage(rows);
+                              setPagination(prev => ({ ...prev, page: 1 }));
+                              setShowRowsMenu(false);
+                            }}
+                            className={`w-full text-center py-2 rounded-lg text-sm transition-colors ${rowsPerPage === rows ? 'bg-purple-50 text-purple-700 font-bold' : 'hover:bg-gray-50 text-gray-600'}`}
+                          >
+                            {rows}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-gray-500 text-sm font-medium">
-                {(pagination.page - 1) * rowsPerPage + 1}-{Math.min(pagination.page * rowsPerPage, pagination.total)} of {pagination.total}
-              </span>
+
+              <div className="text-sm text-gray-500 font-medium">
+                Showing {applications.length > 0 ? (pagination.page - 1) * rowsPerPage + 1 : 0} to {Math.min(pagination.page * rowsPerPage, pagination.total)} of {pagination.total} records
+              </div>
+
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => handlePageChange(pagination.page - 1)}
                   disabled={pagination.page === 1}
-                  className={`w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm transition-colors flex items-center justify-center ${pagination.page === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 hover:border-gray-300'}`}
+                  className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
                 </button>
+                <div className="flex gap-1">
+                  {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                    let pageNum;
+                    if (pagination.totalPages <= 5) {
+                      pageNum = i + 1;
+                    } else {
+                      if (pagination.page <= 3) pageNum = i + 1;
+                      else if (pagination.page >= pagination.totalPages - 2) pageNum = pagination.totalPages - 4 + i;
+                      else pageNum = pagination.page - 2 + i;
+                    }
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-10 h-10 rounded-lg text-sm font-bold transition-all ${pagination.page === pageNum ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
                 <button
                   onClick={() => handlePageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.totalPages}
-                  className={`w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm transition-colors flex items-center justify-center ${pagination.page === pagination.totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50 hover:border-gray-300'}`}
+                  disabled={pagination.page === pagination.totalPages || pagination.total === 0}
+                  className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
                 </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

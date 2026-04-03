@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'https://smapi.test-zone.xyz/api/universities';
+import { API_BASE_URL } from "@/config/api";
+
+const API_URL = `${API_BASE_URL}/api/universities`;
 
 export interface University {
     id: string;

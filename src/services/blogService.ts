@@ -14,6 +14,8 @@ export interface Blog {
     status: 'draft' | 'published' | 'scheduled' | 'archived';
     visibility: 'public' | 'restricted';
     publish_date: string | null;
+    meta_title: string | null;
+    meta_description: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -27,6 +29,8 @@ export interface BlogFormData {
     status: string;
     visibility: string;
     publish_date?: string | null;
+    meta_title?: string | null;
+    meta_description?: string | null;
 }
 
 const getAuthHeader = () => {

@@ -11,34 +11,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel
 } from "@/app/components/ui/dropdown-menu";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
+import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
+import { CustomCheckbox, StatusBadge } from './service-marketplace/CommonUI';
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { buildCreditService, BuildCredit } from '../services/buildCreditService';
 import { AddBuildCreditDialog } from './common/AddBuildCreditDialog';
 
-interface CustomCheckboxProps { checked: boolean; partial?: boolean; onChange: () => void; }
-const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ checked, partial, onChange }) => (<div onClick={(e) => { e.stopPropagation(); onChange(); }} className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'}`}>{checked && <Check size={12} className="text-purple-600" strokeWidth={4} />}{partial && <div className="w-2.5 h-2.5 bg-purple-600 rounded-sm" />}</div>);
-
-const StatusBadge: React.FC<{ status: 'active' | 'inactive' | string }> = ({ status }) => {
-  const s = status.toLowerCase() === 'active' ? 'active' : 'inactive';
-  const config = { 'active': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', label: 'Active' }, 'inactive': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300', label: 'Inactive' } }[s];
-  return (<span className={`px-3 py-1 rounded-lg text-[12px] font-medium border border-opacity-20 inline-flex w-[100px] items-center justify-center ${config.bg} ${config.text} ${config.border}`}>{config.label}</span>);
-};
-
-const MetricCard: React.FC<{ title: string; value: string; icon: React.ElementType; bgClass: string; colorClass: string; tooltip: string }> = ({ title, value, icon: Icon, bgClass, colorClass, tooltip }) => (
-  <div className="bg-white p-5 rounded-2xl shadow-md flex flex-col justify-between min-w-[180px] h-[130px] relative overflow-hidden group hover:shadow-lg transition-all border border-gray-50/50">
-    <div className="flex items-center justify-between"><span className="text-[#253154] font-medium text-[15px]">{title}</span><TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><div className="w-4 h-4 rounded-full border border-current text-[10px] flex items-center justify-center cursor-help">i</div></TooltipTrigger><TooltipContent className="bg-[#0e042f] text-white rounded-xl text-xs px-3 py-2"><p>{tooltip}</p></TooltipContent></Tooltip></TooltipProvider></div>
-    <div className="flex items-end gap-3 mt-2"><div className={`w-10 h-10 rounded-xl ${bgClass} ${colorClass} flex items-center justify-center`}><Icon size={22} strokeWidth={1.5} /></div><div><p className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</p></div></div>
-    <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-500"><Icon size={80} /></div>
-  </div>
-);
+// --- Shared Components Extracted ---
 
 const MobileBuildCreditCard: React.FC<{
   item: BuildCredit;
@@ -99,7 +85,7 @@ const MobileBuildCreditCard: React.FC<{
 );
 
 export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => void }> = ({ onNavigate }) => {
-  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
   const [selected, setSelected] = useState<number[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['reference_id', 'provider_name', 'program_name', 'card_type', 'countries_supported', 'status', 'student_visible']);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -376,26 +362,22 @@ export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => 
   return (
     <TooltipProvider>
       <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
-        <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover><PopoverTrigger asChild><button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"><CalendarIcon size={20} className="text-[#253154]" /><span className="font-medium text-[#253154] text-[14px]">{date?.from ? `${format(date.from, 'MMM d')} - ${date.to ? format(date.to, 'MMM d') : ''}` : 'Select date range'}</span></button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CalendarComponent initialFocus mode="range" selected={date} onSelect={setDate} numberOfMonths={2} /></PopoverContent></Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" /><button onClick={fetchData} className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"><RefreshCw size={20} className="text-[#253154]" /></button>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Download size={20} />
-              Export
-            </button>
-            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Upload size={20} />Import</button>
-            <button onClick={() => { setEditItem(null); setShowAddDialog(true); }} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"><Plus size={20} />Add Program</button>
-          </div>
-        </div>
+        
+        {/* Standard Action Bar */}
+        <ServicePageHeader 
+          title="Build Credit" 
+          dateRange={date} 
+          onDateChange={setDate}
+          onRefresh={fetchData}
+          onExport={() => setShowExportDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+          onAdd={() => { setEditItem(null); setShowAddDialog(true); }}
+          addLabel="Add Program"
+        />
 
-        <div className="hidden lg:grid grid-cols-4 gap-5 mb-8">{metrics.map((m, i) => <MetricCard key={i} {...m} />)}</div>
-        <div className="block lg:hidden mb-14 -mx-4"><Slider dots infinite={false} speed={500} slidesToShow={1.1} slidesToScroll={1} arrows={false} centerMode centerPadding='20px'>{metrics.map((m, i) => <div key={i} className="px-2 py-2"><MetricCard {...m} /></div>)}</Slider></div>
+        {/* Metrics - Standard Grid */}
+        <ServiceMetricGrid metrics={metrics} />
+
 
         <div className="hidden md:flex justify-between items-center gap-4 mb-6">
           <div className="relative flex-1"><Search size={20} className="absolute inset-y-0 left-4 my-auto text-[#253154]" /><input type="text" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search credit programs..." className="w-full h-[50px] bg-white rounded-xl border-none shadow-sm pl-12 pr-4 text-[16px] font-medium text-gray-700 placeholder-[#253154] focus:ring-2 focus:ring-purple-100 outline-none" /></div>
@@ -475,9 +457,14 @@ export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => 
                   />
                 ))
               ) : (
-                <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-3">
-                  <CreditCard size={48} className="text-gray-200 mx-auto" />
-                  <p className="text-gray-500 font-medium">No credit programs found</p>
+                <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center space-y-3">
+                  <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                    <CreditCard size={24} className="text-gray-300" />
+                  </div>
+                  <p className="text-gray-500 font-medium">No data available</p>
+                  <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                    There are no credit programs matching your current filters.
+                  </p>
                 </div>
               )}
             </div>
@@ -534,10 +521,15 @@ export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => 
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan={10} className="px-6 py-20 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <CreditCard size={40} className="text-gray-200" />
-                        <p className="text-gray-500 font-medium">No credit programs found</p>
+                    <td colSpan={visibleColumns.length + 2} className="px-6 py-24 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                          <CreditCard className="text-gray-300" size={24} />
+                        </div>
+                        <p className="text-gray-500 font-medium">No results found</p>
+                        <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                          We couldn't find any credit programs matching your filters.
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -545,14 +537,16 @@ export const BuildCreditOverviewPage: React.FC<{ onNavigate?: (page: string) => 
               </tbody>
             </table>
           </div>
-          <div className="h-[80px] bg-white flex items-center justify-between px-6 border-t border-gray-50">
-            <div className="flex items-center gap-2"><span className="text-gray-500 text-sm font-medium">Rows per page:</span><button className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm flex items-center justify-center gap-2 text-sm font-medium text-gray-700">{rowsPerPage}<ChevronDown size={14} className="text-gray-400" /></button></div>
-            <div className="flex items-center gap-3">
-              <button disabled={page === 1} onClick={() => setPage(prev => prev - 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronLeft size={18} strokeWidth={2} className="text-gray-500" /></button>
-              <span className="text-sm font-medium text-gray-700">Page {page} of {pagination.totalPages}</span>
-              <button disabled={page === pagination.totalPages} onClick={() => setPage(prev => prev + 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronRight size={18} strokeWidth={2} className="text-gray-500" /></button>
+          {items.length > 0 && (
+            <div className="h-[80px] bg-white flex items-center justify-between px-6 border-t border-gray-50">
+              <div className="flex items-center gap-2"><span className="text-gray-500 text-sm font-medium">Rows per page:</span><button className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm flex items-center justify-center gap-2 text-sm font-medium text-gray-700">{rowsPerPage}<ChevronDown size={14} className="text-gray-400" /></button></div>
+              <div className="flex items-center gap-3">
+                <button disabled={page === 1} onClick={() => setPage(prev => prev - 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronLeft size={18} strokeWidth={2} className="text-gray-500" /></button>
+                <span className="text-sm font-medium text-gray-700">Page {page} of {pagination.totalPages}</span>
+                <button disabled={page === pagination.totalPages} onClick={() => setPage(prev => prev + 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronRight size={18} strokeWidth={2} className="text-gray-500" /></button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
       <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} moduleName="Build Credit" totalCount={pagination.total} selectedCount={selected.length} columns={exportColumns} supportsDateRange={true} onExport={handleExport} />

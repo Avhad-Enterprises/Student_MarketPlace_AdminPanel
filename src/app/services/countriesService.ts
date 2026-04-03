@@ -2,7 +2,9 @@ import axios from 'axios';
 
 console.log('--- Loading countriesService (Updated) ---');
 
-const API_URL = 'https://smapi.test-zone.xyz/api/countries';
+import { API_BASE_URL } from "@/config/api";
+
+const API_URL = `${API_BASE_URL}/api/countries`;
 
 export interface CountryFormData {
     country_name: string;

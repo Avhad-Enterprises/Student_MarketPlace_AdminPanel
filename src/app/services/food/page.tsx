@@ -1,10 +1,13 @@
 "use client";
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { AdminLayout } from '../../components/AdminLayout';
 import { FoodOverviewPage } from '../../components/FoodOverviewPage';
 
 const FoodPage = () => {
+    const router = useRouter();
+
     return (
         <AdminLayout activePage="services-food">
             <div className="py-6">
@@ -13,7 +16,7 @@ const FoodPage = () => {
                     <p className="text-gray-500 mt-2">Manage food delivery, meal kits, and student dining partners.</p>
                 </div>
 
-                <FoodOverviewPage />
+                <FoodOverviewPage onNavigate={(path: string) => router.push(path)} />
             </div>
         </AdminLayout>
     );

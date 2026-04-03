@@ -5,7 +5,7 @@ import {
   Search, Filter, ArrowUpDown, Columns, Download, Upload,
   Plus, MoreVertical, Edit2, Trash2, ChevronLeft, ChevronRight,
   BookOpen, Globe, Zap, ShieldCheck, DollarSign,
-  CheckCircle2, XCircle, Clock, Star
+  CheckCircle2, XCircle, Clock, Star, Eye
 } from 'lucide-react';
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -25,7 +25,87 @@ const CustomCheckbox = ({ checked, onChange }: { checked: boolean, onChange: () 
   </div>
 );
 
-export const CoursesOverviewPage = () => {
+const MobileCourseCard: React.FC<{
+  item: Course;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onEdit: (item: Course) => void;
+  onDelete: (id: string) => void;
+  onNavigate?: (page: string) => void;
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onNavigate }) => (
+  <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-100'} shadow-sm space-y-4`}>
+    <div className="flex items-start justify-between">
+      <div className="flex items-center gap-3">
+        <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">{item.course_name.charAt(0)}</div>
+          <div>
+            <h3 className="font-bold text-[#253154] text-[15px]">{item.course_name}</h3>
+            <p className="text-gray-500 text-[10px]">Ref: {item.reference_id}</p>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-col items-end gap-1">
+        <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${item.status === 'active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+          {item.status === 'active' ? 'Active' : 'Inactive'}
+        </span>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-3 border-y border-gray-50">
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Provider</p>
+        <p className="text-xs font-medium text-gray-700">{item.provider}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category</p>
+        <p className="text-xs font-bold text-indigo-600">{item.category}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Duration</p>
+        <div className="flex items-center gap-1 text-gray-600 font-medium text-xs"><Clock size={10} /> {item.duration}</div>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tuition</p>
+        <p className="text-xs font-bold text-gray-900">{item.avg_cost}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Learners</p>
+        <p className="text-xs font-medium text-gray-700">{item.learners_count?.toLocaleString()}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rating</p>
+        <div className="flex items-center gap-1 text-green-600 font-bold text-xs"><Star size={10} fill="currentColor" /> {item.rating}/5.0</div>
+      </div>
+    </div>
+
+    <div className="flex items-center justify-end gap-2 pt-1">
+      <button
+        onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/courses/${item.id}`); }}
+        className="p-2.5 bg-indigo-50 text-indigo-610 rounded-xl hover:bg-indigo-100 transition-colors"
+        title="View Details"
+      >
+        <Eye size={18} />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+        className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+        title="Edit"
+      >
+        <Edit2 size={18} />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+        className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+        title="Delete"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  </div>
+);
+
+export const CoursesOverviewPage = ({ onNavigate }: { onNavigate?: (page: string) => void }) => {
   // State for data
   const [courseData, setCourseData] = useState<Course[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -525,109 +605,132 @@ export const CoursesOverviewPage = () => {
                     <td colSpan={10} className="px-6 py-4"><div className="h-6 bg-gray-100 rounded-lg w-full"></div></td>
                   </tr>
                 ))
-              ) : courseData.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="p-4 bg-gray-50 rounded-full"><BookOpen size={40} className="text-gray-300" /></div>
-                      <p className="text-gray-500 font-medium">No courses found</p>
-                    </div>
-                  </td>
-                </tr>
               ) : (
-                courseData.map((item) => (
-                  <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-5">
-                      <CustomCheckbox
-                        checked={selected.includes(item.id)}
-                        onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])}
-                      />
-                    </td>
-                    {visibleColumns.includes('reference_id') && <td className="px-6 py-5 text-sm text-gray-500 font-medium">{item.reference_id}</td>}
-                    {visibleColumns.includes('course_name') && (
-                      <td className="px-6 py-5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">{item.course_name.charAt(0)}</div>
-                          <span className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{item.course_name}</span>
-                        </div>
-                      </td>
-                    )}
-                    {visibleColumns.includes('provider') && <td className="px-6 py-5 text-sm text-gray-600 font-medium">{item.provider}</td>}
-                    {visibleColumns.includes('category') && (
-                      <td className="px-6 py-5 text-center">
-                        <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold border border-indigo-100">{item.category}</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('duration') && (
-                      <td className="px-6 py-5 text-center">
-                        <div className="flex items-center justify-center gap-1.5 text-gray-600">
-                          <Clock size={14} />
-                          <span className="text-sm font-medium">{item.duration}</span>
-                        </div>
-                      </td>
-                    )}
-                    {visibleColumns.includes('avg_cost') && <td className="px-6 py-5 text-sm text-gray-900 font-bold text-center">{item.avg_cost}</td>}
-                    {visibleColumns.includes('countries_covered') && (
-                      <td className="px-6 py-5 text-center">
-                        <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold border border-blue-100">{item.countries_covered} Countries</span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('learners_count') && (
-                      <td className="px-6 py-5 text-center text-sm font-medium text-gray-600">
-                        {item.learners_count?.toLocaleString()}
-                      </td>
-                    )}
-                    {visibleColumns.includes('popularity') && (
-                      <td className="px-6 py-5 text-center">
-                        <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full border border-yellow-100 mx-auto w-fit">
-                          <Zap size={14} fill="currentColor" />
-                          <span className="text-xs font-bold">{item.popularity}/10</span>
-                        </div>
-                      </td>
-                    )}
-                    {visibleColumns.includes('rating') && (
-                      <td className="px-6 py-5 text-center">
-                        <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 mx-auto w-fit">
-                          <Star size={14} fill="currentColor" />
-                          <span className="text-xs font-bold">{item.rating}/5.0</span>
-                        </div>
-                      </td>
-                    )}
-                    {visibleColumns.includes('status') && (
-                      <td className="px-6 py-5 text-center">
-                        <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                          {item.status === 'active' ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                    )}
-                    {visibleColumns.includes('popularity') && (
-                      <td className="px-6 py-5 text-center">
-                        <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full border border-yellow-100 mx-auto w-fit">
-                          <Star size={14} fill="currentColor" />
-                          <span className="text-xs font-bold">{item.popularity}/10</span>
-                        </div>
-                      </td>
-                    )}
-                    <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setEditingCourse(item); setIsAddDialogOpen(true); }}
-                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
-                          title="Edit"
-                        >
-                          <Edit2 size={18} className="text-gray-400 group-hover:text-blue-600" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
-                        </button>
+                <>
+                  {/* Mobile View */}
+                  <tr className="md:hidden">
+                    <td colSpan={12} className="p-0">
+                      <div className="space-y-4 p-4">
+                        {courseData.length > 0 ? (
+                          courseData.map((item) => (
+                            <MobileCourseCard
+                              key={item.id}
+                              item={item}
+                              isSelected={selected.includes(item.id)}
+                              onToggleSelect={() => setSelected(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])}
+                              onEdit={setEditingCourse}
+                              onDelete={handleDelete}
+                              onNavigate={onNavigate}
+                            />
+                          ))
+                        ) : (
+                          <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-3">
+                            <BookOpen size={48} className="text-gray-200 mx-auto" />
+                            <p className="text-gray-500 font-medium">No courses found</p>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
-                ))
+
+                  {/* Desktop View Table */}
+                  {courseData.map((item) => (
+                    <tr 
+                      key={item.id} 
+                      className={`hidden md:table-row border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer ${selected.includes(item.id) ? 'bg-indigo-50/30' : ''}`}
+                      onClick={() => onNavigate?.(`/services/courses/${item.id}`)}
+                    >
+                      <td className="px-6 py-5">
+                        <CustomCheckbox
+                          checked={selected.includes(item.id)}
+                          onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])}
+                        />
+                      </td>
+                      {visibleColumns.includes('reference_id') && <td className="px-6 py-5 text-sm text-gray-500 font-medium">{item.reference_id}</td>}
+                      {visibleColumns.includes('course_name') && (
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">{item.course_name.charAt(0)}</div>
+                            <span className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{item.course_name}</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.includes('provider') && <td className="px-6 py-5 text-sm text-gray-600 font-medium">{item.provider}</td>}
+                      {visibleColumns.includes('category') && (
+                        <td className="px-6 py-5 text-center">
+                          <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-full text-xs font-bold border border-indigo-100">{item.category}</span>
+                        </td>
+                      )}
+                      {visibleColumns.includes('duration') && (
+                        <td className="px-6 py-5 text-center">
+                          <div className="flex items-center justify-center gap-1.5 text-gray-600">
+                            <Clock size={14} />
+                            <span className="text-sm font-medium">{item.duration}</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.includes('avg_cost') && <td className="px-6 py-5 text-sm text-gray-900 font-bold text-center">{item.avg_cost}</td>}
+                      {visibleColumns.includes('countries_covered') && (
+                        <td className="px-6 py-5 text-center">
+                          <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold border border-blue-100">{item.countries_covered} Countries</span>
+                        </td>
+                      )}
+                      {visibleColumns.includes('learners_count') && (
+                        <td className="px-6 py-5 text-center text-sm font-medium text-gray-600">
+                          {item.learners_count?.toLocaleString()}
+                        </td>
+                      )}
+                      {visibleColumns.includes('popularity') && (
+                        <td className="px-6 py-5 text-center">
+                          <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full border border-yellow-100 mx-auto w-fit">
+                            <Zap size={14} fill="currentColor" />
+                            <span className="text-xs font-bold">{item.popularity}/10</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.includes('rating') && (
+                        <td className="px-6 py-5 text-center">
+                          <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 rounded-full border border-green-100 mx-auto w-fit">
+                            <Star size={14} fill="currentColor" />
+                            <span className="text-xs font-bold">{item.rating}/5.0</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.includes('status') && (
+                        <td className="px-6 py-5 text-center">
+                          <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                            {item.status === 'active' ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                      )}
+                      <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/courses/${item.id}`); }}
+                            className="p-2 hover:bg-indigo-50 rounded-lg transition-colors group/view"
+                            title="View Details"
+                          >
+                            <Eye size={18} className="text-gray-400 group-hover/view:text-indigo-600" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setEditingCourse(item); setIsAddDialogOpen(true); }}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </>
               )}
             </tbody>
           </table>

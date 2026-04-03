@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { X, FileText, User, Tag, Layout, Eye, Globe, Lock, Save, RefreshCw, Calendar } from 'lucide-react';
 import { Blog, BlogFormData } from '@/services/blogService';
 import { toast } from 'sonner';
+import dynamic from 'next/dynamic';
+import 'react-quill/dist/quill.snow.css';
+
+const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
 
 interface BlogModalProps {
     isOpen: boolean;
@@ -19,7 +23,9 @@ export const BlogModal: React.FC<BlogModalProps> = ({ isOpen, onClose, onSave, b
         tags: [],
         status: 'draft',
         visibility: 'public',
-        publish_date: null
+        publish_date: null,
+        meta_title: '',
+        meta_description: ''
     });
 
     const [tagInput, setTagInput] = useState('');
@@ -42,7 +48,9 @@ export const BlogModal: React.FC<BlogModalProps> = ({ isOpen, onClose, onSave, b
                 tags: tags,
                 status: blog.status || 'draft',
                 visibility: blog.visibility || 'public',
-                publish_date: blog.publish_date || null
+                publish_date: blog.publish_date || null,
+                meta_title: blog.meta_title || '',
+                meta_description: blog.meta_description || ''
             });
         } else {
             let currentUser = '';
@@ -62,7 +70,9 @@ export const BlogModal: React.FC<BlogModalProps> = ({ isOpen, onClose, onSave, b
                 tags: [],
                 status: 'draft',
                 visibility: 'public',
-                publish_date: null
+                publish_date: null,
+                meta_title: '',
+                meta_description: ''
             });
         }
     }, [blog, isOpen]);
@@ -237,19 +247,58 @@ export const BlogModal: React.FC<BlogModalProps> = ({ isOpen, onClose, onSave, b
                             </div>
                         )}
 
-                        {/* Content */}
+                        {/* Content (Rich Text) */}
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-[#0e042f] ml-1">Content *</label>
-                            <div className="relative">
-                                <textarea
-                                    required
-                                    name="content"
+                            <div className="bg-gray-50 rounded-2xl overflow-hidden border-none focus-within:ring-2 focus-within:ring-indigo-100 transition-all">
+                                <ReactQuill
+                                    theme="snow"
                                     value={formData.content}
-                                    onChange={handleChange}
+                                    onChange={(content) => setFormData(prev => ({ ...prev, content }))}
                                     placeholder="Write your blog post content here..."
-                                    rows={10}
-                                    className="w-full bg-gray-50 border-none rounded-2xl p-6 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-gray-700 font-medium resize-none shadow-inner"
+                                    className="bg-white min-h-[300px]"
+                                    modules={{
+                                        toolbar: [
+                                            [{ 'header': [1, 2, 3, false] }],
+                                            ['bold', 'italic', 'underline', 'strike'],
+                                            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                                            ['link', 'image', 'video'],
+                                            ['clean']
+                                        ],
+                                    }}
                                 />
+                            </div>
+                        </div>
+
+                        {/* SEO Fields */}
+                        <div className="pt-4 border-t border-gray-100">
+                            <h3 className="text-lg font-bold text-[#0e042f] mb-4 flex items-center gap-2">
+                                <Globe size={18} className="text-indigo-500" />
+                                SEO Settings (Optional)
+                            </h3>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-[#0e042f] ml-1">Meta Title</label>
+                                    <input
+                                        type="text"
+                                        name="meta_title"
+                                        value={formData.meta_title || ''}
+                                        onChange={handleChange}
+                                        placeholder="SEO Title (defaults to blog title)"
+                                        className="w-full bg-gray-50 border-none rounded-2xl h-[52px] px-4 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-gray-700 font-medium"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-[#0e042f] ml-1">Meta Description</label>
+                                    <textarea
+                                        name="meta_description"
+                                        value={formData.meta_description || ''}
+                                        onChange={handleChange}
+                                        placeholder="Brief description for search engines..."
+                                        rows={3}
+                                        className="w-full bg-gray-50 border-none rounded-2xl p-4 focus:ring-2 focus:ring-indigo-100 outline-none transition-all text-gray-700 font-medium resize-none"
+                                    />
+                                </div>
                             </div>
                         </div>
 
@@ -296,7 +345,14 @@ export const BlogModal: React.FC<BlogModalProps> = ({ isOpen, onClose, onSave, b
                         className="bg-[#0e042f] text-white px-8 h-[52px] rounded-2xl font-bold shadow-lg shadow-indigo-900/20 hover:bg-[#1a0c4a] transition-all disabled:opacity-50 flex items-center gap-2"
                     >
                         {isSaving ? <RefreshCw className="animate-spin" size={20} /> : <Save size={20} />}
-                        {blog ? 'Update Blog' : 'Publish Blog'}
+                        {blog 
+                            ? 'Update Blog' 
+                            : formData.status === 'draft' 
+                                ? 'Save Draft' 
+                                : formData.status === 'scheduled'
+                                    ? 'Schedule Post'
+                                    : 'Publish Blog'
+                        }
                     </button>
                 </div>
             </div>

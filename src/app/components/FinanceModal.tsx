@@ -25,6 +25,7 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
         description: '',
         amount: 0,
         currency: 'USD',
+        service_type: 'General',
         status: 'pending',
         payment_method: 'Credit Card',
         due_date: format(new Date(), 'yyyy-MM-dd'),
@@ -43,6 +44,7 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
                     description: payment.description,
                     amount: payment.amount,
                     currency: payment.currency,
+                    service_type: payment.service_type || 'General',
                     status: payment.status,
                     payment_method: payment.payment_method,
                     due_date: payment.due_date ? format(new Date(payment.due_date), 'yyyy-MM-dd') : '',
@@ -52,11 +54,12 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
             } else {
                 setFormData({
                     student_db_id: 0,
-                    payment_id: `PAY-${Date.now()}`,
-                    invoice_number: `INV-${Date.now()}`,
+                    payment_id: '',
+                    invoice_number: '',
                     description: '',
                     amount: 0,
                     currency: 'USD',
+                    service_type: 'General',
                     status: 'pending',
                     payment_method: 'Credit Card',
                     due_date: format(new Date(), 'yyyy-MM-dd'),
@@ -82,21 +85,27 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
             toast.error('Please select a student');
             return;
         }
+        
+        if (formData.amount <= 0) {
+            toast.error('Amount must be greater than 0');
+            return;
+        }
 
         setLoading(true);
         try {
             if (payment) {
                 await financeService.updatePayment(payment.id, formData);
-                toast.success('Payment updated successfully');
+                toast.success('Invoice updated successfully');
             } else {
                 await financeService.createPayment(formData);
-                toast.success('Payment created successfully');
+                toast.success('Invoice created successfully');
             }
             onSave();
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error saving payment:', error);
-            toast.error('Failed to save payment');
+            const message = error.response?.data?.error || error.message || 'Failed to save invoice';
+            toast.error(message);
         } finally {
             setLoading(false);
         }
@@ -136,17 +145,22 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
                                 </select>
                             </div>
 
-                            {/* Description */}
-                            <div className="space-y-2 col-span-2">
-                                <label className="text-sm font-semibold text-[#0e042f] flex items-center gap-2"><FileText size={16} className="text-indigo-600" />Description</label>
-                                <input
-                                    type="text"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="e.g. Consultation Fee"
+                            {/* Service Type - NEW */}
+                            <div className="space-y-2">
+                                <label className="text-sm font-semibold text-[#0e042f] flex items-center gap-2"><Type size={16} className="text-indigo-600" />Service Type</label>
+                                <select
+                                    value={formData.service_type}
+                                    onChange={(e) => setFormData({ ...formData, service_type: e.target.value })}
                                     className="w-full h-12 bg-gray-50 rounded-xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-600 outline-none px-4 transition-all"
                                     required
-                                />
+                                >
+                                    <option value="Tuition">Tuition</option>
+                                    <option value="Accommodation">Accommodation</option>
+                                    <option value="Visa Fee">Visa Fee</option>
+                                    <option value="Service Fee">Service Fee</option>
+                                    <option value="Insurance">Insurance</option>
+                                    <option value="Other">Other</option>
+                                </select>
                             </div>
 
                             {/* Amount & Currency */}
@@ -154,8 +168,23 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
                                 <label className="text-sm font-semibold text-[#0e042f] flex items-center gap-2"><DollarSign size={16} className="text-indigo-600" />Amount</label>
                                 <input
                                     type="number"
+                                    step="0.01"
+                                    min="0.01"
                                     value={formData.amount}
                                     onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+                                    className="w-full h-12 bg-gray-50 rounded-xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-600 outline-none px-4 transition-all font-bold text-indigo-600"
+                                    required
+                                />
+                            </div>
+
+                            {/* Description */}
+                            <div className="space-y-2 col-span-2">
+                                <label className="text-sm font-semibold text-[#0e042f] flex items-center gap-2"><FileText size={16} className="text-indigo-600" />Description</label>
+                                <input
+                                    type="text"
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    placeholder="e.g. Q3 Installment"
                                     className="w-full h-12 bg-gray-50 rounded-xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-600 outline-none px-4 transition-all"
                                     required
                                 />
@@ -201,6 +230,7 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
                                     <option value="Bank Transfer">Bank Transfer</option>
                                     <option value="PayPal">PayPal</option>
                                     <option value="Cash">Cash</option>
+                                    <option value="Other">Other</option>
                                 </select>
                             </div>
 
@@ -224,7 +254,7 @@ export const FinanceModal: React.FC<FinanceModalProps> = ({ open, onClose, onSav
                                     value={formData.notes || ''}
                                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                     placeholder="Additional details..."
-                                    className="w-full h-32 bg-gray-50 rounded-xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-600 outline-none p-4 transition-all resize-none"
+                                    className="w-full h-24 bg-gray-50 rounded-xl border-none ring-1 ring-gray-200 focus:ring-2 focus:ring-indigo-600 outline-none p-4 transition-all resize-none"
                                 />
                             </div>
                         </div>

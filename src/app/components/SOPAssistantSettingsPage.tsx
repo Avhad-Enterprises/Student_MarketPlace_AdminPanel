@@ -19,6 +19,16 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "./ui/alert-dialog";
 import { sopAssistantService, SOPAssistantSettings } from '@/services/sopAssistantService';
 
 // Fallback Select component for consistency
@@ -87,6 +97,9 @@ export const SOPAssistantSettingsPage: React.FC = () => {
         max_tokens: 2000,
         temperature: 0.5
     });
+
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [pendingAutoApproval, setPendingAutoApproval] = useState(false);
 
     useEffect(() => {
         fetchSettings();
@@ -379,11 +392,62 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                                     type="checkbox"
                                                     className="sr-only peer"
                                                     checked={settings.auto_approval}
-                                                    onChange={(e) => setSettings({ ...settings, auto_approval: e.target.checked })}
+                                                    onChange={(e) => {
+                                                        const newVal = e.target.checked;
+                                                        if (newVal) {
+                                                            setPendingAutoApproval(true);
+                                                            setIsConfirmModalOpen(true);
+                                                        } else {
+                                                            setSettings({ ...settings, auto_approval: false });
+                                                        }
+                                                    }}
                                                 />
                                                 <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0f172b]"></div>
                                             </label>
                                         </div>
+
+                                        {/* Confirmation Modal */}
+                                        <AlertDialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+                                            <AlertDialogContent className="bg-white rounded-[32px] border-none shadow-2xl p-0 overflow-hidden max-w-[500px]">
+                                                <div className="bg-[#0f172b] p-8 text-white relative">
+                                                    <div className="absolute top-0 right-0 p-8 opacity-10">
+                                                        <Zap size={100} />
+                                                    </div>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle className="text-2xl font-bold mb-2">Enable Autonomous Approval?</AlertDialogTitle>
+                                                        <AlertDialogDescription className="text-slate-300 text-sm font-medium leading-relaxed">
+                                                            Activating this feature will allow the AI to automatically mark Statement of Purpose documents as "Approved" if they exceed your set confidence threshold.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                </div>
+                                                <div className="p-8 space-y-6">
+                                                    <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex items-start gap-3">
+                                                        <Shield className="text-amber-600 mt-0.5 shrink-0" size={18} />
+                                                        <p className="text-[13px] text-amber-900 font-medium leading-relaxed">
+                                                            This may bypass human review for high-confidence records. Ensure your prompt logic and thresholds are thoroughly tested.
+                                                        </p>
+                                                    </div>
+                                                    <AlertDialogFooter className="flex flex-col sm:flex-row gap-3">
+                                                        <AlertDialogCancel 
+                                                            className="flex-1 h-12 rounded-xl border-slate-200 text-slate-600 font-bold hover:bg-slate-50"
+                                                            onClick={() => setIsConfirmModalOpen(false)}
+                                                        >
+                                                            Cancel
+                                                        </AlertDialogCancel>
+                                                        <AlertDialogAction 
+                                                            className="flex-1 h-12 rounded-xl bg-[#0f172b] text-white font-bold hover:bg-[#1e293b] shadow-lg shadow-slate-200"
+                                                            onClick={() => {
+                                                                setSettings({ ...settings, auto_approval: true });
+                                                                setIsConfirmModalOpen(false);
+                                                                toast.info('Autonomous Approval enabled. Review your thresholds.');
+                                                            }}
+                                                        >
+                                                            Yes, Enable Feature
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </div>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
                                     </div>
                                 </div>
                             </div>

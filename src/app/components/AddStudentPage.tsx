@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ArrowLeft, AlertCircle, Save, TrendingUp, Globe, Calendar, User, GraduationCap, FileText, UserCheck, Building, MessageSquare, Plane, PlaneTakeoff, List, Target, Users, CheckCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Save, TrendingUp, Globe, Calendar, User, GraduationCap, FileText, UserCheck, Building, MessageSquare, Plane, PlaneTakeoff, List, Target, Users, CheckCircle, BookOpen } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { CustomSelect } from './common/CustomSelect';
 import { DateInput } from './ui/date-input';
@@ -539,6 +539,31 @@ export const AddStudentPage: React.FC<AddStudentPageProps> = ({ onNavigate, stud
               submissionErrorsFaced: student.submission_errors_faced || '',
               submissionResolutionNotes: student.submission_resolution_notes || '',
               
+              offerUniversityName: student.offer_university_name || '',
+              offerCourseName: student.offer_course_name || '',
+              offerCountry: student.offer_country || '',
+              offerIntake: student.offer_intake || '',
+              offerType: student.offer_type || '',
+              offerConditions: student.offer_conditions || '',
+              offerDeadline: student.offer_deadline || '',
+              offerDepositRequired: !!student.offer_deposit_required,
+              offerDepositAmount: student.offer_deposit_amount || '',
+              offerTuitionFee: student.offer_tuition_fee || '',
+              offerLivingCost: student.offer_living_cost || '',
+              offerScholarship: student.offer_scholarship || '',
+              offerTotalCost: student.offer_total_cost || '',
+              offerCourseRelevance: student.offer_course_relevance || '',
+              offerUniversityRanking: student.offer_university_ranking || '',
+              offerEmployabilityOutlook: student.offer_employability_outlook || '',
+              offerIndustryAlignment: student.offer_industry_alignment || '',
+              offerVisaProbability: student.offer_visa_probability || '',
+              offerCountryRisks: student.offer_country_risks || '',
+              offerGapSensitivity: student.offer_gap_sensitivity || '',
+              offerPreferenceLevel: student.offer_preference_level || '',
+              offerFamilyConcerns: student.offer_family_concerns || '',
+              offerStudentQuestions: student.offer_student_questions || '',
+              offerDiscussionSummary: student.offer_discussion_summary || '',
+              
               visaTargetCountry: student.visa_target_country || '',
               visaType: student.visa_type || '',
               visaStartDate: student.visa_start_date || '',
@@ -774,6 +799,31 @@ export const AddStudentPage: React.FC<AddStudentPageProps> = ({ onNavigate, stud
         submissionErrorsFaced: (formData as any).submissionErrorsFaced || null,
         submissionResolutionNotes: (formData as any).submissionResolutionNotes || null,
 
+        offerUniversityName: (formData as any).offerUniversityName || null,
+        offerCourseName: (formData as any).offerCourseName || null,
+        offerCountry: (formData as any).offerCountry || null,
+        offerIntake: (formData as any).offerIntake || null,
+        offerType: (formData as any).offerType || null,
+        offerConditions: (formData as any).offerConditions || null,
+        offerDeadline: (formData as any).offerDeadline || null,
+        offerDepositRequired: (formData as any).offerDepositRequired ? 1 : 0,
+        offerDepositAmount: (formData as any).offerDepositAmount || null,
+        offerTuitionFee: (formData as any).offerTuitionFee || null,
+        offerLivingCost: (formData as any).offerLivingCost || null,
+        offerScholarship: (formData as any).offerScholarship || null,
+        offerTotalCost: (formData as any).offerTotalCost || null,
+        offerCourseRelevance: (formData as any).offerCourseRelevance || null,
+        offerUniversityRanking: (formData as any).offerUniversityRanking || null,
+        offerEmployabilityOutlook: (formData as any).offerEmployabilityOutlook || null,
+        offerIndustryAlignment: (formData as any).offerIndustryAlignment || null,
+        offerVisaProbability: (formData as any).offerVisaProbability || null,
+        offerCountryRisks: (formData as any).offerCountryRisks || null,
+        offerGapSensitivity: (formData as any).offerGapSensitivity || null,
+        offerPreferenceLevel: (formData as any).offerPreferenceLevel || null,
+        offerFamilyConcerns: (formData as any).offerFamilyConcerns || null,
+        offerStudentQuestions: (formData as any).offerStudentQuestions || null,
+        offerDiscussionSummary: (formData as any).offerDiscussionSummary || null,
+
         visaTargetCountry: (formData as any).visaTargetCountry || null,
         visaType: (formData as any).visaType || null,
         visaStartDate: (formData as any).visaStartDate || null,
@@ -1008,7 +1058,7 @@ ${app.notes || 'None provided'}`;
         </div>
 
         {/* Top Navigation Tabs */}
-        <div className="flex items-center gap-2 p-1.5 bg-white rounded-2xl border border-gray-200 overflow-x-auto custom-scrollbar-hide mb-6 sm:mb-8">
+        <div className="flex flex-wrap items-center gap-2 p-1.5 bg-white rounded-2xl border border-gray-200 mb-6 sm:mb-8">
           <button
             onClick={() => setActiveTab('basic-info')}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium whitespace-nowrap transition-all ${
@@ -1156,6 +1206,41 @@ ${app.notes || 'None provided'}`;
               </div>
             </div>
 
+            {/* SECTION 2.5: Education Snapshot */}
+            <div className="bg-white rounded-2xl sm:rounded-[20px] p-5 sm:p-6 shadow-sm border border-slate-100">
+              <div className="flex items-center gap-2 mb-5 sm:mb-6">
+                <div className="w-7 h-7 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+                  <BookOpen size={14} className="text-teal-600" />
+                </div>
+                <h2 className="text-lg sm:text-xl font-bold text-[#0f172b]">Education Snapshot</h2>
+              </div>
+              <div className="space-y-4 sm:space-y-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                  <div>
+                    <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Highest Qualification</label>
+                    <CustomSelect value={formData.highestQualification} onChange={(value) => setFormData({ ...formData, highestQualification: value })} options={[{ value: 'high-school', label: 'High School / 12th' }, { value: 'bachelors', label: 'Bachelor\'s Degree' }, { value: 'masters', label: 'Master\'s Degree' }, { value: 'diploma', label: 'Diploma' }, { value: 'phd', label: 'PhD' }]} placeholder="Select qualification" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Field of Study</label>
+                    <input type="text" value={formData.fieldOfStudy} onChange={(e) => setFormData({ ...formData, fieldOfStudy: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" placeholder="e.g. Computer Science" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Current/Recent Institution</label>
+                  <input type="text" value={formData.currentInstitution} onChange={(e) => setFormData({ ...formData, currentInstitution: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" placeholder="e.g. University of Example" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+                  <div>
+                    <label className="block text-sm font-medium text-[#0f172b] mb-1.5">Graduation Year</label>
+                    <input type="text" value={formData.graduationYear} onChange={(e) => setFormData({ ...formData, graduationYear: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" placeholder="e.g. 2023" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-[#0f172b] mb-1.5">GPA / Percentage</label>
+                    <input type="text" value={formData.gpa} onChange={(e) => setFormData({ ...formData, gpa: e.target.value })} className="w-full h-[44px] px-4 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500 text-base" placeholder="e.g. 3.8 or 85%" />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             {/* SECTION 3: Academic Context */}
             <div className="bg-white rounded-2xl sm:rounded-[20px] p-5 sm:p-6 shadow-sm border border-slate-100">

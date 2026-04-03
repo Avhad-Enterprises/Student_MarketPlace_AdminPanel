@@ -77,9 +77,10 @@ interface MobileVisaCardProps {
   onToggleSelect: () => void;
   onEdit: (visa: Visa) => void;
   onDelete: (id: number) => void;
+  onNavigate?: (page: string) => void;
 }
 
-const MobileVisaCard: React.FC<MobileVisaCardProps> = ({ visa, isSelected, onToggleSelect, onEdit, onDelete }) => {
+const MobileVisaCard: React.FC<MobileVisaCardProps> = ({ visa, isSelected, onToggleSelect, onEdit, onDelete, onNavigate }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -133,18 +134,24 @@ const MobileVisaCard: React.FC<MobileVisaCardProps> = ({ visa, isSelected, onTog
 
       {isExpanded && (
         <div className="px-3 pb-4 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(visa); }}
-              className="w-full h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-sm"
+              className="w-full h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-xs flex items-center justify-center gap-2 shadow-sm"
             >
-              <Edit size={16} /> Edit
+              <Edit size={14} /> Edit
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/visa/${visa.id}`); }}
+              className="w-full h-10 bg-purple-50 text-purple-600 border border-purple-100 rounded-xl hover:bg-purple-100 transition-colors font-medium text-xs flex items-center justify-center gap-2 shadow-sm"
+            >
+              <Eye size={14} /> View
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(visa.id); }}
-              className="w-full h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+              className="w-full h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs flex items-center justify-center gap-2"
             >
-              <Trash2 size={16} /> Delete
+              <Trash2 size={14} /> Delete
             </button>
           </div>
         </div>
@@ -673,8 +680,12 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
                   </tr>
                 ) : (
                   visas.map((visa) => (
-                    <tr key={visa.id} className={`group hover:bg-purple-50/10 transition-colors transition-all ${selectedVisas.includes(visa.id.toString()) ? 'bg-purple-50/30 shadow-[inset_4px_0_0_0_#9333ea]' : ''}`}>
-                      <td className="px-6 py-4">
+                    <tr
+                      key={visa.id}
+                      onClick={() => onNavigate?.(`/services/visa/${visa.id}`)}
+                      className={`cursor-pointer group hover:bg-purple-50/10 transition-colors transition-all ${selectedVisas.includes(visa.id.toString()) ? 'bg-purple-50/30 shadow-[inset_4px_0_0_0_#9333ea]' : ''}`}
+                    >
+                      <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
                         <CustomCheckbox checked={selectedVisas.includes(visa.id.toString())} onChange={() => handleToggleSelect(visa.id.toString())} />
                       </td>
                       {visibleColumns.includes('id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#0e042f]">{visa.visa_id}</td>}
@@ -701,6 +712,13 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
                       )}
                       <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/visa/${visa.id}`); }}
+                            className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                            title="View Details"
+                          >
+                            <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleEditVisa(visa); }}
                             className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
@@ -739,6 +757,7 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
                   onToggleSelect={() => handleToggleSelect(visa.id.toString())}
                   onEdit={handleEditVisa}
                   onDelete={handleDeleteVisa}
+                  onNavigate={onNavigate}
                 />
               ))
             )}

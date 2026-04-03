@@ -62,6 +62,9 @@ import {
   ScrollText
 } from 'lucide-react';
 
+import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
+import { StatusBadge } from './service-marketplace/CommonUI';
+
 // ============================================
 // TYPES & INTERFACES
 // ============================================
@@ -111,10 +114,10 @@ interface Student {
 }
 
 // ============================================
-// MOCK DATA
+// DEFAULT MOCK DATA (Fallback)
 // ============================================
 
-const mockProvider: ServiceProvider = {
+const DEFAULT_PROVIDER: ServiceProvider = {
   id: 'PRV-2024-001',
   name: 'Airalo',
   legalName: 'Airalo Global eSIM Solutions Ltd.',
@@ -137,7 +140,7 @@ const mockProvider: ServiceProvider = {
   uptime: 99.8,
 };
 
-const mockFunnelStages: FunnelStage[] = [
+const DEFAULT_FUNNEL: FunnelStage[] = [
   { id: '1', name: 'Leads', count: 5620, conversion: 100, revenue: 0, color: '#7c3aed' },
   { id: '2', name: 'Interested', count: 4890, conversion: 87, revenue: 0, color: '#8b5cf6' },
   { id: '3', name: 'Trial', count: 4123, conversion: 73, revenue: 0, color: '#a855f7' },
@@ -146,21 +149,29 @@ const mockFunnelStages: FunnelStage[] = [
   { id: '6', name: 'Retained', count: 2341, conversion: 42, revenue: 98200, color: '#e9d5ff' },
 ];
 
-const mockStudents: Student[] = [
+const DEFAULT_STUDENTS: Student[] = [
   { id: 'S001', name: 'John Smith', country: 'USA', counselor: 'Alice Chen', stage: 'Paid', plan: 'Global 10GB', revenue: 45, lastActivity: '2h ago', avatar: '👨' },
   { id: 'S002', name: 'Maria Garcia', country: 'Spain', counselor: 'Bob Wilson', stage: 'Trial', plan: 'Europe 5GB', revenue: 0, lastActivity: '5h ago', avatar: '👩' },
   { id: 'S003', name: 'Wei Zhang', country: 'China', counselor: 'Alice Chen', stage: 'Activated', plan: 'Asia 8GB', revenue: 38, lastActivity: '1d ago', avatar: '👨' },
   { id: 'S004', name: 'Priya Patel', country: 'India', counselor: 'Carol Davis', stage: 'Retained', plan: 'Global 15GB', revenue: 62, lastActivity: '3h ago', avatar: '👩' },
   { id: 'S005', name: 'Ahmed Hassan', country: 'UAE', counselor: 'Bob Wilson', stage: 'Paid', plan: 'Middle East 7GB', revenue: 35, lastActivity: '6h ago', avatar: '👨' },
-  { id: 'S006', name: 'Sophie Martin', country: 'France', counselor: 'Alice Chen', stage: 'Interested', plan: 'Europe 5GB', revenue: 28, lastActivity: '4h ago', avatar: '👩' },
-  { id: 'S007', name: 'Raj Kumar', country: 'India', counselor: 'Carol Davis', stage: 'Paid', plan: 'Asia 8GB', revenue: 38, lastActivity: '1h ago', avatar: '👨' },
 ];
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
 
-export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
+export const ServiceProviderOverviewRedesigned: React.FC<{ 
+  provider?: ServiceProvider;
+  funnel?: FunnelStage[];
+  students?: Student[];
+  onBack?: () => void 
+}> = ({ 
+  provider = DEFAULT_PROVIDER, 
+  funnel = DEFAULT_FUNNEL, 
+  students = DEFAULT_STUDENTS, 
+  onBack 
+}) => {
   const [activeTab, setActiveTab] = useState<string>('overview');
 
   const tabs = [
@@ -190,7 +201,7 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
               SIM Cards
             </button>
             <ChevronRight size={14} />
-            <span className="text-gray-900 font-semibold">{mockProvider.name}</span>
+            <span className="text-gray-900 font-semibold">{provider.name}</span>
           </div>
 
           {/* Provider Header - A. Header Zone */}
@@ -199,18 +210,18 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
             <div className="flex items-start gap-5">
               {/* Avatar */}
               <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-700 flex items-center justify-center text-3xl shadow-lg shadow-purple-500/30 flex-shrink-0">
-                {mockProvider.avatar}
+                {provider.avatar}
               </div>
               
               {/* Name & Metadata */}
               <div>
-                <h1 className="text-[32px] font-bold text-gray-900 mb-4 leading-none">{mockProvider.name}</h1>
+                <h1 className="text-[32px] font-bold text-gray-900 mb-4 leading-none">{provider.name}</h1>
                 
                 {/* Metadata Pills */}
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg">
                     <FileText size={14} className="text-gray-600" />
-                    <span className="text-sm font-semibold text-gray-700">{mockProvider.id}</span>
+                    <span className="text-sm font-semibold text-gray-700">{provider.id}</span>
                   </div>
                   
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 rounded-lg border border-emerald-200">
@@ -220,12 +231,12 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
                   
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg border border-blue-200">
                     <Globe size={14} className="text-blue-600" />
-                    <span className="text-sm font-semibold text-blue-700">{mockProvider.coverage}</span>
+                    <span className="text-sm font-semibold text-blue-700">{provider.coverage}</span>
                   </div>
                   
                   <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 rounded-lg border border-purple-200">
                     <Building2 size={14} className="text-purple-600" />
-                    <span className="text-sm font-semibold text-purple-700">{mockProvider.contractType}</span>
+                    <span className="text-sm font-semibold text-purple-700">{provider.contractType}</span>
                   </div>
                 </div>
               </div>
@@ -264,7 +275,7 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
                   </div>
                   <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">Total Students</span>
                 </div>
-                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">{mockProvider.totalStudents.toLocaleString()}</div>
+                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">{provider.totalStudents.toLocaleString()}</div>
                 <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
                   <ArrowUpRight size={12} />
                   <span>+12% vs last month</span>
@@ -279,7 +290,7 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
                   </div>
                   <span className="text-xs font-bold text-emerald-700 uppercase tracking-wide">Active Subs</span>
                 </div>
-                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">{mockProvider.activeSubscriptions.toLocaleString()}</div>
+                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">{provider.activeSubscriptions.toLocaleString()}</div>
                 <div className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
                   <ArrowUpRight size={12} />
                   <span>+8% vs last month</span>
@@ -294,7 +305,7 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
                   </div>
                   <span className="text-xs font-bold text-purple-700 uppercase tracking-wide">Revenue</span>
                 </div>
-                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">${(mockProvider.monthlyRevenue / 1000).toFixed(1)}k</div>
+                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">${(provider.monthlyRevenue / 1000).toFixed(1)}k</div>
                 <div className="flex items-center gap-1 text-xs text-purple-600 font-medium">
                   <ArrowUpRight size={12} />
                   <span>+15% vs last month</span>
@@ -309,7 +320,7 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
                   </div>
                   <span className="text-xs font-bold text-amber-700 uppercase tracking-wide">Conversion</span>
                 </div>
-                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">{mockProvider.conversionRate}%</div>
+                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">{provider.conversionRate}%</div>
                 <div className="flex items-center gap-1 text-xs text-amber-600 font-medium">
                   <ArrowUpRight size={12} />
                   <span>+3.2% vs last month</span>
@@ -324,7 +335,7 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
                   </div>
                   <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Uptime</span>
                 </div>
-                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">{mockProvider.uptime}%</div>
+                <div className="text-[28px] font-bold text-gray-900 leading-none mb-2">{provider.uptime}%</div>
                 <div className="flex items-center gap-1 text-xs text-gray-600 font-medium">
                   <CheckCircle size={12} />
                   <span>99.9% SLA</span>
@@ -358,7 +369,7 @@ export const ServiceProviderOverviewRedesigned: React.FC<{ onBack?: () => void }
 
       {/* D. ANALYTICS ZONE - Main Content */}
       <div className="max-w-[1440px] mx-auto px-8 py-10">
-        {activeTab === 'overview' && <OverviewTab provider={mockProvider} stages={mockFunnelStages} students={mockStudents} />}
+        {activeTab === 'overview' && <OverviewTab provider={provider} stages={funnel} students={students} />}
         {activeTab === 'funnel' && <div className="text-gray-500">Funnel tab content</div>}
         {activeTab === 'plans' && <div className="text-gray-500">Plans tab content</div>}
         {activeTab === 'analytics' && <div className="text-gray-500">Analytics tab content</div>}

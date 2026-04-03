@@ -37,6 +37,10 @@ import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
 
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
+import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
+import { CustomCheckbox, StatusBadge } from './service-marketplace/CommonUI';
+
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { AddBankDialog } from './common/AddBankDialog';
@@ -49,100 +53,7 @@ import {
   Bank as BankType
 } from '@/app/services/banksService';
 
-// --- CustomCheckbox Component ---
-interface CustomCheckboxProps {
-  checked: boolean;
-  partial?: boolean;
-  onChange: () => void;
-}
-
-const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ checked, partial = false, onChange }) => {
-  return (
-    <div
-      onClick={onChange}
-      className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial
-        ? 'bg-white border-purple-600'
-        : 'bg-white border-gray-300 hover:border-gray-400'
-        }`}
-    >
-      {checked && <Check size={12} className="text-purple-600" strokeWidth={4} />}
-      {partial && <div className="w-2.5 h-2.5 bg-purple-600 rounded-sm" />}
-    </div>
-  );
-};
-
-// --- StatusBadge Component ---
-interface StatusBadgeProps {
-  status: 'active' | 'inactive';
-}
-
-const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  const statusConfig = {
-    'active': {
-      bg: 'bg-green-100',
-      text: 'text-green-700',
-      border: 'border-green-300',
-      label: 'Active'
-    },
-    'inactive': {
-      bg: 'bg-gray-100',
-      text: 'text-gray-600',
-      border: 'border-gray-300',
-      label: 'Inactive'
-    }
-  };
-
-  const config = statusConfig[status];
-
-  return (
-    <span className={`px-3 py-1 rounded-lg text-[12px] font-medium border border-opacity-20 inline-flex w-[100px] items-center justify-center ${config.bg} ${config.text} ${config.border}`}>
-      {config.label}
-    </span>
-  );
-};
-
-// --- MetricCard Component ---
-interface MetricCardProps {
-  title: string;
-  value: string;
-  icon: React.ElementType;
-  bgClass: string;
-  colorClass: string;
-  tooltip: string;
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon: Icon, bgClass, colorClass, tooltip }) => {
-  return (
-    <div className="bg-white p-5 rounded-2xl shadow-md flex flex-col justify-between min-w-[180px] h-[130px] relative overflow-hidden group hover:shadow-lg transition-all border border-gray-50/50">
-      <div className="flex items-center justify-between">
-        <span className="text-[#253154] font-medium text-[15px]">{title}</span>
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-4 h-4 rounded-full border border-current text-[10px] flex items-center justify-center cursor-help hover:text-[#0e042f] hover:border-[#0e042f] transition-colors">
-                i
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="bg-[#0e042f] text-white rounded-xl text-xs px-3 py-2">
-              <p>{tooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-      <div className="flex items-end gap-3 mt-2">
-        <div className={`w-10 h-10 rounded-xl ${bgClass} ${colorClass} flex items-center justify-center`}>
-          <Icon size={22} strokeWidth={1.5} />
-        </div>
-        <div>
-          <p className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</p>
-        </div>
-      </div>
-      <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-500">
-        <Icon size={80} />
-      </div>
-    </div>
-  );
-};
+// --- MetricCard Component is now part of ServiceMetricGrid ---
 
 interface MobileBankCardProps {
   bank: BankType;
@@ -607,113 +518,38 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
 
-        {/* Desktop Action Bar */}
-        <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                  <CalendarIcon size={20} className="text-[#253154]" />
-                  <span className="font-medium text-[#253154] text-[14px]">
-                    {date?.from && date?.to
-                      ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}`
-                      : 'Select date range'}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" />
-            <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500">
-              <RefreshCw size={20} className="text-[#253154]" />
-            </button>
-          </div>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Download size={20} strokeWidth={1.5} />
-              Export
-            </button>
-            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Upload size={20} strokeWidth={1.5} />
-              Import
-            </button>
-            <button
-              onClick={() => {
-                if (onNavigate) {
-                  onNavigate('/services/banks/add');
-                } else {
-                  setEditingBank(null);
-                  setDialogMode('add');
-                  setShowAddDialog(true);
-                }
-              }}
-              className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
-            >
-              <Plus size={20} strokeWidth={1.5} />
-              Add Bank
-            </button>
-          </div>
-        </div>
+        {/* Standard Action Bar */}
+        <ServicePageHeader 
+          title="Banks" 
+          dateRange={date} 
+          onDateChange={setDate}
+          onRefresh={handleRefresh}
+          onExport={() => setShowExportDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+          onAdd={() => {
+            if (onNavigate) {
+              onNavigate('/services/banks/add');
+            } else {
+              setEditingBank(null);
+              setDialogMode('add');
+              setShowAddDialog(true);
+            }
+          }}
+          addLabel="Add Bank"
+        />
 
-        {/* Mobile Action Bar */}
-        <div className="flex md:hidden flex-col gap-4 mb-6">
-          <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-            <div className="flex items-center gap-3">
-              <CalendarIcon size={18} className="text-[#253154]" />
-              <span className="text-sm font-medium text-[#253154]">
-                {date?.from && date?.to
-                  ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}`
-                  : 'Select range'}
-              </span>
-            </div>
-            <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500">
-              <RefreshCw size={18} className="text-[#253154]" />
-            </button>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                if (onNavigate) {
-                  onNavigate('/services/banks/add');
-                } else {
-                  setEditingBank(null);
-                  setDialogMode('add');
-                  setShowAddDialog(true);
-                }
-              }}
-              className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium"
-            >
-              <Plus size={20} />
-              Add Bank
-            </button>
-            <button onClick={() => setActiveMobileMenu(activeMobileMenu === 'import' ? 'none' : 'import')} className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center">
-              <MoreHorizontal size={22} className="text-[#253154]" />
-            </button>
-          </div>
-        </div>
+        {/* Metrics - Standard Grid */}
+        <ServiceMetricGrid metrics={metrics} />
 
-        {/* Metrics - Desktop */}
-        <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          {metrics.map((metric, index) => (
-            <MetricCard key={index} {...metric} />
-          ))}
-        </div>
-
-        {/* Metrics - Mobile */}
+        {/* Mobile Cards (Optional: can be standardized too) */}
         <div className="block lg:hidden mb-14 -mx-4">
           <Slider {...slickSettings}>
             {metrics.map((metric, index) => (
               <div key={index} className="px-2 py-2">
-                <MetricCard {...metric} />
+                <div className="bg-white p-5 rounded-2xl shadow-md min-w-[180px] h-[130px]">
+                  <p className="text-[#253154] font-medium text-[15px]">{metric.title}</p>
+                  <p className="text-[28px] font-bold text-[#253154] mt-4">{metric.value}</p>
+                </div>
               </div>
             ))}
           </Slider>
@@ -1078,6 +914,7 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
                   banks.map((bank) => (
                     <tr
                       key={bank.id}
+                      onClick={() => onNavigate?.(`/services/banks/${bank.id}`)}
                       className={`hover:bg-gray-50 transition-colors group cursor-pointer ${selectedBanks.includes(bank.id.toString()) ? 'bg-purple-50/30' : ''}`}
                     >
                       <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -1096,6 +933,13 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
                       {visibleColumns.includes('updated') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{bank.updated_at ? new Date(bank.updated_at).toLocaleDateString() : 'N/A'}</td>}
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/banks/${bank.id}`); }}
+                            className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                            title="View Details"
+                          >
+                            <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); handleEditBank(bank); }}
                             className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
@@ -1127,7 +971,7 @@ export const BanksOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
                 bank={bank}
                 isSelected={selectedBanks.includes(bank.id.toString())}
                 onToggleSelect={() => handleToggleBank(bank.id.toString())}
-                onNavigate={onNavigate}
+                onNavigate={(page) => onNavigate?.(`/services/banks/${bank.id}`)}
                 onEdit={handleEditBank}
                 onDelete={handleDeleteBank}
                 onToggleStatus={handleToggleStatus}

@@ -40,7 +40,8 @@ import {
     UserPlus,
     ChevronRight,
     Users as UsersIconSmall,
-    HardDrive
+    HardDrive,
+    ShieldCheck
 } from 'lucide-react';
 import {
     Dialog,
@@ -88,11 +89,13 @@ import { integrationSettingsService, IntegrationSettings } from '@/services/inte
 import FileAssetSettings from './FileAssetSettings';
 import { fileSettingsService, FileSettings } from '@/services/fileSettingsService';
 import PolicyLegalSettings from './PolicyLegalSettings';
+import PolicySettingsRoute from './PolicyLegalSettings';
 import { policySettingsService, PolicyGlobalSettings } from '@/services/policySettingsService';
 import AdvancedSystemSettings from './AdvancedSystemSettings';
+import LegalComplianceSettings from './LegalComplianceSettings';
 
 type SettingsView = 'grid' | 'detail';
-type SettingsTab = 'general' | 'ai' | 'security' | 'people' | 'services_countries' | 'comparison_rules' | 'notifications' | 'communications' | 'delivery_safety' | 'compliance' | 'finance' | 'localization' | 'integrations' | 'files' | 'policies' | 'advanced' | 'placeholder';
+type SettingsTab = 'general' | 'ai' | 'security' | 'people' | 'services_countries' | 'comparison_rules' | 'notifications' | 'communications' | 'delivery_safety' | 'compliance' | 'finance' | 'localization' | 'integrations' | 'files' | 'policies' | 'advanced' | 'legal_readiness' | 'placeholder';
 
 interface Category {
     id: string;
@@ -921,6 +924,14 @@ export const SettingsOverviewPage: React.FC = () => {
 
     const categories: Category[] = [
         {
+            id: 'legal-ready',
+            title: 'Legal & Compliance Readiness',
+            description: 'Platform legal documents, GDPR enforcement, launch readiness audit, system identity',
+            icon: ShieldCheck,
+            status: 'Requires Attention',
+            tab: 'legal_readiness'
+        },
+        {
             id: 'org-identity',
             title: 'Organization & Identity',
             description: 'Organization profile, branding (logo, colors), domain & environment settings',
@@ -1085,6 +1096,7 @@ export const SettingsOverviewPage: React.FC = () => {
         { id: 'integrations', label: 'Integrations & APIs', icon: Plug },
         { id: 'files', label: 'Files & Assets', icon: HardDrive },
         { id: 'policies', label: 'Policies & Legal', icon: Scale },
+        { id: 'legal_readiness', label: 'Launch Readiness', icon: ShieldCheck },
         { id: 'advanced', label: 'Advanced & System', icon: Server },
     ];
 

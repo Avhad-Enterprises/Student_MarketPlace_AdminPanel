@@ -159,21 +159,102 @@ const NAV_SECTIONS: NavSection[] = [
   }
 ];
 
+const ROUTE_MAP: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/students': 'students-all',
+  '/students/profiles': 'students-profiles',
+  '/students/applications': 'students-applications',
+  '/students/status-tracking': 'students-status',
+  '/countries': 'countries-list',
+  '/universities': 'universities-list',
+  '/countries/add': 'countries-list',
+  '/communications': 'communications',
+  '/finance': 'finance',
+  '/reports': 'reports',
+  '/ai-test-assistant/overview': 'ai-test-overview',
+  '/ai-test-assistant/library': 'ai-test-library',
+  '/ai-test-assistant/plans': 'ai-test-plans',
+  '/ai-test-assistant/reports': 'ai-test-reports',
+  '/ai-test-assistant/scoring': 'ai-test-scoring',
+  '/online-store/themes': 'store-themes',
+  '/online-store/pages': 'store-pages',
+  '/online-store/website-builder': 'store-builder',
+  '/online-store/navigation': 'store-navigation',
+  '/online-store/preferences': 'store-preferences',
+  '/sop-assistant/overview': 'sop-overview',
+  '/sop-assistant/settings': 'sop-settings',
+  '/ai-visa-assistant/overview': 'ai-overview',
+  '/ai-visa-assistant/setup': 'ai-setup',
+  '/ai-visa-assistant/features': 'ai-features',
+  '/ai-visa-assistant/knowledge': 'ai-knowledge',
+  '/ai-visa-assistant/flows': 'ai-flows',
+  '/ai-visa-assistant/conversations': 'ai-conversations',
+  '/blogs': 'blogs',
+  '/settings': 'settings',
+  '/service-provider/overview': 'services-provider-redesigned',
+  '/bookings/list': 'bookings-list',
+  '/bookings/enquiries': 'bookings-enquiries',
+  '/bookings/status': 'bookings-status',
+  '/bookings/experts': 'bookings-experts',
+  '/profile': 'profile',
+};
+
+const getActivePageFromPathname = (pathname: string): string => {
+  // First, check for exact match or prefix in ROUTE_MAP
+  const sortedRoutes = Object.keys(ROUTE_MAP).sort((a, b) => b.length - a.length);
+  for (const route of sortedRoutes) {
+    if (pathname === route || pathname.startsWith(route + '/')) {
+      return ROUTE_MAP[route];
+    }
+  }
+
+  // Handle Dynamic Services
+  if (pathname.startsWith('/services/')) {
+    const service = pathname.split('/')[2];
+    return `services-${service}`;
+  }
+
+  // Handle AI Visa Assistant sub-routes
+  if (pathname.startsWith('/ai-visa-assistant/')) {
+    const sub = pathname.split('/')[2];
+    return `ai-${sub}`;
+  }
+
+  // Handle Bookings sub-routes
+  if (pathname.startsWith('/bookings/')) {
+    const sub = pathname.split('/')[2];
+    return `bookings-${sub}`;
+  }
+
+  return 'dashboard';
+};
+
 const checkPageInSection = (section: NavSection, pageId: string) => {
   if (section.pages?.includes(pageId)) return true;
   if (section.items?.some(item => item.id === pageId)) return true;
   return false;
 };
 
-export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, onLogout }: AdminLayoutProps) => {
+export const AdminLayout = ({ children, activePage: propActivePage, onNavigate, onLogout }: AdminLayoutProps) => {
   const router = useRouter();
+  const pathname = usePathname();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  // Initialize expandedSections to include the section containing activePage
-  const [expandedSections, setExpandedSections] = useState<string[]>(() => {
+  // Derive the active page from the current pathname
+  const activePage = getActivePageFromPathname(pathname) || propActivePage || 'dashboard';
+
+  // State for expandedSections
+  const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  
+  // Auto-expand the section containing the active page
+  useEffect(() => {
     const activeSection = NAV_SECTIONS.find(section => checkPageInSection(section, activePage));
-    return activeSection ? [activeSection.id] : [];
-  });
+    if (activeSection && !expandedSections.includes(activeSection.id)) {
+      setExpandedSections(prev => Array.from(new Set([...prev, activeSection.id])));
+    }
+  }, [activePage]);
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
@@ -204,11 +285,6 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
       console.error('Error reading auth_user', e);
     }
   }, []);
-  const pathname = usePathname();
-  const [isNavigating, setIsNavigating] = useState(false);
-  const navTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Placeholder for navigation sections if needed locally, but currently using global NAV_SECTIONS
 
   const handleNav = (page: string) => {
     console.log('[AdminLayout] Requested navigation to:', page);
@@ -218,61 +294,12 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
         onNavigate(page);
       } else {
         // Default internal navigation logic
-        const routeMap: Record<string, string> = {
-          'dashboard': '/dashboard',
-          'students-all': '/students',
-          'students-profiles': '/students/profiles',
-          'students-applications': '/students/applications',
-          'students-status': '/students/status-tracking',
-          'countries-list': '/countries',
-          'universities-list': '/universities',
-          'add-country': '/countries/add',
-          'communications': '/communications',
-          'finance': '/finance',
-          'reports': '/reports',
-          'ai-test-overview': '/ai-test-assistant/overview',
-          'ai-test-library': '/ai-test-assistant/library',
-          'ai-test-plans': '/ai-test-assistant/plans',
-          'ai-test-reports': '/ai-test-assistant/reports',
-          'ai-test-scoring': '/ai-test-assistant/scoring',
-          'store-themes': '/online-store/themes',
-          'store-pages': '/online-store/pages',
-          'store-builder': '/online-store/website-builder',
-          'store-navigation': '/online-store/navigation',
-          'store-preferences': '/online-store/preferences',
-          'sop-overview': '/sop-assistant/overview',
-          'sop-settings': '/sop-assistant/settings',
-          'ai-overview': '/ai-visa-assistant/overview',
-          'ai-setup': '/ai-visa-assistant/setup',
-          'ai-features': '/ai-visa-assistant/features',
-          'ai-knowledge': '/ai-visa-assistant/knowledge',
-          'ai-flows': '/ai-visa-assistant/flows',
-          'ai-conversations': '/ai-visa-assistant/conversations',
-          'blogs': '/blogs',
-          'settings': '/settings',
-          'report-analytics': '/reports',
-          'services-sim-cards': '/services/sim-cards',
-          'services-banks': '/services/banks',
-          'services-insurance': '/services/insurance',
-          'services-visa': '/services/visa',
-          'services-taxes': '/services/taxes',
-          'services-loans': '/services/loans',
-          'services-credit': '/services/credit',
-          'services-housing': '/services/housing',
-          'services-forex': '/services/forex',
-          'services-employment': '/services/employment',
-          'services-food': '/services/food',
-          'services-courses': '/services/courses',
-          'services-provider-redesigned': '/service-provider/overview',
-          'bookings-list': '/bookings/list',
-          'bookings-enquiries': '/bookings/enquiries',
-          'bookings-status': '/bookings/status',
-          'bookings-experts': '/bookings/experts',
-          'profile': '/profile',
-        };
-
-        const targetRoute = routeMap[page];
+        const inverseRouteMap: Record<string, string> = {};
+        Object.entries(ROUTE_MAP).forEach(([route, id]) => { inverseRouteMap[id] = route; });
+        
+        const targetRoute = inverseRouteMap[page];
         console.log('[AdminLayout] Target route for', page, 'is:', targetRoute);
+        
         if (targetRoute) {
           console.log('[AdminLayout] Navigating to mapped route:', targetRoute);
           if (pathname !== targetRoute) {
@@ -298,7 +325,7 @@ export const AdminLayout = ({ children, activePage = 'dashboard', onNavigate, on
         } else if (page.startsWith('bookings-')) {
           const subPage = page.replace('bookings-', '');
           const target = `/bookings/${subPage}`;
-          console.log('[AdminLayout] Navigating to booking:', target);
+          console.log('[AdminLayout] Navigating to booking section:', target);
           if (pathname !== target) {
             setIsNavigating(true);
           }

@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'https://smapi.test-zone.xyz/api/status-tracking';
+import { API_BASE_URL } from "@/config/api";
+
+const API_URL = `${API_BASE_URL}/api/status-tracking`;
 
 export interface BackendStatusItem {
     db_id: number;

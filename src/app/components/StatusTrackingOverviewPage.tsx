@@ -35,10 +35,12 @@ import {
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
-import Slider from "react-slick";
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
+import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
+import { CustomCheckbox } from './service-marketplace/CommonUI';
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
@@ -63,28 +65,6 @@ import {
   SelectValue,
 } from "./ui/select";
 import { Textarea } from "./ui/textarea";
-
-// --- CustomCheckbox Component ---
-interface CustomCheckboxProps {
-  checked: boolean;
-  partial?: boolean;
-  onChange: () => void;
-}
-
-const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ checked, partial = false, onChange }) => {
-  return (
-    <div
-      onClick={onChange}
-      className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial
-        ? 'bg-white border-purple-600'
-        : 'bg-white border-gray-300 hover:border-gray-400'
-        }`}
-    >
-      {checked && <Check size={12} className="text-purple-600" strokeWidth={4} />}
-      {partial && <div className="w-2.5 h-2.5 bg-purple-600 rounded-sm" />}
-    </div>
-  );
-};
 
 // --- StageBadge Component ---
 interface StageBadgeProps {
@@ -189,53 +169,6 @@ const RiskBadge: React.FC<RiskBadgeProps> = ({ level }) => {
   );
 };
 
-// --- MetricCard Component ---
-interface MetricCardProps {
-  title: string;
-  value: string;
-  icon: React.ElementType;
-  bgClass: string;
-  colorClass: string;
-  tooltip: string;
-}
-
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon: Icon, bgClass, colorClass, tooltip }) => {
-  return (
-    <div className="bg-white p-5 rounded-2xl shadow-md flex flex-col justify-between min-w-[180px] h-[130px] relative overflow-hidden group hover:shadow-lg transition-all border border-gray-50/50">
-      {/* Top row */}
-      <div className="flex items-center justify-between">
-        <span className="text-[#253154] font-medium text-[15px]">{title}</span>
-        <TooltipProvider delayDuration={200}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="w-4 h-4 rounded-full border border-current text-[10px] flex items-center justify-center cursor-help hover:text-[#0e042f] hover:border-[#0e042f] transition-colors">
-                i
-              </div>
-            </TooltipTrigger>
-            <TooltipContent className="bg-[#0e042f] text-white rounded-xl text-xs px-3 py-2">
-              <p>{tooltip}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-
-      {/* Bottom row */}
-      <div className="flex items-end gap-3 mt-2">
-        <div className={`w-10 h-10 rounded-xl ${bgClass} ${colorClass} flex items-center justify-center`}>
-          <Icon size={22} strokeWidth={1.5} />
-        </div>
-        <div>
-          <p className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</p>
-        </div>
-      </div>
-
-      {/* Decorative background */}
-      <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-500">
-        <Icon size={80} />
-      </div>
-    </div>
-  );
-};
 
 // --- MobileStatusCard Component ---
 interface StudentStatus {
@@ -350,8 +283,8 @@ const MobileStatusCard: React.FC<MobileStatusCardProps> = ({
 export const StatusTrackingOverviewPage: React.FC = () => {
   // State management
   const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(2024, 0, 1),
-    to: new Date(2024, 11, 31)
+    from: subDays(new Date(), 29),
+    to: new Date()
   });
   const [activeMobileMenu, setActiveMobileMenu] = useState<'none' | 'import' | 'search'>('none');
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
@@ -422,7 +355,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
       const data = await getAllStatusTracking(params);
 
       // Map backend data to frontend interface
-      let mappedData: StudentStatus[] = data.map(item => ({
+      let mappedData: StudentStatus[] = data.map((item: BackendStatusItem) => ({
         id: item.student_id,
         dbId: item.db_id,
         studentName: `${item.first_name} ${item.last_name}`,
@@ -732,119 +665,16 @@ export const StatusTrackingOverviewPage: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
 
-        {/* Desktop Action Bar */}
-        <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          {/* Left: Date Picker */}
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                  <CalendarIcon size={20} className="text-[#253154]" />
-                  <span className="font-medium text-[#253154] text-[14px]">
-                    {date?.from && date?.to
-                      ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}`
-                      : 'Select date range'}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" />
-            <button
-              onClick={handleRefresh}
-              className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"
-            >
-              <RefreshCw size={20} className="text-[#253154]" />
-            </button>
-          </div>
+        <ServicePageHeader 
+          title="Status Tracking" 
+          dateRange={date} 
+          onDateChange={setDate}
+          onRefresh={handleRefresh}
+          onExport={() => setShowExportDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+        />
 
-          {/* Right: Action Buttons */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Download size={20} strokeWidth={1.5} />
-              Export
-            </button>
-            <button
-              onClick={() => setShowImportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Upload size={20} strokeWidth={1.5} />
-              Import
-            </button>
-
-          </div>
-        </div>
-
-        {/* Mobile Action Bar */}
-        <div className="flex md:hidden flex-col gap-4 mb-6">
-          {/* Date Range Pill */}
-          <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-            <div className="flex items-center gap-3">
-              <CalendarIcon size={18} className="text-[#253154]" />
-              <span className="text-sm font-medium text-[#253154]">
-                {date?.from && date?.to
-                  ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}`
-                  : 'Select range'}
-              </span>
-            </div>
-            <button
-              onClick={handleRefresh}
-              className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500"
-            >
-              <RefreshCw size={18} className="text-[#253154]" />
-            </button>
-          </div>
-
-          {/* Button Row */}
-          <div className="flex gap-3">
-            <div className="relative flex-1">
-              <Search size={18} className="absolute inset-y-0 left-4 my-auto text-[#253154]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search students..."
-                className="w-full h-[50px] bg-white rounded-xl border border-gray-100 shadow-sm pl-11 pr-4 text-sm font-medium text-gray-700 focus:ring-2 focus:ring-purple-100 outline-none"
-              />
-            </div>
-            <button
-              onClick={() => setActiveMobileMenu(activeMobileMenu === 'search' ? 'none' : 'search')}
-              className={`w-[50px] h-[50px] border rounded-xl shadow-sm flex items-center justify-center transition-colors ${activeMobileMenu === 'search' ? 'bg-purple-600 border-purple-600 text-white' : 'bg-white border-gray-200 text-[#253154]'}`}
-            >
-              <Filter size={20} />
-            </button>
-          </div>
-        </div>
-
-        {/* Metrics Section - Desktop Grid */}
-        <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
-          {metrics.map((metric, index) => (
-            <MetricCard key={index} {...metric} />
-          ))}
-        </div>
-
-        {/* Metrics Section - Mobile Carousel */}
-        <div className="block lg:hidden mb-14 -mx-4">
-          <Slider {...slickSettings}>
-            {metrics.map((metric, index) => (
-              <div key={index} className="px-2 py-2">
-                <MetricCard {...metric} />
-              </div>
-            ))}
-          </Slider>
-        </div>
+        <ServiceMetricGrid metrics={metrics} />
 
         {/* Desktop Search & Filter Bar */}
         <div className="hidden md:flex justify-between items-center gap-4 mb-6">
@@ -1232,103 +1062,150 @@ export const StatusTrackingOverviewPage: React.FC = () => {
                       </div>
                     </td>
                   </tr>
-                ) : statuses.length === 0 ? (
-                  <tr>
-                    <td colSpan={allColumns.length + 2} className="px-6 py-10 text-center text-gray-400">
-                      No status records found.
-                    </td>
-                  </tr>
-                ) : (
-                  statuses.slice(0, rowsPerPage).map((status) => (
-                    <tr
-                      key={status.id}
-                      className={`hover:bg-gray-50 transition-colors group ${selectedStatuses.includes(status.id) ? 'bg-purple-50/30' : ''}`}
-                    >
-                      <td className="px-6 py-4">
-                        <CustomCheckbox
-                          checked={selectedStatuses.includes(status.id)}
-                          onChange={() => handleToggleStatus(status.id)}
-                        />
-                      </td>
-                      {visibleColumns.includes('id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{status.id}</td>}
-                      {visibleColumns.includes('student') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{status.studentName}</td>}
-                      {visibleColumns.includes('stage') && <td className="px-6 py-4 whitespace-nowrap text-sm"><StageBadge stage={status.currentStage} /></td>}
-                      {visibleColumns.includes('subStatus') && <td className="px-6 py-4 whitespace-nowrap text-sm"><SubStatusBadge subStatus={status.subStatus} /></td>}
-                      {visibleColumns.includes('country') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{status.country}</td>}
-                      {visibleColumns.includes('counselor') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{status.counselor}</td>}
-                      {visibleColumns.includes('risk') && <td className="px-6 py-4 whitespace-nowrap text-sm"><RiskBadge level={status.riskLevel} /></td>}
-                      {visibleColumns.includes('lastChange') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{status.lastStatusChange}</td>}
-                      {visibleColumns.includes('appRef') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{status.applicationRef}</td>}
-                      <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end">
-                          <Popover open={openActionMenuId === status.id} onOpenChange={(open) => setOpenActionMenuId(open ? status.id : null)}>
-                            <PopoverTrigger asChild>
-                              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                                <MoreHorizontal size={18} className="text-gray-400" />
-                              </button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-56 p-2 bg-white rounded-xl shadow-xl border border-gray-100 animate-in fade-in zoom-in-95 duration-200" align="end">
-                              <div className="space-y-1">
-                                <button
-                                  onClick={() => { handleOpenTimeline(status); setOpenActionMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                                >
-                                  <Eye size={16} />
-                                  <span>View Student Timeline</span>
-                                </button>
-                                <button
-                                  onClick={() => { handleOpenStatusUpdate(status); setOpenActionMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                                >
-                                  <Edit size={16} />
-                                  <span>Update Status</span>
-                                </button>
-                                <button
-                                  onClick={() => { setSelectedStudent(status); setShowNoteModal(true); setOpenActionMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                                >
-                                  <StickyNote size={16} />
-                                  <span>Add Internal Note</span>
-                                </button>
-                                <button
-                                  onClick={() => { toast.info('Flag for Review functionality is coming soon'); setOpenActionMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                                >
-                                  <Flag size={16} />
-                                  <span>Flag for Review</span>
-                                </button>
-                                <button
-                                  onClick={() => { setSelectedStudent(status); setShowApplicationsModal(true); setOpenActionMenuId(null); }}
-                                  className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                                >
-                                  <Copy size={16} />
-                                  <span>View Linked Applications</span>
-                                </button>
+                ) : statuses.length > 0 ? (
+                  statuses.map(status => (
+                      <tr
+                        key={status.id}
+                        className={`hover:bg-gray-50 transition-colors group ${selectedStatuses.includes(status.id) ? 'bg-purple-50/40' : ''}`}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <CustomCheckbox
+                            checked={selectedStatuses.includes(status.id)}
+                            onChange={() => handleToggleStatus(status.id)}
+                          />
+                        </td>
+                        {visibleColumns.includes('id') && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-bold text-[#253154] bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-100 shadow-sm">
+                              {status.id}
+                            </span>
+                          </td>
+                        )}
+                        {visibleColumns.includes('student') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{status.studentName}</td>
+                        )}
+                        {visibleColumns.includes('stage') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <StageBadge stage={status.currentStage} />
+                          </td>
+                        )}
+                        {visibleColumns.includes('subStatus') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <SubStatusBadge subStatus={status.subStatus} />
+                          </td>
+                        )}
+                        {visibleColumns.includes('country') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{status.country}</td>
+                        )}
+                        {visibleColumns.includes('counselor') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold text-purple-700">
+                                {status.counselor.split(' ').map(n => n[0]).join('')}
                               </div>
-                            </PopoverContent>
-                          </Popover>
+                              {status.counselor}
+                            </div>
+                          </td>
+                        )}
+                        {visibleColumns.includes('risk') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                            <RiskBadge level={status.riskLevel} />
+                          </td>
+                        )}
+                        {visibleColumns.includes('lastChange') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{status.lastStatusChange}</td>
+                        )}
+                        {visibleColumns.includes('appRef') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-600 font-mono tracking-tighter">
+                            {status.applicationRef}
+                          </td>
+                        )}
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => handleOpenTimeline(status)}
+                                    className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                                  >
+                                    <Eye size={16} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>View Timeline</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => handleOpenStatusUpdate(status)}
+                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Update Status</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => handleOpenNote(status)}
+                                    className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all"
+                                  >
+                                    <StickyNote size={16} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Add Internal Note</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                    onClick={() => {
+                                      toast.error("Internal delete logic pending backend approval");
+                                    }}
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete Entry</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={visibleColumns.length + 2} className="px-6 py-24 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                          <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                            <Clock size={24} className="text-gray-300" />
+                          </div>
+                          <p className="text-gray-500 font-medium">No results found</p>
+                          <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                            We couldn't find any status records matching your search criteria.
+                          </p>
                         </div>
                       </td>
                     </tr>
-                  ))
-                )}
+                  )}
               </tbody>
             </table>
           </div>
 
           {/* Mobile Card View */}
           <div className="md:hidden flex flex-col gap-3 p-4">
-            {isLoading ? (
-              <div className="py-10 text-center text-gray-400 flex flex-col items-center gap-2">
-                <RefreshCw className="animate-spin text-purple-500" size={24} />
-                <span className="text-sm">Loading statuses...</span>
-              </div>
-            ) : statuses.length === 0 ? (
-              <div className="py-10 text-center text-gray-400">
-                No status records found.
-              </div>
-            ) : (
-              statuses.slice(0, rowsPerPage).map((status) => (
+            {statuses.length > 0 ? (
+              statuses.map(status => (
                 <MobileStatusCard
                   key={status.id}
                   status={status}
@@ -1336,57 +1213,74 @@ export const StatusTrackingOverviewPage: React.FC = () => {
                   onToggleSelect={() => handleToggleStatus(status.id)}
                   onOpenTimeline={handleOpenTimeline}
                   onOpenStatusUpdate={handleOpenStatusUpdate}
-                  onDelete={() => toast.info('Delete functionality coming soon')}
+                  onDelete={() => { toast.error("Delete pending approval"); }}
                 />
               ))
+            ) : (
+              <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center space-y-3">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                  <Clock size={24} className="text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">No results found</p>
+                <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                  We couldn't find any status records matching your search criteria.
+                </p>
+              </div>
             )}
           </div>
 
           {/* Pagination Bar */}
-          <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
-              <div className="relative">
-                <button
-                  onClick={() => setShowRowsMenu(!showRowsMenu)}
-                  className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700"
-                >
-                  {rowsPerPage}
-                  <ChevronDown size={14} className="text-gray-400" />
+          {statuses.length > 0 && (
+            <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowRowsMenu(!showRowsMenu)}
+                    className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-between gap-2"
+                  >
+                    <span className="text-sm font-medium text-gray-700">{rowsPerPage}</span>
+                    <ChevronDown size={14} className="text-gray-500" />
+                  </button>
+                  {showRowsMenu && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowRowsMenu(false)} />
+                      <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-100 z-20 p-1 animate-in slide-in-from-bottom-1 duration-200">
+                        {[10, 25, 50, 100].map(num => (
+                          <button
+                            key={num}
+                            onClick={() => {
+                              setRowsPerPage(num);
+                              setShowRowsMenu(false);
+                            }}
+                            className={`w-full px-3 py-1.5 text-xs font-medium rounded ${rowsPerPage === num
+                              ? 'bg-purple-50 text-purple-700'
+                              : 'text-gray-600 hover:bg-gray-50'
+                              }`}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="hidden sm:block text-sm text-gray-500 font-medium">
+                Showing {statuses.length > 0 ? 1 : 0} to {statuses.length} of {statuses.length} records
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center disabled:opacity-50" disabled>
+                  <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
                 </button>
-                {showRowsMenu && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowRowsMenu(false)} />
-                    <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-100 z-20 p-1 animate-in slide-in-from-bottom-1 duration-200">
-                      {[5, 10, 25, 50].map(rows => (
-                        <button
-                          key={rows}
-                          onClick={() => {
-                            setRowsPerPage(rows);
-                            setShowRowsMenu(false);
-                          }}
-                          className={`w-full px-3 py-1.5 text-xs font-medium rounded ${rowsPerPage === rows
-                            ? 'bg-purple-50 text-purple-700'
-                            : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                          {rows}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+                <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center disabled:opacity-50" disabled>
+                  <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center">
-                <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
-              </button>
-              <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center">
-                <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -1427,7 +1321,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
               <Label htmlFor="stage" className="text-sm font-semibold text-gray-700">Stage</Label>
               <Select
                 value={updateForm.stage}
-                onValueChange={(val) => setUpdateForm({ ...updateForm, stage: val })}
+                onValueChange={(val: string) => setUpdateForm({ ...updateForm, stage: val })}
               >
                 <SelectTrigger id="stage" className="bg-gray-50 border-gray-100 rounded-xl">
                   <SelectValue placeholder="Select Stage" />
@@ -1444,7 +1338,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
               <Input
                 id="subStatus"
                 value={updateForm.subStatus}
-                onChange={(e) => setUpdateForm({ ...updateForm, subStatus: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUpdateForm({ ...updateForm, subStatus: e.target.value })}
                 placeholder="e.g. Document Collection"
                 className="bg-gray-50 border-gray-100 rounded-xl"
               />
@@ -1454,7 +1348,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
               <Textarea
                 id="notes"
                 value={updateForm.notes}
-                onChange={(e) => setUpdateForm({ ...updateForm, notes: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setUpdateForm({ ...updateForm, notes: e.target.value })}
                 placeholder="Add details about this status change..."
                 className="bg-gray-50 border-gray-100 rounded-xl min-h-[100px]"
               />
@@ -1494,7 +1388,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
           <div className="flex-1 overflow-y-auto pr-4 custom-scrollbar-light">
             <div className="relative pl-8 space-y-8 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-gradient-to-b before:from-purple-200 before:via-purple-100 before:to-transparent">
               {statusHistory.length > 0 ? (
-                statusHistory.map((item, idx) => (
+                statusHistory.map((item: any, idx: number) => (
                   <div key={idx} className="relative animate-in fade-in slide-in-from-left duration-500" style={{ animationDelay: `${idx * 100}ms` }}>
                     <div className={`absolute -left-8 top-1.5 w-6 h-6 rounded-full border-4 border-white shadow-sm flex items-center justify-center ${idx === 0 ? 'bg-purple-600 ring-4 ring-purple-100' : 'bg-gray-200'}`}>
                       {idx === 0 && <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
@@ -1589,7 +1483,7 @@ export const StatusTrackingOverviewPage: React.FC = () => {
           </DialogHeader>
           <div className="py-4 space-y-3">
             {linkedApplications.length > 0 ? (
-              linkedApplications.map((app: any, idx) => (
+              linkedApplications.map((app: any, idx: number) => (
                 <div key={idx} className="p-4 rounded-xl border border-gray-100 bg-gray-50/50 flex items-center justify-between hover:border-purple-200 transition-colors">
                   <div>
                     <div className="font-bold text-[#253154]">{app.university_name}</div>

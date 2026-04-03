@@ -40,7 +40,8 @@ const MobileEmploymentCard: React.FC<{
   onToggleSelect: () => void;
   onEdit: (item: Employment) => void;
   onDelete: (id: string) => void;
-}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete }) => (
+  onNavigate?: (page: string) => void;
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onNavigate }) => (
   <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-purple-600 bg-purple-50/30' : 'border-gray-100'} shadow-sm space-y-4`}>
     <div className="flex items-start justify-between">
       <div className="flex items-center gap-3">
@@ -73,6 +74,13 @@ const MobileEmploymentCard: React.FC<{
     </div>
 
     <div className="flex items-center justify-end gap-2 pt-1">
+      <button
+        onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/employment/${item.id}`); }}
+        className="p-2.5 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors"
+        title="View Details"
+      >
+        <Eye size={18} />
+      </button>
       <button
         onClick={(e) => { e.stopPropagation(); onEdit(item); }}
         className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
@@ -547,6 +555,7 @@ export const EmploymentOverviewPage: React.FC<EmploymentOverviewPageProps> = ({ 
                         onToggleSelect={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])}
                         onEdit={handleEditPlatform}
                         onDelete={handleDelete}
+                        onNavigate={onNavigate}
                       />
                     ))
                   ) : (
@@ -564,10 +573,7 @@ export const EmploymentOverviewPage: React.FC<EmploymentOverviewPageProps> = ({ 
                   <tr
                     key={item.id}
                     className={`hidden md:table-row hover:bg-gray-50 transition-colors cursor-pointer ${selected.includes(item.id) ? 'bg-purple-50/30' : ''}`}
-                    onClick={(e) => {
-                      if ((e.target as HTMLElement).closest('td:first-child') || (e.target as HTMLElement).closest('td:last-child')) return;
-                      onNavigate?.('employment-provider-detail', { id: item.id });
-                    }}
+                    onClick={() => onNavigate?.(`/services/employment/${item.id}`)}
                   >
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}><CustomCheckbox checked={selected.includes(item.id)} onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])} /></td>
                     {visibleColumns.includes('id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{item.reference_id || item.id}</td>}
@@ -579,6 +585,13 @@ export const EmploymentOverviewPage: React.FC<EmploymentOverviewPageProps> = ({ 
                     {visibleColumns.includes('student_visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.student_visible ? 'Yes' : 'No'}</td>}
                     <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/employment/${item.id}`); }}
+                          className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                          title="View Details"
+                        >
+                          <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEditPlatform(item); }}
                           className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"

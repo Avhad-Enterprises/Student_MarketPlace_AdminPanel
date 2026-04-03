@@ -9,6 +9,7 @@ export interface Payment {
     description: string;
     amount: number;
     currency: string;
+    service_type: string;
     status: 'paid' | 'pending' | 'overdue' | 'refunded';
     payment_method: string;
     due_date: string;
@@ -28,6 +29,7 @@ export interface PaymentFormData {
     description: string;
     amount: number;
     currency: string;
+    service_type: string;
     status: string;
     payment_method: string;
     due_date: string;

@@ -12,12 +12,14 @@ import * as XLSX from 'xlsx';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
 import { SlickStyles } from "./ui/SlickStyles";
 import { universityService } from '@/services/universityService';
+
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
@@ -228,8 +230,8 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   const router = useRouter();
   // State management
   const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(2024, 0, 1),
-    to: new Date(2024, 11, 31)
+    from: subDays(new Date(), 29),
+    to: new Date()
   });
   const [activeMobileMenu, setActiveMobileMenu] = useState<'none' | 'import' | 'search'>('none');
   const [selectedUniversities, setSelectedUniversities] = useState<string[]>([]);
@@ -401,7 +403,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   };
 
   const handleEditUniversity = (id: string, tab: string = 'basic-info') => {
-    router.push(`/universities/add?id=${id}&tab=${tab}`);
+    router.push(`/universities/edit/${id}?tab=${tab}`);
   };
 
   const handleDeleteUniversity = async (id: string) => {
@@ -632,103 +634,16 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
       <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
 
         {/* Desktop Action Bar */}
-        <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          {/* Left: Date Picker */}
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                  <CalendarIcon size={20} className="text-[#253154]" />
-                  <span className="font-medium text-[#253154] text-[14px]">
-                    {date?.from && date?.to
-                      ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}`
-                      : 'Select date range'}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" />
-            <button
-              onClick={handleRefresh}
-              className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"
-            >
-              <RefreshCw size={20} className="text-[#253154]" />
-            </button>
-          </div>
-
-          {/* Right: Action Buttons */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Download size={20} strokeWidth={1.5} />
-              Export
-            </button>
-            <button
-              onClick={() => setShowImportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Upload size={20} strokeWidth={1.5} />
-              Import
-            </button>
-            <button
-              onClick={handleAddUniversity}
-              className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
-            >
-              <Plus size={20} strokeWidth={1.5} />
-              Add University
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Action Bar */}
-        <div className="flex md:hidden flex-col gap-4 mb-6">
-          {/* Date Range Pill */}
-          <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-            <div className="flex items-center gap-3">
-              <CalendarIcon size={18} className="text-[#253154]" />
-              <span className="text-sm font-medium text-[#253154]">
-                {date?.from && date?.to
-                  ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}`
-                  : 'Select range'}
-              </span>
-            </div>
-            <button
-              onClick={handleRefresh}
-              className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500"
-            >
-              <RefreshCw size={18} className="text-[#253154]" />
-            </button>
-          </div>
-
-          {/* Button Row */}
-          <div className="flex gap-3">
-            <button
-              onClick={handleAddUniversity}
-              className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium"
-            >
-              <Plus size={20} />
-              Add University
-            </button>
-            <button
-              onClick={() => setActiveMobileMenu(activeMobileMenu === 'import' ? 'none' : 'import')}
-              className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center"
-            >
-              <MoreHorizontal size={22} className="text-[#253154]" />
-            </button>
-          </div>
-        </div>
+        <ServicePageHeader 
+          title="Universities" 
+          dateRange={date} 
+          onDateChange={setDate}
+          onRefresh={handleRefresh}
+          onExport={() => setShowExportDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+          onAdd={handleAddUniversity}
+          addLabel="Add University"
+        />
 
         {/* Metrics Section - Desktop Grid */}
         <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
@@ -1154,7 +1069,7 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
             </div>
           )}
 
-          {/* Desktop Table */}
+          {/* Desktop Table View */}
           <div className="hidden md:block overflow-auto custom-scrollbar-light max-h-[600px]">
             <table className="w-full">
               <thead className="border-b border-gray-100">
@@ -1177,12 +1092,11 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {universities.map(university => (
+                {universities.length > 0 ? universities.map(university => (
                   <tr
                     key={university.id}
                     className={`hover:bg-gray-50 transition-colors cursor-pointer group ${selectedUniversities.includes(university.id) ? 'bg-purple-50/30' : ''}`}
                     onClick={(e) => {
-                      // Don't navigate if clicking checkbox or actions
                       if ((e.target as HTMLElement).closest('td:first-child') || (e.target as HTMLElement).closest('td:last-child')) {
                         return;
                       }
@@ -1229,157 +1143,146 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
                         <StatusBadge status={university.status} />
                       </td>
                     )}
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => { e.stopPropagation(); }}>
                       <div className="flex items-center gap-2">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button
-                              className="p-1.5 text-gray-400 hover:text-[#0e042f] hover:bg-gray-50 rounded-lg transition-all"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal size={18} />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent align="end" className="w-[200px] p-2 rounded-[20px] shadow-xl border-gray-100 animate-in fade-in zoom-in-95 duration-200">
-                            <div className="flex flex-col gap-1">
-                              <div className="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                Quick Access
-                              </div>
-                              <button
-                                onClick={() => handleEditUniversity(university.id, 'basic-info')}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-blue-50 text-blue-700 transition-colors group"
-                              >
-                                <div className="w-8 h-8 rounded-lg bg-blue-100/50 flex items-center justify-center group-hover:bg-blue-100 transition-colors">
-                                  <Globe size={14} />
-                                </div>
-                                <span className="text-sm font-semibold">Basic Info</span>
-                              </button>
-                              <button
-                                onClick={() => handleEditUniversity(university.id, 'admissions')}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-orange-50 text-orange-700 transition-colors group"
-                              >
-                                <div className="w-8 h-8 rounded-lg bg-orange-100/50 flex items-center justify-center group-hover:bg-orange-100 transition-colors">
-                                  <UserCheck size={14} />
-                                </div>
-                                <span className="text-sm font-semibold">Admissions</span>
-                              </button>
-                              <button
-                                onClick={() => handleEditUniversity(university.id, 'costs')}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-emerald-50 text-emerald-700 transition-colors group"
-                              >
-                                <div className="w-8 h-8 rounded-lg bg-emerald-100/50 flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
-                                  <TrendingUp size={14} />
-                                </div>
-                                <span className="text-sm font-semibold">Manage Costs</span>
-                              </button>
-                              <button
-                                onClick={() => handleEditUniversity(university.id, 'academic')}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-indigo-50 text-indigo-700 transition-colors group"
-                              >
-                                <div className="w-8 h-8 rounded-lg bg-indigo-100/50 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                                  <GraduationCap size={14} />
-                                </div>
-                                <span className="text-sm font-semibold">Academic Sys</span>
-                              </button>
-
-                              <div className="my-1 h-px bg-gray-100 mx-2" />
-                              
-                              <button
-                                onClick={() => handleDeleteUniversity(university.id)}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-50 text-red-600 transition-colors group text-left"
-                              >
-                                <div className="w-8 h-8 rounded-lg bg-red-100/50 flex items-center justify-center group-hover:bg-red-100 transition-colors">
-                                  <Trash2 size={14} />
-                                </div>
-                                <span className="text-sm font-semibold">Delete Record</span>
-                              </button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditUniversity(university.id); }}
+                          className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                          title="View Details"
+                        >
+                          <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEditUniversity(university.id, 'basic-info'); }}
+                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                          title="Edit Basic Info"
+                        >
+                          <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleAddApplication(university.id); }}
+                          className="p-2 hover:bg-green-50 rounded-lg transition-colors group"
+                          title="Add Application"
+                        >
+                          <Plus size={18} className="text-gray-400 group-hover:text-green-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteUniversity(university.id); }}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
+                        </button>
                       </div>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-24 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                          <GraduationCap size={24} className="text-gray-300" />
+                        </div>
+                        <p className="text-gray-500 font-medium">No data available</p>
+                        <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                          There are no universities matching your current filters.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Mobile Card View */}
           <div className="md:hidden flex flex-col gap-3 p-4">
-            {universities.map(university => (
-              <MobileUniversityCard
-                key={university.id}
-                university={university}
-                isSelected={selectedUniversities.includes(university.id)}
-                onToggleSelect={() => handleToggleUniversity(university.id)}
-                onEdit={() => handleEditUniversity(university.id)}
-              />
-            ))}
+            {universities.length > 0 ? (
+              universities.map(university => (
+                <MobileUniversityCard
+                  key={university.id}
+                  university={university}
+                  isSelected={selectedUniversities.includes(university.id)}
+                  onToggleSelect={() => handleToggleUniversity(university.id)}
+                  onEdit={() => handleEditUniversity(university.id)}
+                />
+              ))
+            ) : (
+              <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center space-y-3">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                  <GraduationCap size={24} className="text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">No data available</p>
+                <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                  There are no universities matching your current filters.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Pagination Bar */}
-          <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
-            {/* Left: Rows Per Page */}
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
-              <div className="relative">
-                <button
-                  onClick={() => setShowRowsMenu(!showRowsMenu)}
-                  className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-between gap-2"
-                >
-                  <span className="text-sm font-medium text-gray-700">{rowsPerPage}</span>
-                  <ChevronDown size={14} className="text-gray-500" />
-                </button>
+          {universities.length > 0 && (
+            <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowRowsMenu(!showRowsMenu)}
+                    className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-between gap-2"
+                  >
+                    <span className="text-sm font-medium text-gray-700">{rowsPerPage}</span>
+                    <ChevronDown size={14} className="text-gray-500" />
+                  </button>
 
-                {showRowsMenu && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowRowsMenu(false)} />
-                    <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-100 z-20 p-1 animate-in slide-in-from-bottom-1 duration-200">
-                      {[10, 25, 50, 100].map(num => (
-                        <button
-                          key={num}
-                          onClick={() => {
-                            setRowsPerPage(num);
-                            setShowRowsMenu(false);
-                          }}
-                          className={`w-full px-3 py-1.5 text-xs font-medium rounded ${rowsPerPage === num
-                            ? 'bg-purple-50 text-purple-700'
-                            : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                          {num}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+                  {showRowsMenu && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setShowRowsMenu(false)} />
+                      <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-100 z-20 p-1 animate-in slide-in-from-bottom-1 duration-200">
+                        {[10, 25, 50, 100].map(num => (
+                          <button
+                            key={num}
+                            onClick={() => {
+                              setRowsPerPage(num);
+                              setShowRowsMenu(false);
+                            }}
+                            className={`w-full px-3 py-1.5 text-xs font-medium rounded ${rowsPerPage === num
+                              ? 'bg-purple-50 text-purple-700'
+                              : 'text-gray-600 hover:bg-gray-50'
+                              }`}
+                          >
+                            {num}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-sm text-gray-500 font-medium">
+                Showing {universities.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0} to {Math.min(currentPage * rowsPerPage, universities.length)} of {universities.length} records
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center"
+                >
+                  <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
+                </button>
               </div>
             </div>
-
-            {/* Right: Navigation Buttons */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                // Note: Disable logic would require knowing total pages from backend response. 
-                // For now, allowing typical infinite or user-guided navigation until end.
-                className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center"
-              >
-                <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-
       </div>
 
-      {/* Export Dialog */}
       <ExportDialog
         open={showExportDialog}
         onOpenChange={setShowExportDialog}
@@ -1391,7 +1294,6 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
         onExport={handleExport}
       />
 
-      {/* Import Dialog */}
       <ImportDialog
         open={showImportDialog}
         onOpenChange={setShowImportDialog}
@@ -1404,3 +1306,4 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
     </TooltipProvider>
   );
 };
+;

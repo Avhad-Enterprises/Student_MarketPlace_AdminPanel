@@ -3,10 +3,11 @@ import { Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizo
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { format } from "date-fns";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/app/components/ui/dropdown-menu";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
+import { GlobalDateFilter } from './common/GlobalDateFilter';
 import Slider from "react-slick";
 import * as XLSX from 'xlsx';
 
@@ -14,6 +15,8 @@ import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { getAllForex, getForexMetrics, createForex, updateForex, deleteForex, Forex } from '@/app/services/forexService';
 import { AddForexDialog } from './common/AddForexDialog';
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
+import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
 
 const CustomCheckbox: React.FC<{ checked: boolean; partial?: boolean; onChange: () => void }> = ({ checked, partial, onChange }) => (<div onClick={onChange} className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'}`}>{checked && <Check size={12} className="text-purple-600" strokeWidth={4} />}{partial && <div className="w-2.5 h-2.5 bg-purple-600 rounded-sm" />}</div>);
 const StatusBadge: React.FC<{ status: 'active' | 'inactive' }> = ({ status }) => {
@@ -34,7 +37,8 @@ const MobileForexCard: React.FC<{
   onToggleSelect: () => void;
   onEdit: (item: Forex) => void;
   onDelete: (id: string) => void;
-}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete }) => (
+  onNavigate?: (page: string) => void;
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onNavigate }) => (
   <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-purple-600 bg-purple-50/30' : 'border-gray-100'} shadow-sm space-y-4`}>
     <div className="flex items-start justify-between">
       <div className="flex items-center gap-3">
@@ -68,6 +72,13 @@ const MobileForexCard: React.FC<{
 
     <div className="flex items-center justify-end gap-2 pt-1">
       <button
+        onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/forex/${item.id}`); }}
+        className="p-2.5 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors"
+        title="View Details"
+      >
+        <Eye size={18} />
+      </button>
+      <button
         onClick={(e) => { e.stopPropagation(); onEdit(item); }}
         className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
         title="Edit"
@@ -92,7 +103,7 @@ interface ForexOverviewPageProps {
 }
 
 export const ForexOverviewPage: React.FC<ForexOverviewPageProps> = ({ onNavigate }) => {
-  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
   const [selected, setSelected] = useState<string[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['forex_id', 'provider_name', 'service_type', 'currency_pairs', 'countries_covered', 'status', 'visible']);
   const [isLoading, setIsLoading] = useState(true);
@@ -399,19 +410,18 @@ export const ForexOverviewPage: React.FC<ForexOverviewPageProps> = ({ onNavigate
     <>
       <div suppressHydrationWarning className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
         {/* ... existing content ... */}
-        <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover><PopoverTrigger asChild><button suppressHydrationWarning className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors"><CalendarIcon size={20} className="text-[#253154]" /><span className="font-medium text-[#253154] text-[14px]">Select date range</span></button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CalendarComponent initialFocus mode="range" selected={date} onSelect={setDate} numberOfMonths={2} /></PopoverContent></Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" /><button className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"><RefreshCw size={20} className="text-[#253154]" /></button>
-          </div>
-          <div className="flex items-center gap-3">
-            <button suppressHydrationWarning onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Download size={20} />Export</button>
-            <button suppressHydrationWarning onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Upload size={20} />Import</button>
-            <button suppressHydrationWarning onClick={() => { setEditingItem(null); setDialogMode('add'); setShowAddDialog(true); }} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"><Plus size={20} />Add Forex</button>
-          </div>
-        </div>
+        <ServicePageHeader 
+          title="Forex" 
+          dateRange={date} 
+          onDateChange={setDate}
+          onRefresh={handleRefresh}
+          onExport={() => setShowExportDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+          onAdd={() => { setEditingItem(null); setDialogMode('add'); setShowAddDialog(true); }}
+          addLabel="Add Forex"
+        />
 
-        <div className="hidden lg:grid grid-cols-4 gap-5 mb-8">{metrics.map((m, i) => <MetricCard key={i} {...m} />)}</div>
+        <ServiceMetricGrid metrics={metrics} />
         <div className="block lg:hidden mb-14 -mx-4"><Slider dots infinite={false} speed={500} slidesToShow={1.1} slidesToScroll={1} arrows={false} centerMode centerPadding='20px'>{metrics.map((m, i) => <div key={i} className="px-2 py-2"><MetricCard {...m} /></div>)}</Slider></div>
 
         <div className="hidden md:flex justify-between items-center gap-4 mb-6">
@@ -533,12 +543,18 @@ export const ForexOverviewPage: React.FC<ForexOverviewPageProps> = ({ onNavigate
                       onToggleSelect={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])}
                       onEdit={handleEditForex}
                       onDelete={handleDelete}
+                      onNavigate={onNavigate}
                     />
                   ))
                 ) : (
-                  <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-3">
-                    <DollarSign size={48} className="text-gray-200 mx-auto" />
-                    <p className="text-gray-500 font-medium">No forex providers found</p>
+                  <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center space-y-3">
+                    <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                      <DollarSign size={24} className="text-gray-300" />
+                    </div>
+                    <p className="text-gray-500 font-medium">No data available</p>
+                    <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                      There are no forex providers matching your current filters.
+                    </p>
                   </div>
                 )}
               </div>
@@ -557,43 +573,63 @@ export const ForexOverviewPage: React.FC<ForexOverviewPageProps> = ({ onNavigate
                     <th className="sticky top-0 z-10 bg-white px-6 py-4 text-left text-[14px] font-bold text-[#253154] tracking-wider uppercase">Actions</th>
                   </tr></thead>
                   <tbody className="divide-y divide-gray-50">
-                    {items.map((item) => (
-                      <tr
-                        key={item.id}
-                        className={`hover:bg-gray-50 transition-colors cursor-pointer ${selected.includes(item.id) ? 'bg-purple-50/30' : ''}`}
-                        onClick={(e) => {
-                          if ((e.target as HTMLElement).closest('td:first-child') || (e.target as HTMLElement).closest('td:last-child')) return;
-                          onNavigate?.('forex-provider-detail', { forexId: item.id });
-                        }}
-                      >
-                        <td className="px-6 py-4"><CustomCheckbox checked={selected.includes(item.id)} onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])} /></td>
-                        {visibleColumns.includes('forex_id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{item.forex_id}</td>}
-                        {visibleColumns.includes('provider_name') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-bold underline decoration-purple-200 decoration-2 underline-offset-4">{item.provider_name}</td>}
-                        {visibleColumns.includes('service_type') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.service_type}</td>}
-                        {visibleColumns.includes('currency_pairs') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.currency_pairs}</td>}
-                        {visibleColumns.includes('countries_covered') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.countries_covered}</td>}
-                        {visibleColumns.includes('status') && <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={item.status} /></td>}
-                        {visibleColumns.includes('visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.student_visible ? 'Yes' : 'No'}</td>}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleEditForex(item); }}
-                              className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
-                              title="Edit"
-                            >
-                              <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                              className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
-                              title="Delete"
-                            >
-                              <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
-                            </button>
+                    {items.length > 0 ? (
+                      items.map((item) => (
+                        <tr
+                          key={item.id}
+                          className={`hover:bg-gray-50 transition-colors cursor-pointer ${selected.includes(item.id) ? 'bg-purple-50/30' : ''}`}
+                          onClick={() => onNavigate?.(`/services/forex/${item.id}`)}
+                        >
+                          <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}><CustomCheckbox checked={selected.includes(item.id)} onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(x => x !== item.id) : [...prev, item.id])} /></td>
+                          {visibleColumns.includes('forex_id') && <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[#253154]">{item.forex_id}</td>}
+                          {visibleColumns.includes('provider_name') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-bold underline decoration-purple-200 decoration-2 underline-offset-4">{item.provider_name}</td>}
+                          {visibleColumns.includes('service_type') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.service_type}</td>}
+                          {visibleColumns.includes('currency_pairs') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.currency_pairs}</td>}
+                          {visibleColumns.includes('countries_covered') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.countries_covered}</td>}
+                          {visibleColumns.includes('status') && <td className="px-6 py-4 whitespace-nowrap text-sm"><StatusBadge status={item.status} /></td>}
+                          {visibleColumns.includes('visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.student_visible ? 'Yes' : 'No'}</td>}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/forex/${item.id}`); }}
+                                className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                                title="View Details"
+                              >
+                                <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleEditForex(item); }}
+                                className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                                title="Edit"
+                              >
+                                <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                                className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                                title="Delete"
+                              >
+                                <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={visibleColumns.length + 2} className="px-6 py-24 text-center">
+                          <div className="flex flex-col items-center justify-center space-y-3">
+                            <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                              <DollarSign size={24} className="text-gray-300" />
+                            </div>
+                            <p className="text-gray-500 font-medium">No results found</p>
+                            <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                              We couldn't find any forex providers matching your filters.
+                            </p>
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -602,21 +638,23 @@ export const ForexOverviewPage: React.FC<ForexOverviewPageProps> = ({ onNavigate
         </div>
 
         {/* Pagination Footer */}
-        <div className="h-[80px] bg-white flex items-center justify-between px-6 border-t border-gray-50">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
-            <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-sm font-medium text-gray-700 outline-none">
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+        {items.length > 0 && (
+          <div className="h-[80px] bg-white flex items-center justify-between px-6 border-t border-gray-50">
+            <div className="flex items-center gap-2">
+              <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
+              <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-sm font-medium text-gray-700 outline-none">
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-500 font-medium">Page {currentPage} of {totalPages}</span>
+              <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronLeft size={18} strokeWidth={2} className="text-gray-500" /></button>
+              <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronRight size={18} strokeWidth={2} className="text-gray-500" /></button>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500 font-medium">Page {currentPage} of {totalPages}</span>
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronLeft size={18} strokeWidth={2} className="text-gray-500" /></button>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronRight size={18} strokeWidth={2} className="text-gray-500" /></button>
-          </div>
-        </div>
+        )}
       </div>
       <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} moduleName="Forex" totalCount={metricsData?.totalProviders || 0} selectedCount={selected.length} columns={exportColumns} supportsDateRange={false} onExport={handleExport} />
       <ImportDialog open={showImportDialog} onOpenChange={setShowImportDialog} moduleName="Forex" fields={importFields} onImport={handleImport} templateUrl="/templates/forex-import-template.xlsx" allowUpdate={true} />

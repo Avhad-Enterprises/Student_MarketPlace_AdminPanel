@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
     ArrowLeft, Save, X, Globe, User, TrendingUp, 
     GraduationCap, UserCheck, CheckCircle, Building, 
@@ -37,8 +37,27 @@ export const CountryForm: React.FC<CountryFormProps> = ({
     onCancel
 }) => {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState(initialTab);
+    
+    // Sync activeTab with URL query parameter
+    React.useEffect(() => {
+        const queryTab = searchParams.get('tab');
+        if (queryTab && queryTab !== activeTab) {
+            setActiveTab(queryTab);
+        }
+    }, [searchParams]);
+
+    // Update URL when tab changes
+    const handleTabChange = (tabId: string) => {
+        setActiveTab(tabId);
+        if (isEdit && countryId) {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set('tab', tabId);
+            router.replace(`/countries/edit/${countryId}?${params.toString()}`, { scroll: false });
+        }
+    };
     
     const [formData, setFormData] = useState<CountryFormData>(initialData || {
         country_name: '',
@@ -261,7 +280,7 @@ export const CountryForm: React.FC<CountryFormProps> = ({
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => handleTabChange(tab.id)}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium whitespace-nowrap transition-all text-sm ${
                                 activeTab === tab.id
                                     ? 'bg-purple-50 text-purple-700 shadow-sm'

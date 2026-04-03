@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal, Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, ArrowDown, Search, Copy, Printer, Archive, Edit, Check, Columns, Eye, Power, Globe, Users, Shield, FileCheck, MapPin, TrendingUp, X } from 'lucide-react';
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
-import Slider from "react-slick";
+import * as XLSX from 'xlsx';
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,37 +13,14 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
+import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
+import { CustomCheckbox, StatusBadge } from './service-marketplace/CommonUI';
+
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { AddInsuranceDialog } from './common/AddInsuranceDialog';
 import { getAllInsurance, getInsuranceMetrics, createInsurance, updateInsurance, deleteInsurance, Insurance as InsuranceType } from '@/app/services/insuranceService';
-
-interface CustomCheckboxProps { checked: boolean; partial?: boolean; onChange: () => void; }
-const CustomCheckbox: React.FC<CustomCheckboxProps> = ({ checked, partial = false, onChange }) => {
-  return (<div onClick={onChange} className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
-    {checked && <Check size={12} className="text-purple-600" strokeWidth={4} />}
-    {partial && <div className="w-2.5 h-2.5 bg-purple-600 rounded-sm" />}
-  </div>);
-};
-
-interface StatusBadgeProps { status: 'active' | 'inactive'; }
-const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
-  const statusConfig = { 'active': { bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300', label: 'Active' }, 'inactive': { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300', label: 'Inactive' } };
-  const config = statusConfig[status];
-  return (<span className={`px-3 py-1 rounded-lg text-[12px] font-medium border border-opacity-20 inline-flex w-[100px] items-center justify-center ${config.bg} ${config.text} ${config.border}`}>{config.label}</span>);
-};
-
-interface MetricCardProps { title: string; value: string; icon: React.ElementType; bgClass: string; colorClass: string; tooltip: string; }
-const MetricCard: React.FC<MetricCardProps> = ({ title, value, icon: Icon, bgClass, colorClass, tooltip }) => {
-  return (<div className="bg-white p-5 rounded-2xl shadow-md flex flex-col justify-between min-w-[180px] h-[130px] relative overflow-hidden group hover:shadow-lg transition-all border border-gray-50/50">
-    <div className="flex items-center justify-between"><span className="text-[#253154] font-medium text-[15px]">{title}</span>
-      <TooltipProvider delayDuration={200}><Tooltip><TooltipTrigger asChild><div className="w-4 h-4 rounded-full border border-current text-[10px] flex items-center justify-center cursor-help hover:text-[#0e042f] hover:border-[#0e042f] transition-colors">i</div></TooltipTrigger>
-        <TooltipContent className="bg-[#0e042f] text-white rounded-xl text-xs px-3 py-2"><p>{tooltip}</p></TooltipContent></Tooltip></TooltipProvider></div>
-    <div className="flex items-end gap-3 mt-2"><div className={`w-10 h-10 rounded-xl ${bgClass} ${colorClass} flex items-center justify-center`}><Icon size={22} strokeWidth={1.5} /></div>
-      <div><p className="text-[28px] font-bold text-[#253154] leading-none mb-1">{value}</p></div></div>
-    <div className="absolute -right-6 -bottom-6 opacity-5 rotate-12 group-hover:scale-110 transition-transform duration-500"><Icon size={80} /></div>
-  </div>);
-};
 
 interface MobileInsuranceCardProps {
   insurance: InsuranceType;
@@ -56,6 +33,7 @@ interface MobileInsuranceCardProps {
   onCopyId?: (id: string) => void;
 }
 
+
 const MobileInsuranceCard: React.FC<MobileInsuranceCardProps> = ({
   insurance,
   isSelected,
@@ -66,11 +44,9 @@ const MobileInsuranceCard: React.FC<MobileInsuranceCardProps> = ({
   onToggleStatus,
   onCopyId
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
   return (
     <div className={`bg-white rounded-2xl border transition-all duration-300 ${isSelected ? 'border-purple-600 shadow-md ring-1 ring-purple-600/10' : 'border-gray-100 shadow-sm'}`}>
-      <div className="p-4" onClick={() => setIsExpanded(!isExpanded)}>
+      <div className="p-4" onClick={() => {}}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div onClick={(e) => { e.stopPropagation(); onToggleSelect(); }}>
@@ -96,7 +72,7 @@ const MobileInsuranceCard: React.FC<MobileInsuranceCardProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 pt-3 border-t border-gray-100">
+      <div className="p-4 pt-0 space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit?.(insurance); }}
@@ -105,25 +81,33 @@ const MobileInsuranceCard: React.FC<MobileInsuranceCardProps> = ({
             <Edit size={14} /> Edit
           </button>
           <button
+            onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/insurance/${insurance.id}`); }}
+            className="flex items-center justify-center gap-2 h-10 bg-purple-50 text-purple-600 border border-purple-100 rounded-xl hover:bg-purple-100 transition-colors font-medium text-xs whitespace-nowrap shadow-sm"
+          >
+            <Eye size={14} /> View
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
             onClick={(e) => { e.stopPropagation(); onDelete?.(insurance.id); }}
             className="flex items-center justify-center gap-2 h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs whitespace-nowrap"
           >
             <Archive size={14} /> Delete
           </button>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); onToggleStatus?.(insurance); }}
-            className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#64748b] rounded-xl hover:bg-gray-100 transition-colors font-medium text-[10px]"
-          >
-            <Power size={12} /> {insurance.status === 'active' ? 'Deactivate' : 'Activate'}
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onCopyId?.(insurance.insurance_id); }}
-            className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#64748b] rounded-xl hover:bg-gray-100 transition-colors font-medium text-[10px]"
-          >
-            <Copy size={12} /> Copy ID
-          </button>
+          <div className="grid grid-cols-2 gap-1">
+             <button
+              onClick={(e) => { e.stopPropagation(); onToggleStatus?.(insurance); }}
+              className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#64748b] rounded-xl hover:bg-gray-100 transition-colors font-medium text-[10px]"
+            >
+              <Power size={12} /> {insurance.status === 'active' ? 'Off' : 'On'}
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onCopyId?.(insurance.insurance_id); }}
+              className="flex items-center justify-center gap-2 h-10 bg-gray-50 text-[#64748b] rounded-xl hover:bg-gray-100 transition-colors font-medium text-[10px]"
+            >
+              <Copy size={12} /> ID
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -131,12 +115,15 @@ const MobileInsuranceCard: React.FC<MobileInsuranceCardProps> = ({
 };
 
 export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => void }> = ({ onNavigate }) => {
-  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
   const [activeMobileMenu, setActiveMobileMenu] = useState<'none' | 'import' | 'search' | 'filter' | 'sort'>('none');
   const [selectedInsurance, setSelectedInsurance] = useState<string[]>([]);
   const [selectAllStore, setSelectAllStore] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['id', 'provider', 'policy', 'coverage', 'countries', 'status', 'visible']);
   const [showColumnMenu, setShowColumnMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [showRowsMenu, setShowRowsMenu] = useState(false);
@@ -162,7 +149,6 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
 
   const [openRowMenuId, setOpenRowMenuId] = useState<number | null>(null);
 
-  // Debounce search
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
@@ -238,12 +224,12 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
     setVisibleColumns(prev => prev.includes(columnKey) ? prev.filter(k => k !== columnKey) : [...prev, columnKey]);
   };
 
-  const handleSaveInsurance = async (data: any) => {
+  const handleSaveInsurance = async (data: Partial<InsuranceType>) => {
     try {
       if (editingInsurance) {
         await updateInsurance(editingInsurance.id, data);
       } else {
-        await createInsurance(data);
+        await createInsurance(data as any);
       }
       fetchData();
     } catch (error) {
@@ -287,8 +273,6 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
     toast.success("Reference ID copied to clipboard");
     setOpenRowMenuId(null);
   };
-
-  const slickSettings = { dots: true, infinite: false, speed: 500, slidesToShow: 1.1, slidesToScroll: 1, arrows: false, centerMode: true, centerPadding: '20px' };
 
   const exportColumns: ExportColumn[] = [
     { id: 'id', label: 'Database ID', defaultSelected: false },
@@ -345,18 +329,6 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
         return row;
       });
 
-      const XLSX = (window as any).XLSX;
-      if (!XLSX) {
-        const blob = new Blob([JSON.stringify(mappedData, null, 2)], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `insurance_export_${new Date().getTime()}.json`;
-        a.click();
-        toast.success("Insurance exported as JSON");
-        return;
-      }
-
       const worksheet = XLSX.utils.json_to_sheet(mappedData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Insurance");
@@ -370,7 +342,7 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
     }
   };
 
-  const handleImport = async (data: any[], mode: any) => {
+  const handleImport = async (data: any[], mode: 'add' | 'update') => {
     console.log('Importing data:', data, 'mode:', mode);
     let successCount = 0;
     let failCount = 0;
@@ -424,26 +396,18 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
   return (
     <TooltipProvider><div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
 
-      {/* Desktop Action Bar - Same as Banks */}
-      <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-        <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-          <Popover><PopoverTrigger asChild><button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-            <CalendarIcon size={20} className="text-[#253154]" /><span className="font-medium text-[#253154] text-[14px]">{date?.from && date?.to ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}` : 'Select date range'}</span>
-          </button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><CalendarComponent initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} /></PopoverContent></Popover>
-          <div className="w-px h-4 bg-gray-200 mx-2" /><button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"><RefreshCw size={20} className="text-[#253154]" /></button>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Download size={20} strokeWidth={1.5} />Export</button>
-          <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Upload size={20} strokeWidth={1.5} />Import</button>
-          <button onClick={() => { setEditingInsurance(null); setShowAddDialog(true); }} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"><Plus size={20} strokeWidth={1.5} />Add Insurance</button>
-        </div>
-      </div>
+      <ServicePageHeader 
+        title="Insurance" 
+        dateRange={date} 
+        onDateChange={setDate}
+        onRefresh={handleRefresh}
+        onExport={() => setShowExportDialog(true)}
+        onImport={() => setShowImportDialog(true)}
+        onAdd={() => { setEditingInsurance(null); setShowAddDialog(true); }}
+        addLabel="Add Insurance Plan"
+      />
 
-      {/* Metrics - Desktop */}
-      <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">{metrics.map((metric, idx) => <MetricCard key={idx} {...metric} />)}</div>
-
-      {/* Metrics - Mobile */}
-      <div className="block lg:hidden mb-14 -mx-4"><Slider {...slickSettings}>{metrics.map((metric, idx) => <div key={idx} className="px-2 py-2"><MetricCard {...metric} /></div>)}</Slider></div>
+      <ServiceMetricGrid metrics={metrics} />
 
       {/* Search Bar - Desktop (same pattern) */}
       <div className="hidden md:flex justify-between items-center gap-4 mb-6">
@@ -615,10 +579,15 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
                 </tr>
               ) : insurances.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleColumns.length + 2} className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-3 text-gray-400">
-                      <Shield size={40} className="opacity-20" />
-                      <p className="text-sm font-medium">No results found matching your criteria</p>
+                  <td colSpan={visibleColumns.length + 2} className="px-6 py-24 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                        <Shield className="text-gray-300" size={24} />
+                      </div>
+                      <p className="text-gray-500 font-medium">No results found</p>
+                      <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                        We couldn't find any insurance plans matching your filters.
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -626,7 +595,7 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
                 insurances.map((ins) => (
                   <tr
                     key={ins.id}
-                    onClick={() => onNavigate?.('insurance-provider-detail')}
+                    onClick={() => onNavigate?.(`/services/insurance/${ins.id}`)}
                     className={`cursor-pointer hover:bg-gray-50 transition-colors group ${selectedInsurance.includes(ins.id.toString()) ? 'bg-purple-50/30' : ''}`}
                   >
                     <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -641,6 +610,13 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
                     {visibleColumns.includes('visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{ins.student_visible ? 'Yes' : 'No'}</td>}
                     <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/insurance/${ins.id}`); }}
+                          className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                          title="View Details"
+                        >
+                          <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                        </button>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleEditInsurance(ins); }}
                           className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
@@ -673,9 +649,14 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
               <p className="text-xs font-medium">Loading...</p>
             </div>
           ) : insurances.length === 0 ? (
-            <div className="py-10 flex flex-col items-center gap-3 text-gray-400 bg-white rounded-2xl border border-gray-100 border-dashed">
-              <Shield size={32} className="opacity-20" />
-              <p className="text-xs font-medium">No results found</p>
+            <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center space-y-3">
+              <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                <Shield size={24} className="text-gray-300" />
+              </div>
+              <p className="text-gray-500 font-medium">No results found</p>
+              <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                We couldn't find any insurance plans matching your filters.
+              </p>
             </div>
           ) : (
             insurances.map((ins) => (
@@ -695,53 +676,55 @@ export const InsuranceOverviewPage: React.FC<{ onNavigate?: (page: string) => vo
         </div>
 
         {/* Pagination */}
-        <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
-          <div className="flex items-center gap-2"><span className="text-gray-500 text-sm font-medium">Rows per page:</span>
-            <Popover open={showRowsMenu} onOpenChange={setShowRowsMenu}>
-              <PopoverTrigger asChild>
-                <button className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-center gap-2 text-sm font-medium text-gray-700">
-                  {rowsPerPage}<ChevronDown size={14} className="text-gray-400" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-24 p-1 rounded-xl shadow-xl border-gray-100" align="center">
-                {[10, 20, 50, 100].map((num) => (
-                  <button
-                    key={num}
-                    onClick={() => {
-                      setRowsPerPage(num);
-                      setCurrentPage(1);
-                      setShowRowsMenu(false);
-                    }}
-                    className={`w-full px-3 py-2 rounded-lg text-sm text-left transition-colors ${rowsPerPage === num ? 'bg-purple-50 text-purple-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    {num}
+        {insurances.length > 0 && (
+          <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
+            <div className="flex items-center gap-2"><span className="text-gray-500 text-sm font-medium">Rows per page:</span>
+              <Popover open={showRowsMenu} onOpenChange={setShowRowsMenu}>
+                <PopoverTrigger asChild>
+                  <button className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm flex items-center justify-center gap-2 text-sm font-medium text-gray-700">
+                    {rowsPerPage}<ChevronDown size={14} className="text-gray-400" />
                   </button>
-                ))}
-              </PopoverContent>
-            </Popover>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500 font-medium hidden sm:inline">
-              Page {currentPage} of {totalPages}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-              >
-                <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
-              </button>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-              >
-                <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
-              </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-24 p-1 rounded-xl shadow-xl border-gray-100" align="center">
+                  {[10, 20, 50, 100].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => {
+                        setRowsPerPage(num);
+                        setCurrentPage(1);
+                        setShowRowsMenu(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-sm text-left transition-colors ${rowsPerPage === num ? 'bg-purple-50 text-purple-700 font-bold' : 'text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-500 font-medium hidden sm:inline">
+                Page {currentPage} of {totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                >
+                  <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Mobile Menus */}

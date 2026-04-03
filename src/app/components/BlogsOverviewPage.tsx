@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal, Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Columns, FileText, Edit, Archive, Clock, Eye, List, LayoutGrid, Globe, Lock } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { GlobalDateFilter } from './common/GlobalDateFilter';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
@@ -77,7 +78,7 @@ interface BlogsOverviewPageProps {
 const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => {
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(2025, 0, 1), to: new Date(2026, 11, 31) });
+  const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 30), to: new Date() });
   const [selectedBlogs, setSelectedBlogs] = useState<string[]>([]);
   const [selectAllStore, setSelectAllStore] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['blogId', 'title', 'author', 'category', 'status', 'publishDate', 'updatedAt', 'visibility']);
@@ -187,13 +188,13 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
   const paginatedBlogs = filteredAndSortedBlogs.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const handleSelectAll = () => {
+    if (blogs.length === 0) return;
     if (selectedBlogs.length === blogs.length) {
       setSelectedBlogs([]);
-      setSelectAllStore(false);
     } else {
       setSelectedBlogs(blogs.map(b => b.id.toString()));
-      setSelectAllStore(false);
     }
+    setSelectAllStore(false);
   };
 
   const handleToggleBlog = (blogId: string) => {
@@ -260,22 +261,16 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
     <div className="w-full px-4 sm:px-8 lg:px-10 py-6 md:py-10 bg-gray-50 min-h-screen">
       <div className="max-w-[1600px] mx-auto">
         <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                  <CalendarIcon size={20} className="text-[#253154]" />
-                  <span className="font-medium text-[#253154] text-[14px]">
-                    {date?.from && date?.to ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}` : 'Select date range'}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} />
-              </PopoverContent>
-            </Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" />
-            <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500">
+          <div className="flex items-center gap-3">
+            <GlobalDateFilter
+              date={date}
+              onDateChange={setDate}
+              className="w-[300px]"
+            />
+            <button
+              onClick={handleRefresh}
+              className="p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all hover:rotate-180 duration-500 shadow-sm"
+            >
               <RefreshCw size={20} className="text-[#253154]" />
             </button>
           </div>
@@ -433,7 +428,7 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
               <thead className="bg-gray-50/50 border-b border-gray-100">
                 <tr>
                   <th className="w-12 px-6 py-4 text-left">
-                    <CustomCheckbox checked={selectedBlogs.length === blogs.length} partial={selectedBlogs.length > 0 && selectedBlogs.length < blogs.length} onChange={handleSelectAll} />
+                    <CustomCheckbox checked={blogs.length > 0 && selectedBlogs.length === blogs.length} partial={selectedBlogs.length > 0 && selectedBlogs.length < blogs.length} onChange={handleSelectAll} />
                   </th>
                   {visibleColumns.includes('blogId') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Blog ID</th>}
                   {visibleColumns.includes('title') && <th className="px-6 py-4 text-left text-[11px] font-bold text-gray-400 uppercase tracking-wider">Title</th>}
@@ -456,8 +451,16 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
                   </tr>
                 ) : paginatedBlogs.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="px-6 py-10 text-center text-gray-400">
-                      No blogs found.
+                    <td colSpan={visibleColumns.length + 2} className="px-6 py-24 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center">
+                          <FileText className="text-gray-300" size={24} />
+                        </div>
+                        <p className="text-gray-500 font-medium">No data available</p>
+                        <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                          There are no blog posts matching your current filters.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -505,44 +508,46 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
           </div>
 
           {/* Pagination Footer */}
-          <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between bg-gray-50/30">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 font-medium">Rows per page:</span>
-              <select
-                value={rowsPerPage}
-                onChange={(e) => {
-                  setRowsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 outline-none transition-all cursor-pointer font-medium text-[#253154]"
-              >
-                {[5, 10, 20, 50].map(size => (
-                  <option key={size} value={size}>{size}</option>
-                ))}
-              </select>
-              <span className="text-sm text-gray-500 ml-4">
-                {filteredAndSortedBlogs.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0}-
-                {Math.min(currentPage * rowsPerPage, filteredAndSortedBlogs.length)} of {filteredAndSortedBlogs.length}
-              </span>
+          {filteredAndSortedBlogs.length > 0 && (
+            <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between bg-gray-50/30">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 font-medium">Rows per page:</span>
+                <select
+                  value={rowsPerPage}
+                  onChange={(e) => {
+                    setRowsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white hover:bg-gray-50 outline-none transition-all cursor-pointer font-medium text-[#253154]"
+                >
+                  {[5, 10, 20, 50].map(size => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
+                </select>
+                <span className="text-sm text-gray-500 ml-4">
+                  {filteredAndSortedBlogs.length > 0 ? (currentPage - 1) * rowsPerPage + 1 : 0}-
+                  {Math.min(currentPage * rowsPerPage, filteredAndSortedBlogs.length)} of {filteredAndSortedBlogs.length}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-all text-[#253154]"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <span className="text-sm font-bold text-[#253154] px-2">Page {currentPage} of {Math.max(1, totalPages)}</span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-all text-[#253154]"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-all text-[#253154]"
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <span className="text-sm font-bold text-[#253154] px-2">Page {currentPage} of {Math.max(1, totalPages)}</span>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages || totalPages === 0}
-                className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-all text-[#253154]"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
       <ExportDialog open={showExportDialog} onOpenChange={setShowExportDialog} moduleName="Blogs" totalCount={blogs.length} selectedCount={selectedBlogs.length} columns={exportColumns} supportsDateRange={true} onExport={handleExport} />

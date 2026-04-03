@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_URL = 'https://smapi.test-zone.xyz/api/ai-test-scoring';
+import { API_BASE_URL } from "@/config/api";
+
+const API_URL = `${API_BASE_URL}/api/ai-test-scoring`;
 
 const getAuthHeader = () => {
     const token = localStorage.getItem('auth_token');

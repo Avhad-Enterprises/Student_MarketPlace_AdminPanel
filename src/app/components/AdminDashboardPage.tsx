@@ -6,14 +6,17 @@ import { useState } from 'react';
 import { Calendar as CalendarIcon, RefreshCw } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { DateRange } from "react-day-picker";
 import { toast } from "sonner";
+import { GlobalDateFilter } from './common/GlobalDateFilter';
+import { getDashboardStats, DashboardStats } from '../services/dashboardService';
+import { Skeleton } from './ui/skeleton';
 
 // --- MetricCard Component ---
 interface MetricCardProps {
   title: string;
-  value: string;
+  value: React.ReactNode;
   trend: string;
   trendColor: 'green' | 'red';
   graphPath: string;
@@ -166,11 +169,31 @@ interface AdminDashboardPageProps {
 export const AdminDashboardPage = ({ onNavigate }: AdminDashboardPageProps) => {
   // State management for date picker
   const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(2024, 0, 1),
-    to: new Date(2024, 11, 31)
+    from: subDays(new Date(), 30),
+    to: new Date()
   });
 
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchStats = async () => {
+    setLoading(true);
+    try {
+      const data = await getDashboardStats();
+      setStats(data);
+    } catch (error) {
+      toast.error('Failed to load dashboard statistics');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchStats();
+  }, []);
+
   const handleRefresh = () => {
+    fetchStats();
     toast.success('Data refreshed successfully!');
   };
 
@@ -179,34 +202,16 @@ export const AdminDashboardPage = ({ onNavigate }: AdminDashboardPageProps) => {
 
       {/* Desktop Action Bar */}
       <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-        {/* Left: Date Picker */}
-        <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                <CalendarIcon size={20} className="text-[#253154]" />
-                <span className="font-medium text-[#253154] text-[14px]">
-                  {date?.from && date?.to
-                    ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}`
-                    : 'Select date range'}
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <CalendarComponent
-                initialFocus
-                mode="range"
-                defaultMonth={date?.from}
-                selected={date}
-                onSelect={setDate}
-                numberOfMonths={2}
-              />
-            </PopoverContent>
-          </Popover>
-          <div className="w-px h-4 bg-gray-200 mx-2" />
+        {/* Left: Global Date Filter */}
+        <div className="flex items-center gap-3">
+          <GlobalDateFilter 
+            date={date} 
+            onDateChange={setDate} 
+            className="w-[300px]"
+          />
           <button
             onClick={handleRefresh}
-            className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"
+            className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all hover:rotate-180 duration-500 shadow-sm"
           >
             <RefreshCw size={20} className="text-[#253154]" />
           </button>
@@ -215,19 +220,15 @@ export const AdminDashboardPage = ({ onNavigate }: AdminDashboardPageProps) => {
 
       {/* Mobile Action Bar */}
       <div className="flex md:hidden flex-col gap-4 mb-6">
-        {/* Date Range Pill */}
-        <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-          <div className="flex items-center gap-3">
-            <CalendarIcon size={18} className="text-[#253154]" />
-            <span className="text-sm font-medium text-[#253154]">
-              {date?.from && date?.to
-                ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}`
-                : 'Select range'}
-            </span>
-          </div>
+        <div className="flex items-center gap-3">
+          <GlobalDateFilter 
+            date={date} 
+            onDateChange={setDate} 
+            className="flex-1"
+          />
           <button
             onClick={handleRefresh}
-            className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500"
+            className="p-3 bg-white border border-gray-200 rounded-xl active:rotate-180 active:duration-500 shadow-sm"
           >
             <RefreshCw size={18} className="text-[#253154]" />
           </button>
@@ -239,35 +240,33 @@ export const AdminDashboardPage = ({ onNavigate }: AdminDashboardPageProps) => {
         {/* Section 2: Metrics Grid (5 KPI Cards) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
           <MetricCard
-            title="Active Users"
-            value="12,847"
-            trend="15.3%"
+            title="Total Students"
+            value={loading ? <Skeleton className="h-8 w-20" /> : (stats?.metrics.students.toLocaleString() || '0')}
+            trend={stats?.trends.students || "0.0%"}
             trendColor="green"
             graphPath="M0 8L14.2 6.8L28.4 9.2L42.6 7.4L56.8 10.6L71 4"
             graphColor="#8884D8"
-            graphViewBox="0 0 71 15"
           />
           <MetricCard
-            title="API Calls"
-            value="2.4M"
-            trend="23.1%"
+            title="Active Applications"
+            value={loading ? <Skeleton className="h-8 w-20" /> : (stats?.metrics.activeApplications.toLocaleString() || '0')}
+            trend={stats?.trends.applications || "0.0%"}
             trendColor="green"
             graphPath="M0 15L14.4 12L28.8 8L43.2 4L57.6 2L72 0"
             graphColor="#82CA9D"
             graphViewBox="0 0 72 22"
           />
           <MetricCard
-            title="New Registrations"
-            value="847"
-            trend="3.7%"
-            trendColor="red"
+            title="Published Blogs"
+            value={loading ? <Skeleton className="h-8 w-20" /> : (stats?.metrics.blogs.toLocaleString() || '0')}
+            trend="+3.7%"
+            trendColor="green"
             graphPath="M0 4L14.2 6L28.4 3L42.6 8L56.8 5L71 10"
             graphColor="#FFC658"
-            graphViewBox="0 0 71 15"
           />
           <MetricCard
-            title="Failed Requests"
-            value="127"
+            title="Total Payments"
+            value={loading ? <Skeleton className="h-8 w-20" /> : (stats?.metrics.payments.toLocaleString() || '0')}
             trend="8.9%"
             trendColor="green"
             graphPath="M0 18L14.4 14L28.8 10L43.2 6L57.6 3L72 0"
@@ -275,10 +274,10 @@ export const AdminDashboardPage = ({ onNavigate }: AdminDashboardPageProps) => {
             graphViewBox="0 0 72 23"
           />
           <MetricCard
-            title="Storage Used"
-            value="847 GB"
-            trend="4.2%"
-            trendColor="red"
+            title="Registered Users"
+            value={loading ? <Skeleton className="h-8 w-20" /> : (stats?.metrics.users.toLocaleString() || '0')}
+            trend={stats?.trends.users || "0.0%"}
+            trendColor="green"
             graphPath="M0 8L14.4 12L28.8 7L43.2 15L57.6 10L72 16"
             graphColor="#FF6B6B"
             graphViewBox="0 0 72 21"
@@ -297,30 +296,21 @@ export const AdminDashboardPage = ({ onNavigate }: AdminDashboardPageProps) => {
               </button>
             </div>
             <div className="space-y-1">
-              <AnnouncementItem
-                color="blue"
-                title="Security Patch Available"
-                time="1 hour ago"
-                desc="Critical security update ready for deployment."
-              />
-              <AnnouncementItem
-                color="yellow"
-                title="Scheduled Maintenance"
-                time="3 hours ago"
-                desc="Database maintenance window at 2:00 AM UTC."
-              />
-              <AnnouncementItem
-                color="emerald"
-                title="System Upgrade Complete"
-                time="1 day ago"
-                desc="Application upgraded to v2.5.0 successfully."
-              />
-              <AnnouncementItem
-                color="purple"
-                title="Policy Update Required"
-                time="2 days ago"
-                desc="New data retention policy requires admin review."
-              />
+              {(stats?.systemAlerts || []).map((alert, idx) => (
+                <AnnouncementItem
+                  key={idx}
+                  color={alert.color}
+                  title={alert.title}
+                  time={alert.time}
+                  desc={alert.desc}
+                />
+              ))}
+              {!loading && (!stats?.systemAlerts || stats.systemAlerts.length === 0) && (
+                <p className="text-sm text-gray-500 text-center py-8">No alerts available</p>
+              )}
+              {loading && [...Array(4)].map((_, i) => (
+                <div key={i} className="flex gap-4 p-3"><Skeleton className="w-10 h-10 rounded-full" /><div className="flex-1 space-y-2"><Skeleton className="h-4 w-3/4" /><Skeleton className="h-3 w-1/2" /></div></div>
+              ))}
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Calendar as CalendarIcon,
   RefreshCw,
@@ -43,10 +44,11 @@ import * as XLSX from 'xlsx'; // Import xlsx
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { CountryForm } from './CountryForm';
@@ -233,10 +235,11 @@ interface CountriesOverviewPageProps {
 }
 
 export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ onNavigate, onEditCountry }) => {
+  const router = useRouter();
   // State management
   const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(2024, 0, 1),
-    to: new Date(2024, 11, 31)
+    from: subDays(new Date(), 29),
+    to: new Date()
   });
   const [activeMobileMenu, setActiveMobileMenu] = useState<'none' | 'import' | 'search'>('none');
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
@@ -772,8 +775,8 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
     if (onEditCountry) {
       onEditCountry(countryId, tab);
     } else {
-      // Fallback navigation if onEditCountry prop not provided
-      window.location.href = `/countries/add?id=${countryId}&tab=${tab}`;
+      // Modernized routing using dynamic path /edit/[id]
+      router.push(`/countries/edit/${countryId}?tab=${tab}`);
     }
   };
 
@@ -851,112 +854,17 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
 
   return (
     <TooltipProvider>
-
       <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
-
-        {/* Desktop Action Bar */}
-        <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          {/* Left: Date Picker */}
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                  <CalendarIcon size={20} className="text-[#253154]" />
-                  <span className="font-medium text-[#253154] text-[14px]">
-                    {date?.from && date?.to
-                      ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}`
-                      : 'Select date range'}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={setDate}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" />
-            <button
-              onClick={handleRefresh}
-              className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500"
-            >
-              <RefreshCw size={20} className="text-[#253154]" />
-            </button>
-          </div>
-
-          {/* Right: Action Buttons */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Download size={20} strokeWidth={1.5} />
-              Export
-            </button>
-            <button
-              onClick={() => setShowImportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Upload size={20} strokeWidth={1.5} />
-              Import
-            </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium" onClick={handleAddCountry}>
-              <Plus size={20} strokeWidth={1.5} />
-              Add Country
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Action Bar */}
-        <div className="flex md:hidden flex-col gap-4 mb-6">
-          {/* Date Range Pill */}
-          <div className="w-full h-[50px] bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-between px-5">
-            <div className="flex items-center gap-3">
-              <CalendarIcon size={18} className="text-[#253154]" />
-              <span className="text-sm font-medium text-[#253154]">
-                {date?.from && date?.to
-                  ? `${format(date.from, 'd MMM')} - ${format(date.to, 'd MMM')}`
-                  : 'Select range'}
-              </span>
-            </div>
-            <button
-              onClick={handleRefresh}
-              className="p-2 hover:bg-gray-50 rounded-full transition-colors active:rotate-180 active:duration-500"
-            >
-              <RefreshCw size={18} className="text-[#253154]" />
-            </button>
-          </div>
-
-          {/* Button Row */}
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex flex-col items-center justify-center gap-1 bg-white h-[60px] rounded-xl border border-gray-100 shadow-sm active:scale-95 transition-transform"
-            >
-              <Download size={18} className="text-[#253154]" />
-              <span className="text-[10px] font-medium text-[#253154]">Export</span>
-            </button>
-            <button
-              onClick={() => setShowImportDialog(true)}
-              className="flex flex-col items-center justify-center gap-1 bg-white h-[60px] rounded-xl border border-gray-100 shadow-sm active:scale-95 transition-transform"
-            >
-              <Upload size={18} className="text-[#253154]" />
-              <span className="text-[10px] font-medium text-[#253154]">Import</span>
-            </button>
-            <button
-              onClick={handleAddCountry}
-              className="flex flex-col items-center justify-center gap-1 bg-[#0e042f] h-[60px] rounded-xl shadow-lg active:scale-95 transition-transform"
-            >
-              <Plus size={18} className="text-white" />
-              <span className="text-[10px] font-medium text-white">Add</span>
-            </button>
-          </div>
-        </div>
+        <ServicePageHeader 
+          title="Countries" 
+          dateRange={date} 
+          onDateChange={setDate}
+          onRefresh={loadCountriesData}
+          onExport={() => setShowExportDialog(true)}
+          onImport={() => setShowImportDialog(true)}
+          onAdd={handleAddCountry}
+          addLabel="Add Country"
+        />
 
         {/* Metrics Section - Desktop Grid */}
         <div className="hidden lg:grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 mb-8">
@@ -1240,12 +1148,6 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
               className="flex-1 h-full border-none focus:ring-0 text-sm bg-transparent outline-none"
             />
           </div>
-          <button
-            onClick={() => setActiveMobileMenu(activeMobileMenu === 'search' ? 'none' : 'search')}
-            className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-full shadow-sm flex items-center justify-center"
-          >
-            <MoreHorizontal size={22} className="text-[#253154]" />
-          </button>
         </div>
 
         {/* Mobile Bottom Sheet - Import Menu */}
@@ -1411,207 +1313,237 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
-                {countries.map(country => (
-                  <tr
-                    key={country.id}
-                    className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedCountries.includes(country.id) ? 'bg-purple-50/30' : ''}`}
-                    onClick={(e) => {
-                      // Don't navigate if clicking checkbox or actions
-                      if ((e.target as HTMLElement).closest('td:first-child') || (e.target as HTMLElement).closest('td:last-child')) {
-                        return;
-                      }
-                      handleEditCountry(country.id);
-                    }}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <CustomCheckbox
-                        checked={selectedCountries.includes(country.id)}
-                        onChange={() => handleToggleCountry(country.id)}
-                      />
-                    </td>
-                    {visibleColumns.includes('name') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#253154]">{country.name}</td>
-                    )}
-                    {visibleColumns.includes('code') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{country.code}</td>
-                    )}
-                    {visibleColumns.includes('region') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{country.region}</td>
-                    )}
-                    {visibleColumns.includes('visa_difficulty') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{country.visa_difficulty}</td>
-                    )}
-                    {visibleColumns.includes('cost_of_living') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{country.cost_of_living}</td>
-                    )}
-                    {visibleColumns.includes('status') && (
+              <tbody className="divide-y divide-gray-50">                 {countries.length > 0 ? (
+                   countries.map(country => (
+                    <tr
+                      key={country.id}
+                      className={`hover:bg-gray-50 transition-colors cursor-pointer ${selectedCountries.includes(country.id) ? 'bg-purple-50/30' : ''}`}
+                      onClick={(e) => {
+                        // Don't navigate if clicking checkbox or actions
+                        if ((e.target as HTMLElement).closest('td:first-child') || (e.target as HTMLElement).closest('td:last-child')) {
+                          return;
+                        }
+                        handleEditCountry(country.id);
+                      }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <StatusBadge status={country.status === 'active' ? 'active' : 'disabled'} />
+                        <CustomCheckbox
+                          checked={selectedCountries.includes(country.id)}
+                          onChange={() => handleToggleCountry(country.id)}
+                        />
                       </td>
-                    )}
-                    {visibleColumns.includes('universities') && (
+                      {visibleColumns.includes('name') && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#253154]">{country.name}</td>
+                      )}
+                      {visibleColumns.includes('code') && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{country.code}</td>
+                      )}
+                      {visibleColumns.includes('region') && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{country.region}</td>
+                      )}
+                      {visibleColumns.includes('visa_difficulty') && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{country.visa_difficulty}</td>
+                      )}
+                      {visibleColumns.includes('cost_of_living') && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{country.cost_of_living}</td>
+                      )}
+                      {visibleColumns.includes('status') && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <StatusBadge status={country.status === 'active' ? 'active' : 'disabled'} />
+                        </td>
+                      )}
+                      {visibleColumns.includes('universities') && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div
+                            className="text-sm font-medium text-purple-600 hover:text-purple-800 cursor-pointer underline decoration-dotted"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = `/universities?countryId=${country.id}`;
+                            }}
+                          >
+                            {country.universities_count || 0} Universities
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.includes('popularity') && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#253154]">{country.popularity}%</td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div
-                          className="text-sm font-medium text-purple-600 hover:text-purple-800 cursor-pointer underline decoration-dotted"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.location.href = `/universities?countryId=${country.id}`;
-                          }}
-                        >
-                          {country.universities_count || 0} Universities
+                        <div className="flex items-center gap-2">
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <button
+                                className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <MoreVertical size={16} />
+                              </button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 p-2" align="end">
+                              <div className="space-y-1">
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditCountry(country.id, 'basic-info');
+                                  }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                >
+                                  <Edit size={14} />
+                                  Edit Basic Info
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditCountry(country.id, 'visa');
+                                  }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                >
+                                  <Settings size={14} />
+                                  Manage Visa
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditCountry(country.id, 'costs');
+                                  }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                >
+                                  <DollarSign size={14} />
+                                  Manage Costs
+                                </button>
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditCountry(country.id, 'academic');
+                                  }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                >
+                                  <GraduationCap size={14} />
+                                  Academic System
+                                </button>
+                                <div className="h-px bg-gray-100 my-1" />
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.location.href = `/universities?countryId=${country.id}`;
+                                  }}
+                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                >
+                                  <Building size={14} />
+                                  View Universities
+                                </button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                          <button
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmCountry(country);
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </td>
-                    )}
-                    {visibleColumns.includes('popularity') && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[#253154]">{country.popularity}%</td>
-                    )}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <button
-                              className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-all"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreVertical size={16} />
-                            </button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-48 p-2" align="end">
-                            <div className="space-y-1">
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditCountry(country.id, 'basic-info');
-                                }}
-                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                              >
-                                <Edit size={14} />
-                                Edit Basic Info
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditCountry(country.id, 'visa');
-                                }}
-                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                              >
-                                <Settings size={14} />
-                                Manage Visa
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditCountry(country.id, 'costs');
-                                }}
-                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                              >
-                                <DollarSign size={14} />
-                                Manage Costs
-                              </button>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditCountry(country.id, 'academic');
-                                }}
-                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                              >
-                                <GraduationCap size={14} />
-                                Academic System
-                              </button>
-                              <div className="h-px bg-gray-100 my-1" />
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.location.href = `/universities?countryId=${country.id}`;
-                                }}
-                                className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                              >
-                                <Building size={14} />
-                                View Universities
-                              </button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                        <button
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteConfirmCountry(country);
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                    </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={visibleColumns.length + 2} className="px-6 py-24 text-center">
+                        <div className="flex flex-col items-center justify-center space-y-3">
+                          <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                            <Globe size={24} className="text-gray-300" />
+                          </div>
+                          <p className="text-gray-500 font-medium">No data available</p>
+                          <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                            There are no countries matching your current filters.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
               </tbody>
             </table>
           </div>
 
           {/* Mobile Card View */}
           <div className="md:hidden flex flex-col gap-3 p-4">
-            {countries.map(country => (
-              <MobileCountryCard
-                key={country.id}
-                country={country}
-                isSelected={selectedCountries.includes(country.id)}
-                onToggleSelect={() => handleToggleCountry(country.id)}
-                onEdit={() => handleEditCountry(country.id)}
-              />
-            ))}
-          </div>
-
-          {/* Pagination Bar */}
-          <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
-            {/* Left: Rows Per Page */}
-            <div className="flex items-center gap-2">
-              <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
-              <div className="relative">
-                <button
-                  onClick={() => setShowRowsMenu(!showRowsMenu)}
-                  className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-between gap-2"
-                >
-                  <span className="text-sm font-medium text-gray-700">{rowsPerPage}</span>
-                  <ChevronDown size={14} className="text-gray-500" />
-                </button>
-
-                {showRowsMenu && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowRowsMenu(false)} />
-                    <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-100 z-20 p-1 animate-in slide-in-from-bottom-1 duration-200">
-                      {[10, 25, 50, 100].map(num => (
-                        <button
-                          key={num}
-                          onClick={() => {
-                            setRowsPerPage(num);
-                            setShowRowsMenu(false);
-                          }}
-                          className={`w-full px-3 py-1.5 text-xs font-medium rounded ${rowsPerPage === num
-                            ? 'bg-purple-50 text-purple-700'
-                            : 'text-gray-600 hover:bg-gray-50'
-                            }`}
-                        >
-                          {num}
-                        </button>
-                      ))}
-                    </div>
-                  </>
-                )}
+            {countries.length > 0 ? (
+              countries.map(country => (
+                <MobileCountryCard
+                  key={country.id}
+                  country={country}
+                  isSelected={selectedCountries.includes(country.id)}
+                  onToggleSelect={() => handleToggleCountry(country.id)}
+                  onEdit={() => handleEditCountry(country.id)}
+                />
+              ))
+            ) : (
+              <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center space-y-3">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                  <Globe size={24} className="text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">No data available</p>
+                <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                  There are no countries matching your current filters.
+                </p>
               </div>
-            </div>
-
-            {/* Right: Navigation Buttons */}
-            <div className="flex items-center gap-3">
-              <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center">
-                <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
-              </button>
-              <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center">
-                <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
-              </button>
-            </div>
+            )}
           </div>
+
+            {countries.length > 0 && (
+              <div className="h-[80px] bg-white w-full flex items-center justify-between px-6 rounded-tr-[30px] shadow-[0px_-5px_25px_rgba(0,0,0,0.03)] relative z-20 border-t border-gray-50">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowRowsMenu(!showRowsMenu)}
+                      className="h-9 min-w-[70px] px-3 rounded-lg border border-gray-200 bg-white shadow-sm hover:border-gray-300 transition-colors flex items-center justify-between gap-2"
+                    >
+                      <span className="text-sm font-medium text-gray-700">{rowsPerPage}</span>
+                      <ChevronDown size={14} className="text-gray-500" />
+                    </button>
+                    {showRowsMenu && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setShowRowsMenu(false)} />
+                        <div className="absolute bottom-full left-0 mb-1 bg-white rounded-lg shadow-xl border border-gray-100 z-20 p-1 animate-in slide-in-from-bottom-1 duration-200">
+                          {[10, 25, 50, 100].map(num => (
+                            <button
+                              key={num}
+                              onClick={() => {
+                                setRowsPerPage(num);
+                                setShowRowsMenu(false);
+                              }}
+                              className={`w-full px-3 py-1.5 text-xs font-medium rounded ${rowsPerPage === num
+                                ? 'bg-purple-50 text-purple-700'
+                                : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                            >
+                              {num}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-sm text-gray-500 font-medium">
+                  Showing {countries.length > 0 ? 1 : 0} to {countries.length} of {countries.length} records
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center disabled:opacity-50">
+                    <ChevronLeft size={18} strokeWidth={2} className="text-gray-500" />
+                  </button>
+                  <button className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 hover:border-gray-300 transition-colors flex items-center justify-center disabled:opacity-50">
+                    <ChevronRight size={18} strokeWidth={2} className="text-gray-500" />
+                  </button>
+                </div>
+              </div>
+            )}
         </div>
 
       </div>

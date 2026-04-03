@@ -2023,8 +2023,16 @@ ${newAppFormData.notes || 'None'}
                 </div>
                 <div className="grid grid-cols-2 gap-6 pt-6 border-t border-gray-50">
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Estimated Budget</div>
-                    <div className="font-medium text-gray-900 text-emerald-600">{student?.budget_range || 'Not Provided'}</div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Risk Level</div>
+                    <div className="font-medium text-gray-900 capitalize">
+                      <span className={`px-2.5 py-1 rounded-md text-xs font-semibold ${
+                        student?.risk_level === 'high' ? 'bg-red-50 text-red-700 border border-red-100' :
+                        student?.risk_level === 'medium' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                        'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                      }`}>
+                        {student?.risk_level || 'Low'}
+                      </span>
+                    </div>
                   </div>
                   <div>
                     <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Date of Birth</div>

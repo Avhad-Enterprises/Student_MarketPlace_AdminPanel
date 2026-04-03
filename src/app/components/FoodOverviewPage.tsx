@@ -5,26 +5,20 @@ import {
   Search, Filter, ArrowUpDown, Columns, Download, Upload,
   Plus, MoreVertical, Edit2, Trash2, ChevronLeft, ChevronRight,
   Utensils, Globe, Zap, ShieldCheck, DollarSign,
-  CheckCircle2, XCircle, ChevronDown, Eye
+  CheckCircle2, XCircle, ChevronDown, Eye, RefreshCw
 } from 'lucide-react';
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { DateRange } from "react-day-picker";
+import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
+import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
+import { CustomCheckbox, StatusBadge } from './service-marketplace/CommonUI';
 import * as XLSX from 'xlsx';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AddFoodDialog } from './common/AddFoodDialog';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { Food, getAllFood, createFood, updateFood, deleteFood, getFoodMetrics } from '../services/foodService';
 
-
-const CustomCheckbox = ({ checked, onChange }: { checked: boolean, onChange: () => void }) => (
-  <div
-    onClick={(e) => { e.stopPropagation(); onChange(); }}
-    className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${checked ? 'bg-pink-600 border-pink-600' : 'border-gray-300 bg-white'}`}
-  >
-    {checked && <div className="w-2.5 h-2.5 bg-white rounded-sm" />}
-  </div>
-);
 
 const MobileFoodCard: React.FC<{
   item: Food;
@@ -32,7 +26,8 @@ const MobileFoodCard: React.FC<{
   onToggleSelect: () => void;
   onEdit: (item: Food) => void;
   onDelete: (id: string) => void;
-}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete }) => (
+  onNavigate?: (page: string) => void;
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onNavigate }) => (
   <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-pink-600 bg-pink-50/30' : 'border-gray-100'} shadow-sm space-y-4`}>
     <div className="flex items-start justify-between">
       <div className="flex items-center gap-3">
@@ -74,6 +69,13 @@ const MobileFoodCard: React.FC<{
 
     <div className="flex items-center justify-end gap-2 pt-1">
       <button
+        onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/food/${item.id}`); }}
+        className="p-2.5 bg-pink-50 text-pink-610 rounded-xl hover:bg-pink-100 transition-colors"
+        title="View Details"
+      >
+        <Eye size={18} />
+      </button>
+      <button
         onClick={(e) => { e.stopPropagation(); onEdit(item); }}
         className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
         title="Edit"
@@ -91,7 +93,7 @@ const MobileFoodCard: React.FC<{
   </div>
 );
 
-export const FoodOverviewPage = () => {
+export const FoodOverviewPage = ({ onNavigate }: { onNavigate?: (page: string) => void }) => {
   // State for data
   const [foodData, setFoodData] = useState<Food[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,6 +124,7 @@ export const FoodOverviewPage = () => {
   // Export state
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
   const [selected, setSelected] = useState<string[]>([]);
 
 
@@ -142,7 +145,8 @@ export const FoodOverviewPage = () => {
         status: filterStatus !== 'all' ? filterStatus : undefined,
         service_type: filterServiceType !== 'all' ? filterServiceType : undefined,
         sort: sortField,
-        order: sortOrder
+        order: sortOrder,
+        dateRange: date
       };
       const result = await getAllFood(params);
       setFoodData(result.data || []);
@@ -407,307 +411,194 @@ export const FoodOverviewPage = () => {
   };
 
 
+  const metricCards = [
+    { title: 'Total Partners', value: metrics.totalPartners.toString(), icon: Utensils, bgClass: 'bg-pink-50', colorClass: 'text-pink-600', tooltip: 'Total food delivery and discount partners' },
+    { title: 'Active Users', value: metrics.activeUsers, icon: Zap, bgClass: 'bg-yellow-50', colorClass: 'text-yellow-600', tooltip: 'Students actively using food discounts' },
+    { title: 'Countries Served', value: metrics.countriesServed.toString(), icon: Globe, bgClass: 'bg-blue-50', colorClass: 'text-blue-600', tooltip: 'Countries with active food partnerships' },
+    { title: 'Student Savings', value: metrics.studentSavings, icon: DollarSign, bgClass: 'bg-green-50', colorClass: 'text-green-600', tooltip: 'Estimated total savings for students' }
+  ];
+
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      {/* Header + Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        {[
-          { label: 'Total Partners', value: metrics.totalPartners, icon: <Utensils className="text-pink-600" />, bg: 'bg-pink-50' },
-          { label: 'Active Users', value: metrics.activeUsers, icon: <Zap className="text-yellow-600" />, bg: 'bg-yellow-50' },
-          { label: 'Countries Served', value: metrics.countriesServed, icon: <Globe className="text-blue-600" />, bg: 'bg-blue-50' },
-          { label: 'Student Savings', value: metrics.studentSavings, icon: <DollarSign className="text-green-600" />, bg: 'bg-green-50' },
-        ].map((stat, i) => (
-          <div key={i} className={`${stat.bg} p-6 rounded-[24px] border border-white/50 shadow-sm transition-all hover:scale-[1.02]`}>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-white rounded-xl shadow-sm">{stat.icon}</div>
-              <div>
-                <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">{stat.label}</p>
-                <p className="text-2xl font-bold mt-1 text-gray-900">{stat.value}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
+      <ServicePageHeader 
+        title="Food & Dining" 
+        dateRange={date} 
+        onDateChange={setDate}
+        onRefresh={fetchData}
+        onExport={() => setShowExportDialog(true)}
+        onImport={() => setShowImportDialog(true)}
+        onAdd={() => { setEditingPlatform(null); setIsAddDialogOpen(true); }}
+        addLabel="Add Platform"
+      />
 
-      {/* Main Table Section */}
+      <ServiceMetricGrid metrics={metricCards} />
+
       <div className="bg-white rounded-[32px] border border-gray-100 shadow-xl shadow-pink-900/5 overflow-hidden">
-        <div className="p-6 border-b border-gray-50">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-pink-500 transition-colors" size={20} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search food platforms..."
-                className="w-full pl-12 pr-4 py-3.5 bg-gray-50/50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all text-[15px]"
-              />
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className={`p-4 rounded-2xl border border-gray-200 hover:bg-gray-50 transition-all flex items-center justify-center ${filterStatus !== 'all' || filterServiceType !== 'all' ? 'border-pink-600 bg-pink-50/50' : 'bg-white'}`}>
-                    <Filter size={20} className={filterStatus !== 'all' || filterServiceType !== 'all' ? 'text-pink-600' : 'text-gray-600'} />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-64 p-4">
-                  <div className="space-y-4">
-                    <h4 className="font-bold text-[#253154]">Filters</h4>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-500">Status</label>
-                      <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-pink-500/20">
-                        <option value="all">All Status</option>
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm text-gray-500">Service Type</label>
-                      <select value={filterServiceType} onChange={(e) => setFilterServiceType(e.target.value)} className="w-full p-2 border rounded-lg outline-none focus:ring-2 focus:ring-pink-500/20">
-                        <option value="all">All Types</option>
-                        <option value="Delivery">Delivery</option>
-                        <option value="Meal Kits">Meal Kits</option>
-                        <option value="Grocery Discounts">Grocery Discounts</option>
-                        <option value="Student Specials">Student Specials</option>
-                      </select>
-                    </div>
-                    <button onClick={() => { setFilterStatus('all'); setFilterServiceType('all'); }} className="text-sm text-pink-600 font-medium hover:underline">Reset Filters</button>
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="p-4 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-all flex items-center justify-center">
-                    <ArrowUpDown size={20} className="text-gray-600" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48 p-2">
-                  <div className="space-y-1">
-                    {[
-                      { label: 'Platform', value: 'platform' },
-                      { label: 'Service Type', value: 'service_type' },
-                      { label: 'Countries', value: 'countries_covered' },
-                      { label: 'Popularity', value: 'popularity' },
-                      { label: 'Date Created', value: 'created_at' }
-                    ].map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => {
-                          if (sortField === opt.value) {
-                            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-                          } else {
-                            setSortField(opt.value);
-                            setSortOrder('asc');
-                          }
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded-md flex items-center justify-between text-sm ${sortField === opt.value ? 'bg-pink-50 text-pink-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}
-                      >
-                        {opt.label}
-                        {sortField === opt.value && (sortOrder === 'asc' ? <ArrowUpDown size={14} /> : <ArrowUpDown size={14} className="rotate-180" />)}
-                      </button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button className="p-4 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-all flex items-center justify-center">
-                    <Columns size={20} className="text-gray-600" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent className="w-48 p-2">
-                  <div className="space-y-1">
-                    {columns.map((col) => (
-                      <button
-                        key={col.id}
-                        onClick={(e) => { e.preventDefault(); toggleColumn(col.id); }}
-                        className="w-full text-left px-3 py-2 rounded-md flex items-center gap-3 text-sm text-gray-600 hover:bg-gray-50"
-                      >
-                        <CustomCheckbox checked={visibleColumns.includes(col.id)} onChange={() => toggleColumn(col.id)} />
-                        {col.label}
-                      </button>
-                    ))}
-                  </div>
-                </PopoverContent>
-              </Popover>
-
-              <button onClick={() => setShowExportDialog(true)} className="hidden md:flex items-center gap-2 p-4 px-6 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-all text-gray-700 font-medium">
-                <Download size={20} />
-                Export
-              </button>
-
-              <button onClick={() => setShowImportDialog(true)} className="hidden md:flex items-center gap-2 p-4 px-6 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 transition-all text-gray-700 font-medium">
-                <Upload size={20} />
-                Import
-              </button>
-
-
-              <button
-                onClick={() => { setEditingPlatform(null); setIsAddDialogOpen(true); }}
-                className="flex items-center gap-2 p-4 px-8 rounded-2xl bg-[#0e042f] hover:bg-[#1a0c4a] text-white transition-all shadow-lg shadow-pink-900/10 font-medium"
-              >
-                <Plus size={20} />
-                Add New
-              </button>
-            </div>
+        <div className="hidden md:flex justify-between items-center gap-4 p-6 border-b border-gray-50">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search food platforms..."
+              className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all text-[15px] font-medium"
+            />
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50/50 border-b border-gray-50">
-                <th className="px-6 py-4 text-left w-12">
-                  <CustomCheckbox
-                    checked={selected.length === foodData.length && foodData.length > 0}
-                    onChange={() => setSelected(selected.length === foodData.length ? [] : foodData.map(i => i.id))}
-                  />
-                </th>
-                {visibleColumns.includes('reference_id') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">ID</th>}
-                {visibleColumns.includes('platform') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Platform</th>}
-                {visibleColumns.includes('service_type') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Service Type</th>}
-                {visibleColumns.includes('offer_details') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Offer Details</th>}
-                {visibleColumns.includes('avg_cost') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Avg Cost</th>}
-                {visibleColumns.includes('countries_covered') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Countries</th>}
-                {visibleColumns.includes('popularity') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Popularity</th>}
-                {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Status</th>}
-                {visibleColumns.includes('verified') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Verified</th>}
-                {visibleColumns.includes('actions') && <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                Array(5).fill(0).map((_, i) => (
-                  <tr key={i} className="animate-pulse border-b border-gray-50">
-                    <td colSpan={10} className="px-6 py-4"><div className="h-6 bg-gray-100 rounded-lg w-full"></div></td>
-                  </tr>
-                ))
-              ) : (
-                <>
-                  {/* Mobile View */}
-                  <div className="md:hidden space-y-4 p-4">
-                    {foodData.length > 0 ? (
-                      foodData.map((item) => (
-                        <MobileFoodCard
-                          key={item.id}
-                          item={item}
-                          isSelected={selected.includes(item.id)}
-                          onToggleSelect={() => setSelected(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])}
-                          onEdit={setEditingPlatform}
-                          onDelete={handleDelete}
-                        />
-                      ))
-                    ) : (
-                      <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-3">
-                        <Utensils size={48} className="text-gray-200 mx-auto" />
-                        <p className="text-gray-500 font-medium">No platforms found</p>
-                      </div>
-                    )}
-                  </div>
+        <div className="relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-white/50 z-20 flex items-center justify-center">
+              <RefreshCw size={40} className="text-pink-600 animate-spin" />
+            </div>
+          )}
 
-                  {/* Desktop View Table */}
-                  {foodData.length === 0 ? (
-                    <tr className="hidden md:table-row">
-                      <td colSpan={10} className="px-6 py-20 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="p-4 bg-gray-50 rounded-full"><Utensils size={40} className="text-gray-300" /></div>
-                          <p className="text-gray-500 font-medium">No food platforms found</p>
+          {/* Mobile View */}
+          <div className="md:hidden space-y-4 p-4">
+            {foodData.length > 0 ? (
+              foodData.map((item) => (
+                <MobileFoodCard
+                  key={item.id}
+                  item={item}
+                  isSelected={selected.includes(item.id)}
+                  onToggleSelect={() => setSelected(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])}
+                  onEdit={setEditingPlatform}
+                  onDelete={handleDelete}
+                  onNavigate={onNavigate}
+                />
+              ))
+            ) : (
+              <div className="bg-white p-12 rounded-2xl border border-gray-100 text-center space-y-3">
+                <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                  <Utensils size={24} className="text-gray-300" />
+                </div>
+                <p className="text-gray-500 font-medium">No results found</p>
+                <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                  We couldn't find any food platforms matching your filters.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Desktop View Table */}
+          <div className="hidden md:block overflow-auto custom-scrollbar-light max-h-[600px]">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50/50 border-b border-gray-50">
+                  <th className="px-6 py-4 text-left w-12">
+                    <CustomCheckbox
+                      checked={selected.length === foodData.length && foodData.length > 0}
+                      onChange={() => setSelected(selected.length === foodData.length ? [] : foodData.map(i => i.id))}
+                    />
+                  </th>
+                  {visibleColumns.includes('reference_id') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">ID</th>}
+                  {visibleColumns.includes('platform') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Platform</th>}
+                  {visibleColumns.includes('service_type') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Service Type</th>}
+                  {visibleColumns.includes('offer_details') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">Offer Details</th>}
+                  {visibleColumns.includes('avg_cost') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Avg Cost</th>}
+                  {visibleColumns.includes('countries_covered') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Countries</th>}
+                  {visibleColumns.includes('popularity') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Popularity</th>}
+                  {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Status</th>}
+                  {visibleColumns.includes('verified') && <th className="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest text-center">Verified</th>}
+                  {visibleColumns.includes('actions') && <th className="px-6 py-4 text-right text-xs font-bold text-gray-400 uppercase tracking-widest">Actions</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {foodData.length === 0 ? (
+                  <tr>
+                    <td colSpan={visibleColumns.length + 2} className="px-6 py-24 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto">
+                          <Utensils className="text-gray-300" size={24} />
+                        </div>
+                        <p className="text-gray-500 font-medium">No results found</p>
+                        <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                          We couldn't find any food platforms matching your filters.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  foodData.map((item) => (
+                    <tr
+                      key={item.id}
+                      className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer ${selected.includes(item.id) ? 'bg-pink-50/30' : ''}`}
+                      onClick={() => onNavigate?.(`/services/food/${item.id}`)}
+                    >
+                      <td className="px-6 py-5">
+                        <CustomCheckbox
+                          checked={selected.includes(item.id)}
+                          onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])}
+                        />
+                      </td>
+                      {visibleColumns.includes('reference_id') && <td className="px-6 py-5 text-sm text-gray-500 font-medium">{item.reference_id}</td>}
+                      {visibleColumns.includes('platform') && (
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600 font-bold">{item.platform.charAt(0)}</div>
+                            <span className="font-bold text-gray-900 group-hover:text-pink-600 transition-colors uppercase tracking-tight">{item.platform}</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.includes('service_type') && <td className="px-6 py-5 text-sm text-gray-600 font-medium">{item.service_type}</td>}
+                      {visibleColumns.includes('offer_details') && <td className="px-6 py-5 text-sm text-gray-600 max-w-[200px] truncate">{item.offer_details}</td>}
+                      {visibleColumns.includes('avg_cost') && <td className="px-6 py-5 text-sm text-gray-900 font-bold text-center">{item.avg_cost}</td>}
+                      {visibleColumns.includes('countries_covered') && (
+                        <td className="px-6 py-5 text-center">
+                          <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold border border-blue-100">{item.countries_covered} Countries</span>
+                        </td>
+                      )}
+                      {visibleColumns.includes('popularity') && (
+                        <td className="px-6 py-5 text-center">
+                          <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full border border-yellow-100 mx-auto w-fit">
+                            <Zap size={14} fill="currentColor" />
+                            <span className="text-xs font-bold">{item.popularity}/10</span>
+                          </div>
+                        </td>
+                      )}
+                      {visibleColumns.includes('status') && (
+                        <td className="px-6 py-5 text-center">
+                          <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
+                            {item.status === 'active' ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                      )}
+                      {visibleColumns.includes('verified') && (
+                        <td className="px-6 py-5 text-center">
+                          {item.verified ? <CheckCircle2 className="text-green-500 mx-auto" size={20} /> : <XCircle className="text-gray-300 mx-auto" size={20} />}
+                        </td>
+                      )}
+                      <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/food/${item.id}`); }}
+                            className="p-2 hover:bg-pink-50 rounded-lg transition-colors group/view"
+                            title="View Details"
+                          >
+                            <Eye size={18} className="text-gray-400 group-hover/view:text-pink-610" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setEditingPlatform(item); setIsAddDialogOpen(true); }}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                          </button>
                         </div>
                       </td>
                     </tr>
-                  ) : (
-                    foodData.map((item) => (
-                      <tr
-                        key={item.id}
-                        className={`hidden md:table-row border-b border-gray-50 hover:bg-gray-50/50 transition-colors group cursor-pointer ${selected.includes(item.id) ? 'bg-pink-50/30' : ''}`}
-                        onClick={() => { /* Navigate to detail if needed */ }}
-                      >
-                        <td className="px-6 py-5">
-                          <CustomCheckbox
-                            checked={selected.includes(item.id)}
-                            onChange={() => setSelected(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])}
-                          />
-                        </td>
-                        {visibleColumns.includes('reference_id') && <td className="px-6 py-5 text-sm text-gray-500 font-medium">{item.reference_id}</td>}
-                        {visibleColumns.includes('platform') && (
-                          <td className="px-6 py-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-pink-100 flex items-center justify-center text-pink-600 font-bold">{item.platform.charAt(0)}</div>
-                              <span className="font-bold text-gray-900 group-hover:text-pink-600 transition-colors uppercase tracking-tight">{item.platform}</span>
-                            </div>
-                          </td>
-                        )}
-                        {visibleColumns.includes('service_type') && <td className="px-6 py-5 text-sm text-gray-600 font-medium">{item.service_type}</td>}
-                        {visibleColumns.includes('offer_details') && <td className="px-6 py-5 text-sm text-gray-600 max-w-[200px] truncate">{item.offer_details}</td>}
-                        {visibleColumns.includes('avg_cost') && <td className="px-6 py-5 text-sm text-gray-900 font-bold text-center">{item.avg_cost}</td>}
-                        {visibleColumns.includes('countries_covered') && (
-                          <td className="px-6 py-5 text-center">
-                            <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold border border-blue-100">{item.countries_covered} Countries</span>
-                          </td>
-                        )}
-                        {visibleColumns.includes('popularity') && (
-                          <td className="px-6 py-5 text-center">
-                            <div className="flex items-center justify-center gap-1.5 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full border border-yellow-100 mx-auto w-fit">
-                              <Zap size={14} fill="currentColor" />
-                              <span className="text-xs font-bold">{item.popularity}/10</span>
-                            </div>
-                          </td>
-                        )}
-                        {visibleColumns.includes('status') && (
-                          <td className="px-6 py-5 text-center">
-                            <span className={`px-4 py-1.5 rounded-full text-xs font-bold ${item.status === 'active' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'}`}>
-                              {item.status === 'active' ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                        )}
-                        {visibleColumns.includes('verified') && (
-                          <td className="px-6 py-5 text-center">
-                            {item.verified ? <CheckCircle2 className="text-green-500 mx-auto" size={20} /> : <XCircle className="text-gray-300 mx-auto" size={20} />}
-                          </td>
-                        )}
-                        <td className="px-6 py-5 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setEditingPlatform(item); setIsAddDialogOpen(true); }}
-                              className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
-                              title="Edit"
-                            >
-                              <Edit2 size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                              className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
-                              title="Delete"
-                            >
-                              <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="h-[80px] bg-white flex items-center justify-between px-6 border-t border-gray-50">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-500 text-sm font-medium">Rows per page:</span>
-            <select value={rowsPerPage} onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }} className="h-9 rounded-lg border border-gray-200 bg-white px-2 text-sm font-medium text-gray-700 outline-none focus:ring-2 focus:ring-pink-500/20">
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500 font-medium">Page {currentPage} of {totalPages}</span>
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage(prev => prev - 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronLeft size={18} strokeWidth={2} className="text-gray-500" /></button>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(prev => prev + 1)} className="w-10 h-10 rounded-lg border border-gray-200 bg-white shadow-sm hover:bg-gray-50 transition-colors flex items-center justify-center disabled:opacity-50"><ChevronRight size={18} strokeWidth={2} className="text-gray-500" /></button>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -740,7 +631,6 @@ export const FoodOverviewPage = () => {
         templateUrl="/templates/food-import-template.xlsx"
         allowUpdate={true}
       />
-
     </div>
   );
 };

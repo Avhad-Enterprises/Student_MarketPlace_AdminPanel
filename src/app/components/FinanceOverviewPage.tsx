@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal, Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Columns, DollarSign, TrendingUp, CreditCard, Wallet, Receipt, Clock, Trash2, Edit3 } from 'lucide-react';
+import { Calendar as CalendarIcon, RefreshCw, Download, Upload, Plus, MoreHorizontal, Filter, ArrowUpDown, ChevronLeft, ChevronRight, ChevronDown, Search, Check, Columns, DollarSign, TrendingUp, CreditCard, Wallet, Receipt, Clock, Trash2, Edit3, Eye } from 'lucide-react';
 import { Calendar as CalendarComponent } from "./ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { GlobalDateFilter } from './common/GlobalDateFilter';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { toast } from "sonner";
 import { DateRange } from "react-day-picker";
 import Slider from "react-slick";
@@ -15,8 +16,76 @@ import { ImportDialog, ImportField, ImportMode } from './common/ImportDialog';
 import { financeService, Payment } from '@/services/financeService';
 import { FinanceModal } from './FinanceModal';
 
+const MobileFinanceCard: React.FC<{
+  item: Payment;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  onEdit: (item: Payment) => void;
+  onDelete: (id: number) => void;
+  onNavigate?: (page: string) => void;
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onNavigate }) => (
+  <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-purple-600 bg-purple-50/30' : 'border-gray-100'} shadow-sm space-y-4`}>
+    <div className="flex items-start justify-between">
+      <div className="flex items-center gap-3">
+        <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-xs"><Receipt size={14} /></div>
+          <div>
+            <h3 className="font-bold text-[#253154] text-[15px]">{item.invoice_number}</h3>
+            <p className="text-gray-500 text-[10px]">{item.first_name} {item.last_name}</p>
+          </div>
+        </div>
+      </div>
+      <StatusBadge status={item.status as any} />
+    </div>
+
+    <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-3 border-y border-gray-50">
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Amount</p>
+        <p className="text-sm font-bold text-indigo-600">{item.currency} {Number(item.amount).toFixed(2)}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date</p>
+        <p className="text-xs font-medium text-gray-700">{format(new Date(item.created_at), 'MMM d, y')}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Method</p>
+        <p className="text-xs font-medium text-gray-600">{item.payment_method}</p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Due Date</p>
+        <p className="text-xs font-bold text-red-500">{item.due_date}</p>
+      </div>
+    </div>
+
+    <div className="flex items-center justify-end gap-2 pt-1">
+      <button
+        onClick={(e) => { e.stopPropagation(); onNavigate?.(`/finance/${item.id}`); }}
+        className="p-2.5 bg-indigo-50 text-indigo-610 rounded-xl hover:bg-indigo-100 transition-colors"
+        title="View Details"
+      >
+        <Eye size={18} />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+        className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+        title="Edit"
+      >
+        <Edit3 size={18} />
+      </button>
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+        className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+        title="Delete"
+      >
+        <Trash2 size={18} />
+      </button>
+    </div>
+  </div>
+);
+
 const CustomCheckbox: React.FC<{ checked: boolean; partial?: boolean; onChange: () => void }> = ({ checked, partial = false, onChange }) => (
-  <div onClick={onChange} className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
+  <div onClick={(e) => { e.stopPropagation(); onChange(); }} className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
     {checked && <Check size={12} className="text-purple-600" strokeWidth={4} />}
     {partial && <div className="w-2.5 h-2.5 bg-purple-600 rounded-sm" />}
   </div>
@@ -55,7 +124,7 @@ interface FinanceOverviewPageProps {
 export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavigate, onEditEntry }) => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [date, setDate] = useState<DateRange | undefined>({ from: new Date(2025, 0, 1), to: new Date(2025, 11, 31) });
+  const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 30), to: new Date() });
   const [selected, setSelected] = useState<number[]>([]);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['transactionId', 'date', 'studentName', 'amount', 'type', 'method', 'status', 'actions']);
   const [showExportDialog, setShowExportDialog] = useState(false);
@@ -176,22 +245,16 @@ export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavi
       <div className="max-w-[1600px] mx-auto">
         {/* Header Controls */}
         <div className="hidden md:flex justify-between items-center gap-4 mb-8">
-          <div className="bg-white px-2 h-[50px] rounded-xl shadow-sm border border-gray-100 flex items-center">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button className="flex items-center gap-3 hover:bg-gray-50 px-3 py-2 rounded-lg transition-colors">
-                  <CalendarIcon size={20} className="text-[#253154]" />
-                  <span className="font-medium text-[#253154] text-[14px]">
-                    {date?.from && date?.to ? `${format(date.from, 'LLL dd, y')} - ${format(date.to, 'LLL dd, y')}` : 'Select date range'}
-                  </span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent initialFocus mode="range" defaultMonth={date?.from} selected={date} onSelect={setDate} numberOfMonths={2} />
-              </PopoverContent>
-            </Popover>
-            <div className="w-px h-4 bg-gray-200 mx-2" />
-            <button onClick={handleRefresh} className="p-2 hover:bg-gray-50 rounded-full transition-all hover:rotate-180 duration-500">
+          <div className="flex items-center gap-3">
+            <GlobalDateFilter
+              date={date}
+              onDateChange={setDate}
+              className="w-[300px]"
+            />
+            <button
+              onClick={handleRefresh}
+              className="p-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all hover:rotate-180 duration-500 shadow-sm"
+            >
               <RefreshCw size={20} className="text-[#253154]" />
             </button>
           </div>
@@ -285,206 +348,286 @@ export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavi
                 <div className="space-y-3">
                   <h3 className="font-bold text-[#0e042f] mb-2 uppercase text-[11px] tracking-wider text-gray-400">Visible Columns</h3>
                   {[
-                    { key: 'transactionId', label: 'Invoice ID' },
-                    { key: 'date', label: 'Date' },
-                    { key: 'studentName', label: 'Student' },
-                    { key: 'amount', label: 'Amount' },
-                    { key: 'type', label: 'Type' },
-                    { key: 'method', label: 'Method' },
-                    { key: 'status', label: 'Status' }
-                  ].map(col => (
-                    <label key={col.key} className="flex items-center gap-3 cursor-pointer group">
-                      <CustomCheckbox
-                        checked={visibleColumns.includes(col.key)}
-                        onChange={() => setVisibleColumns(prev => prev.includes(col.key) ? prev.filter(c => c !== col.key) : [...prev, col.key])}
+            { key: 'transactionId', label: 'Invoice ID' },
+            { key: 'date', label: 'Date' },
+            { key: 'studentName', label: 'Student' },
+            { key: 'amount', label: 'Amount' },
+            { key: 'serviceType', label: 'Service Type' },
+            { key: 'type', label: 'Description' },
+            { key: 'method', label: 'Method' },
+            { key: 'status', label: 'Status' }
+          ].map(col => (
+            <label key={col.key} className="flex items-center gap-3 cursor-pointer group">
+              <CustomCheckbox
+                checked={visibleColumns.includes(col.key)}
+                onChange={() => setVisibleColumns(prev => prev.includes(col.key) ? prev.filter(c => c !== col.key) : [...prev, col.key])}
+              />
+              <span className="text-sm text-gray-700 group-hover:text-indigo-600 transition-colors">{col.label}</span>
+            </label>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  </div>
+</div>
+
+{/* Transactions Table */}
+<div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
+  <div className="hidden md:block overflow-x-auto">
+    <table className="w-full">
+      <thead className="bg-gray-50/50 border-b border-gray-100">
+        <tr>
+          <th className="w-12 px-6 py-4 text-left"><CustomCheckbox checked={selected.length === filteredAndSortedPayments.length && filteredAndSortedPayments.length > 0} partial={selected.length > 0 && selected.length < filteredAndSortedPayments.length} onChange={handleSelectAll} /></th>
+          {visibleColumns.includes('transactionId') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Invoice ID</th>}
+          {visibleColumns.includes('date') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Date</th>}
+          {visibleColumns.includes('studentName') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Student</th>}
+          {visibleColumns.includes('amount') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Amount</th>}
+          {visibleColumns.includes('serviceType') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Service Type</th>}
+          {visibleColumns.includes('type') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Description</th>}
+          {visibleColumns.includes('method') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Method</th>}
+          {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Status</th>}
+          {visibleColumns.includes('actions') && <th className="px-6 py-4 text-right text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Actions</th>}
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-100">
+        {loading ? (
+          Array(5).fill(0).map((_, i) => (
+            <tr key={i} className="animate-pulse border-b border-gray-50">
+              <td colSpan={visibleColumns.length + 1} className="px-6 py-4"><div className="h-6 bg-gray-100 rounded-lg w-full"></div></td>
+            </tr>
+          ))
+        ) : (
+          <>
+            {/* Mobile View */}
+            <tr className="md:hidden">
+              <td colSpan={visibleColumns.length + 1} className="p-0">
+                <div className="space-y-4 p-4">
+                  {paginatedPayments.length > 0 ? (
+                    paginatedPayments.map((item) => (
+                      <MobileFinanceCard
+                        key={item.id}
+                        item={item}
+                        isSelected={selected.includes(item.id)}
+                        onToggleSelect={() => handleToggle(item.id)}
+                        onEdit={(p) => { setSelectedPayment(p); setShowModal(true); }}
+                        onDelete={handleDelete}
+                        onNavigate={onNavigate}
                       />
-                      <span className="text-sm text-gray-700 group-hover:text-indigo-600 transition-colors">{col.label}</span>
-                    </label>
-                  ))}
+                    ))
+                  ) : (
+                    <div className="bg-white p-8 rounded-2xl border border-gray-100 text-center space-y-3">
+                      <Receipt size={48} className="text-gray-200 mx-auto" />
+                      <p className="text-gray-500 font-medium">No transactions found</p>
+                    </div>
+                  )}
                 </div>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
+              </td>
+            </tr>
 
-        {/* Transactions Table */}
-        <div className="bg-white rounded-2xl shadow-md border border-gray-100 overflow-hidden">
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50/50 border-b border-gray-100">
-                <tr>
-                  <th className="w-12 px-6 py-4 text-left"><CustomCheckbox checked={selected.length === filteredAndSortedPayments.length && filteredAndSortedPayments.length > 0} partial={selected.length > 0 && selected.length < filteredAndSortedPayments.length} onChange={handleSelectAll} /></th>
-                  {visibleColumns.includes('transactionId') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Invoice ID</th>}
-                  {visibleColumns.includes('date') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Date</th>}
-                  {visibleColumns.includes('studentName') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Student</th>}
-                  {visibleColumns.includes('amount') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Amount</th>}
-                  {visibleColumns.includes('type') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Type</th>}
-                  {visibleColumns.includes('method') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Method</th>}
-                  {visibleColumns.includes('status') && <th className="px-6 py-4 text-left text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Status</th>}
-                  {visibleColumns.includes('actions') && <th className="px-6 py-4 text-right text-[11px] font-bold text-[#99a1af] uppercase tracking-wider">Actions</th>}
+            {/* Desktop View Table */}
+            {paginatedPayments.length > 0 ? (
+              paginatedPayments.map((t) => (
+                <tr 
+                  key={t.id} 
+                  className={`hidden md:table-row hover:bg-gray-50/50 transition-colors group cursor-pointer ${selected.includes(t.id) ? 'bg-purple-50/30' : ''}`}
+                  onClick={() => onNavigate?.(`/finance/${t.id}`)}
+                >
+                  <td className="px-6 py-4"><CustomCheckbox checked={selected.includes(t.id)} onChange={() => handleToggle(t.id)} /></td>
+                  {visibleColumns.includes('transactionId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#0e042f] group-hover:text-purple-600 transition-colors">{t.invoice_number}</span></td>}
+                  {visibleColumns.includes('date') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{format(new Date(t.created_at), 'MMM d, yyyy')}</span></td>}
+                  {visibleColumns.includes('studentName') && <td className="px-6 py-4 text-[14px] text-gray-700">{t.first_name} {t.last_name}</td>}
+                  {visibleColumns.includes('amount') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-indigo-600">{t.currency} {Number(t.amount).toFixed(2)}</span></td>}
+                  {visibleColumns.includes('serviceType') && <td className="px-6 py-4"><span className="px-2 py-1 bg-indigo-50 text-indigo-600 rounded text-[12px] font-medium uppercase tracking-wider">{t.service_type || 'General'}</span></td>}
+                  {visibleColumns.includes('type') && <td className="px-6 py-4 text-[14px] text-gray-700">{t.description}</td>}
+                  {visibleColumns.includes('method') && <td className="px-6 py-4 text-[12px] font-medium text-gray-600">{t.payment_method}</td>}
+                  {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={t.status as any} /></td>}
+                  {visibleColumns.includes('actions') && (
+                    <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onNavigate?.(`/finance/${t.id}`); }}
+                          className="p-2 hover:bg-indigo-50 rounded-lg transition-colors group/view"
+                          title="View Details"
+                        >
+                          <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setSelectedPayment(t); setShowModal(true); }}
+                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors group/edit"
+                          title="Edit"
+                        >
+                          <Edit3 size={18} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
+                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors group/delete"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {loading ? (
-                  <tr><td colSpan={visibleColumns.length + 1} className="px-6 py-20 text-center"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" /><p className="text-gray-500 animate-pulse">Loading financial records...</p></td></tr>
-                ) : paginatedPayments.length === 0 ? (
-                  <tr><td colSpan={visibleColumns.length + 1} className="px-6 py-20 text-center"><div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4"><Search size={24} className="text-gray-300" /></div><p className="text-[#0e042f] font-bold text-lg mb-1">No invoices found</p><p className="text-gray-500">Try adjusting your search or filters</p></td></tr>
-                ) : paginatedPayments.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50/50 transition-colors group">
-                    <td className="px-6 py-4"><CustomCheckbox checked={selected.includes(t.id)} onChange={() => handleToggle(t.id)} /></td>
-                    {visibleColumns.includes('transactionId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#0e042f]">{t.invoice_number}</span></td>}
-                    {visibleColumns.includes('date') && <td className="px-6 py-4"><span className="text-[14px] text-gray-700">{format(new Date(t.created_at), 'MMM d, yyyy')}</span></td>}
-                    {visibleColumns.includes('studentName') && <td className="px-6 py-4 text-[14px] text-gray-700">{t.first_name} {t.last_name}</td>}
-                    {visibleColumns.includes('amount') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-indigo-600">{t.currency} {Number(t.amount).toFixed(2)}</span></td>}
-                    {visibleColumns.includes('type') && <td className="px-6 py-4 text-[14px] text-gray-700">{t.description}</td>}
-                    {visibleColumns.includes('method') && <td className="px-6 py-4 text-[12px] font-medium text-gray-600">{t.payment_method}</td>}
-                    {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={t.status} /></td>}
-                    {visibleColumns.includes('actions') && (
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => { setSelectedPayment(t); setShowModal(true); }} className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors"><Edit3 size={18} /></button>
-                          <button onClick={() => handleDelete(t.id)} className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"><Trash2 size={18} /></button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))
+            ) : (
+                <tr className="hidden md:table-row">
+                  <td colSpan={visibleColumns.length + 1} className="px-6 py-24 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center">
+                        <Receipt className="text-gray-300" size={24} />
+                      </div>
+                      <p className="text-gray-500 font-medium">No data available</p>
+                      <p className="text-xs text-gray-400 max-w-[200px] mx-auto">
+                        There are no transaction records matching your current filters.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+            )}
+          </>
+        )}
+      </tbody>
+    </table>
+  </div>
 
-          {/* Pagination Footer */}
-          <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between bg-gray-50/30">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Rows per page:</span>
-              <select
-                value={rowsPerPage}
-                onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                className="bg-transparent border-none text-sm font-semibold text-[#0e042f] focus:ring-0 cursor-pointer"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-              <span className="text-sm text-gray-500 ml-4">
-                {(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredAndSortedPayments.length)} of {filteredAndSortedPayments.length}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="p-2 rounded-xl border border-gray-200 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:shadow-none transition-all"
-              ><ChevronLeft size={18} /></button>
-              <div className="flex gap-1">
-                {Array.from({ length: Math.ceil(filteredAndSortedPayments.length / rowsPerPage) }, (_, i) => i + 1).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${currentPage === page ? 'bg-[#0e042f] text-white shadow-lg shadow-indigo-900/20' : 'hover:bg-white text-gray-500 hover:text-[#0e042f]'}`}
-                  >{page}</button>
-                ))}
-              </div>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredAndSortedPayments.length / rowsPerPage), prev + 1))}
-                disabled={currentPage === Math.ceil(filteredAndSortedPayments.length / rowsPerPage) || filteredAndSortedPayments.length === 0}
-                className="p-2 rounded-xl border border-gray-200 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:shadow-none transition-all"
-              ><ChevronRight size={18} /></button>
-            </div>
-          </div>
-        </div>
+  {/* Pagination Footer */}
+  {filteredAndSortedPayments.length > 0 && (
+    <div className="border-t border-gray-100 px-6 py-4 flex items-center justify-between bg-gray-50/30">
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-500">Rows per page:</span>
+        <select
+          value={rowsPerPage}
+          onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+          className="bg-transparent border-none text-sm font-semibold text-[#0e042f] focus:ring-0 cursor-pointer"
+        >
+          <option value={5}>5</option>
+          <option value={10}>10</option>
+          <option value={20}>20</option>
+          <option value={50}>50</option>
+        </select>
+        <span className="text-sm text-gray-500 ml-4">
+          {(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredAndSortedPayments.length)} of {filteredAndSortedPayments.length}
+        </span>
       </div>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+          disabled={currentPage === 1}
+          className="p-2 rounded-xl border border-gray-200 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:shadow-none transition-all"
+        ><ChevronLeft size={18} /></button>
+        <div className="flex gap-1">
+          {Array.from({ length: Math.ceil(filteredAndSortedPayments.length / rowsPerPage) }, (_, i) => i + 1).map(page => (
+            <button
+              key={page}
+              onClick={() => setCurrentPage(page)}
+              className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all ${currentPage === page ? 'bg-[#0e042f] text-white shadow-lg shadow-indigo-900/20' : 'hover:bg-white text-gray-500 hover:text-[#0e042f]'}`}
+            >{page}</button>
+          ))}
+        </div>
+        <button
+          onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredAndSortedPayments.length / rowsPerPage), prev + 1))}
+          disabled={currentPage === Math.ceil(filteredAndSortedPayments.length / rowsPerPage) || filteredAndSortedPayments.length === 0}
+          className="p-2 rounded-xl border border-gray-200 hover:bg-white hover:shadow-sm disabled:opacity-30 disabled:hover:shadow-none transition-all"
+        ><ChevronRight size={18} /></button>
+      </div>
+    </div>
+  )}
+</div>
+</div>
 
-      <FinanceModal
-        open={showModal}
-        onClose={() => setShowModal(false)}
-        onSave={fetchPayments}
-        payment={selectedPayment}
-      />
+<FinanceModal
+open={showModal}
+onClose={() => setShowModal(false)}
+onSave={fetchPayments}
+payment={selectedPayment}
+/>
 
-      <ExportDialog
-        open={showExportDialog}
-        onOpenChange={setShowExportDialog}
-        moduleName="Transactions"
-        totalCount={payments.length}
-        selectedCount={selected.length}
-        columns={[
-          { id: 'payment_id', label: 'Payment ID', defaultSelected: true },
-          { id: 'created_at', label: 'Date', defaultSelected: true },
-          { id: 'first_name', label: 'First Name', defaultSelected: true },
-          { id: 'last_name', label: 'Last Name', defaultSelected: true },
-          { id: 'amount', label: 'Amount', defaultSelected: true },
-          { id: 'status', label: 'Status', defaultSelected: true }
-        ]}
-        supportsDateRange={true}
-        onExport={async () => { toast.success("Exporting..."); }}
-      />
+<ExportDialog
+open={showExportDialog}
+onOpenChange={setShowExportDialog}
+moduleName="Transactions"
+totalCount={payments.length}
+selectedCount={selected.length}
+columns={[
+  { id: 'invoice_number', label: 'Invoice ID', defaultSelected: true },
+  { id: 'created_at', label: 'Date', defaultSelected: true },
+  { id: 'first_name', label: 'First Name', defaultSelected: true },
+  { id: 'last_name', label: 'Last Name', defaultSelected: true },
+  { id: 'amount', label: 'Amount', defaultSelected: true },
+  { id: 'service_type', label: 'Service Type', defaultSelected: true },
+  { id: 'status', label: 'Status', defaultSelected: true }
+]}
+supportsDateRange={true}
+onExport={async () => { toast.success("Exporting..."); }}
+/>
 
-      <ImportDialog
-        open={showImportDialog}
-        onOpenChange={setShowImportDialog}
-        moduleName="Transactions"
-        fields={[
-          { id: 'student_db_id', label: 'Student DB ID', required: true, type: 'number' },
-          { id: 'invoice_number', label: 'Invoice Number', required: true, type: 'text' },
-          { id: 'amount', label: 'Amount', required: true, type: 'number' },
-          { id: 'currency', label: 'Currency', required: true, type: 'text' },
-          { id: 'status', label: 'Status', required: true, type: 'select', options: ['paid', 'pending', 'overdue', 'refunded'] },
-          { id: 'payment_method', label: 'Method', required: true, type: 'text' },
-          { id: 'due_date', label: 'Due Date', required: true, type: 'date' },
-          { id: 'description', label: 'Description', required: true, type: 'text' },
-          { id: 'payment_id', label: 'Payment ID', required: false, type: 'text' },
-          { id: 'notes', label: 'Notes', required: false, type: 'text' }
-        ]}
-        templateUrl="/templates/finance-import-template.xlsx"
-        onImport={async (data: any[], mode: ImportMode) => {
-          let successCount = 0;
-          let failCount = 0;
+<ImportDialog
+open={showImportDialog}
+onOpenChange={setShowImportDialog}
+moduleName="Transactions"
+fields={[
+  { id: 'student_db_id', label: 'Student DB ID', required: true, type: 'number' },
+  { id: 'invoice_number', label: 'Invoice Number', required: false, type: 'text' },
+  { id: 'amount', label: 'Amount', required: true, type: 'number' },
+  { id: 'currency', label: 'Currency', required: true, type: 'text' },
+  { id: 'service_type', label: 'Service Type', required: true, type: 'select', options: ['Tuition', 'Accommodation', 'Visa Fee', 'Service Fee', 'Insurance', 'Other'] },
+  { id: 'status', label: 'Status', required: true, type: 'select', options: ['paid', 'pending', 'overdue', 'refunded'] },
+  { id: 'payment_method', label: 'Method', required: true, type: 'text' },
+  { id: 'due_date', label: 'Due Date', required: true, type: 'date' },
+  { id: 'description', label: 'Description', required: true, type: 'text' },
+  { id: 'payment_id', label: 'Payment ID', required: false, type: 'text' },
+  { id: 'notes', label: 'Notes', required: false, type: 'text' }
+]}
+templateUrl="/templates/finance-import-template.xlsx"
+onImport={async (data: any[], mode: ImportMode) => {
+  let successCount = 0;
+  let failCount = 0;
 
-          const loadingToast = toast.loading(`Importing invoices (0/${data.length})...`);
+  const loadingToast = toast.loading(`Importing invoices (0/${data.length})...`);
 
-          for (let i = 0; i < data.length; i++) {
-            const row = data[i];
-            try {
-              if (!row.student_db_id || Number(row.student_db_id) <= 0) {
-                throw new Error("Invalid or missing Student DB ID");
-              }
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    try {
+      if (!row.student_db_id || Number(row.student_db_id) <= 0) {
+        throw new Error("Invalid or missing Student DB ID");
+      }
 
-              const payload: any = {
-                student_db_id: Number(row.student_db_id),
-                invoice_number: row.invoice_number || `INV-IMP-${Date.now()}-${i}`,
-                payment_id: row.payment_id || `PAY-IMP-${Date.now()}-${i}`,
-                amount: Number(row.amount),
-                currency: row.currency || 'USD',
-                status: row.status || 'pending',
-                payment_method: row.payment_method || 'Other',
-                due_date: row.due_date || new Date().toISOString().split('T')[0],
-                description: row.description || 'Imported Invoice',
-                notes: row.notes || undefined
-              };
+      const payload: any = {
+        student_db_id: Number(row.student_db_id),
+        invoice_number: row.invoice_number,
+        payment_id: row.payment_id,
+        amount: Number(row.amount),
+        currency: row.currency || 'USD',
+        service_type: row.service_type || 'General',
+        status: row.status || 'pending',
+        payment_method: row.payment_method || 'Other',
+        due_date: row.due_date || new Date().toISOString().split('T')[0],
+        description: row.description || 'Imported Invoice',
+        notes: row.notes || undefined
+      };
 
-              await financeService.createPayment(payload);
-              successCount++;
-            } catch (error: any) {
-              const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || "Unknown error";
-              console.error(`Failed to import invoice row ${i + 1}:`, error);
-              toast.error(`Row ${i + 1} (${row.invoice_number || 'No Invoice'}): ${errorMessage}`, { duration: 5000 });
-              failCount++;
-            }
-            toast.loading(`Importing invoices (${successCount + failCount}/${data.length})...`, { id: loadingToast });
-          }
+      await financeService.createPayment(payload);
+      successCount++;
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.message || "Unknown error";
+      console.error(`Failed to import invoice row ${i + 1}:`, error);
+      toast.error(`Row ${i + 1} (${row.invoice_number || 'No Invoice'}): ${errorMessage}`, { duration: 5000 });
+      failCount++;
+    }
+    toast.loading(`Importing invoices (${successCount + failCount}/${data.length})...`, { id: loadingToast });
+  }
 
-          toast.dismiss(loadingToast);
-          if (successCount > 0) {
-            toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
-          } else {
-            toast.error(`Import failed! All ${failCount} rows failed.`);
-          }
-          fetchPayments();
-          setShowImportDialog(false);
-        }}
-      />
+  toast.dismiss(loadingToast);
+  if (successCount > 0) {
+    toast.success(`Import complete! ${successCount} successful, ${failCount} failed.`);
+  } else {
+    toast.error(`Import failed! All ${failCount} rows failed.`);
+  }
+  fetchPayments();
+  setShowImportDialog(false);
+}}
+/>
     </div>
   );
 };

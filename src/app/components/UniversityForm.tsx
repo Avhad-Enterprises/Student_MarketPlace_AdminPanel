@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
     ArrowLeft, Save, X, Globe, User, TrendingUp, 
     GraduationCap, UserCheck, CheckCircle, Building, 
@@ -44,6 +44,25 @@ export const UniversityForm: React.FC<UniversityFormProps> = ({
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState(initialTab);
+    const searchParams = useSearchParams();
+
+    // Sync activeTab with URL query parameter
+    React.useEffect(() => {
+        const queryTab = searchParams.get('tab');
+        if (queryTab && queryTab !== activeTab) {
+            setActiveTab(queryTab);
+        }
+    }, [searchParams]);
+
+    // Update URL when tab changes
+    const handleTabChange = (tabId: string) => {
+        setActiveTab(tabId);
+        if (isEdit && initialData?.id) {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set('tab', tabId);
+            router.replace(`/universities/edit/${initialData.id}?${params.toString()}`, { scroll: false });
+        }
+    };
 const defaultUniversityData: UniversityFormData = {
     // 1. BASIC INFORMATION
     name: '',
@@ -522,7 +541,7 @@ const defaultUniversityData: UniversityFormData = {
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => handleTabChange(tab.id)}
                             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium whitespace-nowrap transition-all text-[12px] ${
                                 activeTab === tab.id
                                     ? 'bg-blue-50 text-blue-700 shadow-sm'
