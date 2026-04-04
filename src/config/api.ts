@@ -1,1 +1,1 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://students.test-zone.xyz';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://smapi.test-zone.xyz';

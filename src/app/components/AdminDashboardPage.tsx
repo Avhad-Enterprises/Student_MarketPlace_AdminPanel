@@ -40,9 +40,9 @@ const MetricCard = ({
         <h3 className="text-xs font-bold text-[#62748e] uppercase tracking-wider">
           {title}
         </h3>
-        <p className="text-2xl font-bold text-[#0f172b]">
+        <div className="text-2xl font-bold text-[#0f172b]">
           {value}
-        </p>
+        </div>
       </div>
 
       {/* Bottom: Trend + Chart */}
