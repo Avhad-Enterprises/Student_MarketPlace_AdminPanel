@@ -137,6 +137,22 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
   const { hasPermission: canCreate } = usePermission('students', 'create');
   const { hasPermission: canDelete } = usePermission('students', 'delete');
 
+  const [userRole, setUserRole] = useState<string>('counselor');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userJson = localStorage.getItem('auth_user');
+      if (userJson) {
+        try {
+          const user = JSON.parse(userJson);
+          setUserRole(user.role?.name || 'counselor');
+        } catch (e) {
+          console.error('Error parsing user for role:', e);
+        }
+      }
+    }
+  }, []);
+
   // Student data state
   const [student, setStudent] = useState<BackendStudent | null>(null);
   const [loading, setLoading] = useState(true);

@@ -42,6 +42,7 @@ import {
 } from 'lucide-react';
 import { CommunicationSettings, communicationSettingsService } from '../../services/communicationSettingsService';
 import { messageTemplateService, MessageTemplate } from '../../services/messageTemplateService';
+import { usePermission } from '../../hooks/usePermission';
 import { toast } from 'sonner';
 import {
     Dialog,
