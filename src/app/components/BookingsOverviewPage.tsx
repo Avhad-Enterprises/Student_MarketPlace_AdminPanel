@@ -28,6 +28,8 @@ import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { AddBookingModal } from './AddBookingModal';
 import { EditBookingModal } from './EditBookingModal';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '@/hooks/usePermission';
 
 interface CustomCheckboxProps {
   checked: boolean;
@@ -120,6 +122,7 @@ interface MobileBookingCardProps {
 
 const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelected, onToggleSelect, onNavigateToDetail, onEdit, onDelete }) => {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { hasPermission: canViewDetails } = usePermission('bookings', 'view');
 
   return (
     <div className={`bg-white rounded-[16px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 w-full transition-all active:scale-[0.99] cursor-pointer flex flex-col gap-2 ${isSelected ? 'bg-purple-50/30' : ''}`}>
@@ -159,25 +162,33 @@ const MobileBookingCard: React.FC<MobileBookingCardProps> = ({ booking, isSelect
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onNavigateToDetail?.();
+              if (canViewDetails) {
+                onNavigateToDetail?.();
+              } else {
+                toast.error("Access Denied", { description: "You don't have permission to view booking details." });
+              }
             }}
             className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm mb-2"
           >
             View Details
           </button>
           <div className="flex gap-2">
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
-              className="flex-1 h-10 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
-            >
-              <Edit2 size={16} /> Edit
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
-              className="flex-1 h-10 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
-            >
-              <Trash2 size={16} /> Delete
-            </button>
+            <PermissionGuard module="bookings" action="edit">
+              <button
+                onClick={(e) => { e.stopPropagation(); onEdit?.(); }}
+                className="flex-1 h-10 bg-purple-50 text-purple-600 rounded-xl hover:bg-purple-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+              >
+                <Edit2 size={16} /> Edit
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="bookings" action="delete">
+              <button
+                onClick={(e) => { e.stopPropagation(); onDelete?.(); }}
+                className="flex-1 h-10 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors font-medium text-sm flex items-center justify-center gap-2"
+              >
+                <Trash2 size={16} /> Delete
+              </button>
+            </PermissionGuard>
           </div>
         </div>
       )}
@@ -190,6 +201,11 @@ interface BookingsOverviewPageProps {
 }
 
 const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate }) => {
+  const { hasPermission: canViewDetails } = usePermission('bookings', 'view');
+  const { hasPermission: canCreate } = usePermission('bookings', 'create');
+  const { hasPermission: canEdit } = usePermission('bookings', 'edit');
+  const { hasPermission: canDelete } = usePermission('bookings', 'delete');
+  const { hasPermission: canExport } = usePermission('bookings', 'export');
   const [date, setDate] = useState<DateRange | undefined>(undefined);
   const [activeMobileMenu, setActiveMobileMenu] = useState<'none' | 'import' | 'search'>('none');
   const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
@@ -389,6 +405,10 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
   };
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to delete bookings.' });
+      return;
+    }
     if (window.confirm("Are you sure you want to delete this booking?")) {
       try {
         await bookingService.deleteBooking(id);
@@ -402,11 +422,19 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
   };
 
   const handleEdit = (booking: ApiBooking) => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to edit bookings.' });
+      return;
+    }
     setEditingBooking(booking);
     setIsEditModalOpen(true);
   };
 
   const handleExport = async (options: any) => {
+    if (!canExport) {
+      toast.error('Unauthorized', { description: 'You do not have permission to export booking data.' });
+      return;
+    }
     const dataToExport = options.scope === 'selected'
       ? bookings.filter(b => selectedBookings.includes(b.booking_id))
       : filteredAndSortedBookings;
@@ -442,6 +470,14 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
   };
 
   const handleImport = async (data: any[], mode: any) => {
+    if (!canCreate && mode === 'create') {
+      toast.error('Unauthorized', { description: 'You do not have permission to import new bookings.' });
+      return;
+    }
+    if (!canEdit && (mode === 'update' || mode === 'merge')) {
+      toast.error('Unauthorized', { description: 'You do not have permission to update bookings via import.' });
+      return;
+    }
     let successCount = 0;
     let failCount = 0;
 
@@ -542,18 +578,24 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Download size={20} strokeWidth={1.5} />Export
-            </button>
-            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Upload size={20} strokeWidth={1.5} />Import
-            </button>
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
-            >
-              <Plus size={20} strokeWidth={1.5} />Add Booking
-            </button>
+            <PermissionGuard module="bookings" action="export">
+              <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Download size={20} strokeWidth={1.5} />Export
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="bookings" action="create">
+              <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Upload size={20} strokeWidth={1.5} />Import
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="bookings" action="create">
+              <button
+                onClick={() => setIsAddModalOpen(true)}
+                className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+              >
+                <Plus size={20} strokeWidth={1.5} />Add Booking
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -787,7 +829,13 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
                     {paginatedBookings.map((booking) => (
                       <tr
                         key={booking.booking_id}
-                        onClick={() => onNavigate?.('booking-detail', booking.booking_id)}
+                        onClick={() => {
+                          if (canViewDetails) {
+                            onNavigate?.('booking-detail', booking.booking_id);
+                          } else {
+                            toast.error("Access Denied", { description: "You don't have permission to view booking details." });
+                          }
+                        }}
                         className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                       >
                         <td
@@ -805,21 +853,25 @@ const BookingsOverviewPage: React.FC<BookingsOverviewPageProps> = ({ onNavigate 
                         {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={booking.status} /></td>}
                         {visibleColumns.includes('actions') && (
                           <td className="px-6 py-4">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleEdit(booking); }}
-                                className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                                title="Edit"
-                              >
-                                <Edit2 size={16} />
-                              </button>
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(booking.booking_id); }}
-                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 size={16} />
-                              </button>
+                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                              <PermissionGuard module="bookings" action="edit">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEdit(booking); }}
+                                  className="p-2 hover:bg-purple-50 text-purple-600 rounded-lg transition-colors group/edit"
+                                  title="Edit"
+                                >
+                                  <Edit2 size={18} />
+                                </button>
+                              </PermissionGuard>
+                              <PermissionGuard module="bookings" action="delete">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(booking.booking_id); }}
+                                  className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors group/delete"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </PermissionGuard>
                             </div>
                           </td>
                         )}

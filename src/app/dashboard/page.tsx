@@ -1,8 +1,9 @@
 "use client";
 
-import { AdminLayout } from "@/components/AdminLayout";
-import { AdminDashboardPage } from "@/components/AdminDashboardPage";
+import { AdminLayout } from "@/app/components/AdminLayout";
+import { AdminDashboardPage } from "@/app/components/AdminDashboardPage";
 import { useRouter } from "next/navigation";
+import { PermissionGuard } from "@/app/components/common/PermissionGuard";
 
 export default function DashboardRoute() {
     const router = useRouter();
@@ -14,7 +15,9 @@ export default function DashboardRoute() {
 
     return (
         <AdminLayout activePage="dashboard" onLogout={handleLogout}>
-            <AdminDashboardPage />
+            <PermissionGuard module="dashboard" action="view">
+                <AdminDashboardPage />
+            </PermissionGuard>
         </AdminLayout>
     );
 }

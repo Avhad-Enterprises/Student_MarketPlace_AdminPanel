@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { usePermission } from '@/hooks/usePermission';
 import { 
     Bot, 
     Zap, 
@@ -24,24 +25,30 @@ import { AiVisaSettings } from '../../services/aiVisaSettingsService';
 interface Props {
     settings: AiVisaSettings;
     setSettings: React.Dispatch<React.SetStateAction<AiVisaSettings>>;
+    readOnly?: boolean;
 }
 
-export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings }) => {
+export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings, readOnly = false }) => {
+    const { hasPermission: userHasEditPermission } = usePermission('ai-test-assistant', 'edit');
+    const canEdit = userHasEditPermission && !readOnly;
+
     const handleChange = (field: keyof AiVisaSettings, value: any) => {
+        if (!canEdit) return;
         setSettings((prev: AiVisaSettings) => ({ ...prev, [field]: value }));
     };
 
     const Toggle = ({ enabled, onChange, label, sublabel }: { enabled: boolean, onChange: (val: boolean) => void, label: string, sublabel?: string }) => (
-        <div className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-all group">
+        <div className={`flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-all group ${!canEdit ? 'opacity-75' : ''}`}>
             <div className="space-y-1">
                 <p className="text-[15px] font-bold text-[#0f172b] group-hover:text-[#6929c4] transition-colors">{label}</p>
                 {sublabel && <p className="text-[13px] text-gray-400 font-medium">{sublabel}</p>}
             </div>
             <button
-                onClick={() => onChange(!enabled)}
+                onClick={() => canEdit && onChange(!enabled)}
+                disabled={!canEdit}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
                     enabled ? 'bg-[#6929c4] shadow-[0_0_15px_rgba(105,41,196,0.2)]' : 'bg-gray-200 shadow-inner'
-                }`}
+                } ${!canEdit ? 'cursor-not-allowed grayscale-[0.5]' : ''}`}
             >
                 <span
                     className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ease-spring ${
@@ -53,7 +60,7 @@ export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings
     );
 
     const Slider = ({ value, onChange, label, min = 0, max = 100, sublabel }: { value: number, onChange: (val: number) => void, label: string, min?: number, max?: number, sublabel?: string }) => (
-        <div className="space-y-4">
+        <div className={`space-y-4 ${!canEdit ? 'opacity-75' : ''}`}>
             <div className="flex justify-between items-end mb-2">
                 <div>
                     <label className="text-[14px] font-bold text-[#64748b] uppercase tracking-wider">{label}</label>
@@ -63,8 +70,9 @@ export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings
                     <input 
                         type="number" 
                         value={value}
+                        disabled={!canEdit}
                         onChange={(e) => onChange(Number(e.target.value))}
-                        className="w-16 h-10 bg-gray-50 border border-gray-200 rounded-xl px-2 text-center font-bold text-[#0f172b] focus:border-[#6929c4] focus:bg-white outline-none transition-all"
+                        className="w-16 h-10 bg-gray-50 border border-gray-200 rounded-xl px-2 text-center font-bold text-[#0f172b] focus:border-[#6929c4] focus:bg-white outline-none transition-all disabled:cursor-not-allowed"
                     />
                     <span className="text-gray-400 font-bold">%</span>
                 </div>
@@ -79,8 +87,9 @@ export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings
                     min={min} 
                     max={max} 
                     value={value} 
+                    disabled={!canEdit}
                     onChange={(e) => onChange(Number(e.target.value))}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 disabled:cursor-not-allowed"
                 />
             </div>
         </div>
@@ -119,8 +128,9 @@ export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings
                             <label className="text-[13px] font-bold text-[#64748b] ml-1 uppercase tracking-wider">AI Mode</label>
                             <div className="relative group">
                                 <select 
-                                    className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white appearance-none cursor-pointer text-[15px] font-bold pr-12 shadow-sm"
+                                    className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white appearance-none cursor-pointer text-[15px] font-bold pr-12 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     value={settings.ai_mode}
+                                    disabled={!canEdit}
                                     onChange={(e) => handleChange('ai_mode', e.target.value)}
                                 >
                                     <option value="Balanced">Balanced - Moderate risk tolerance with data-driven decisions</option>
@@ -135,8 +145,9 @@ export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings
                             <label className="text-[13px] font-bold text-[#64748b] ml-1 uppercase tracking-wider">Risk Sensitivity Level</label>
                             <div className="relative group">
                                 <select 
-                                    className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white appearance-none cursor-pointer text-[15px] font-bold pr-12 shadow-sm"
+                                    className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white appearance-none cursor-pointer text-[15px] font-bold pr-12 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     value={settings.risk_sensitivity}
+                                    disabled={!canEdit}
                                     onChange={(e) => handleChange('risk_sensitivity', e.target.value)}
                                 >
                                     <option value="Medium">Medium - Balanced risk assessment</option>
@@ -186,9 +197,10 @@ export const AIVisaAssistantSettings: React.FC<Props> = ({ settings, setSettings
                         <label className="text-[13px] font-bold text-[#64748b] ml-1 uppercase tracking-wider">Default Prompt Template</label>
                         <div className="relative">
                             <textarea 
-                                className="w-full min-h-[160px] p-8 rounded-[32px] border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-gray-50/30 focus:bg-white text-[15px] font-medium leading-relaxed resize-none shadow-inner"
+                                className="w-full min-h-[160px] p-8 rounded-[32px] border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-gray-50/30 focus:bg-white text-[15px] font-medium leading-relaxed resize-none shadow-inner disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="Enter base prompt for AI assessments..."
                                 value={settings.prompt_template}
+                                disabled={!canEdit}
                                 onChange={(e) => handleChange('prompt_template', e.target.value)}
                             />
                             <div className="absolute top-6 left-6 -z-10 bg-gradient-to-r from-purple-500/5 to-blue-500/5 blur-xl w-[calc(100%-48px)] h-[calc(100%-48px)]" />

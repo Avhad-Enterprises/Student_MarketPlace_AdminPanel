@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { FeaturesManager } from '../../components/FeaturesManager';
 import { FeatureDetail } from '../../components/FeatureDetail';
+import { PermissionGuard } from '../../components/common/PermissionGuard';
 
 export default function AIFeaturesPage() {
     const [view, setView] = useState<'list' | 'detail'>('list');
@@ -25,15 +26,17 @@ export default function AIFeaturesPage() {
 
     return (
         <AdminLayout activePage="ai-features">
-            {view === 'list' ? (
-                <FeaturesManager onNavigate={handleNavigate} />
-            ) : (
-                <FeatureDetail
-                    key={selectedFeatureId || 'loading'}
-                    featureId={selectedFeatureId || ''}
-                    onBack={() => handleNavigate('list')}
-                />
-            )}
+            <PermissionGuard module="ai-visa-assistant" action="view">
+                {view === 'list' ? (
+                    <FeaturesManager onNavigate={handleNavigate} />
+                ) : (
+                    <FeatureDetail
+                        key={selectedFeatureId || 'loading'}
+                        featureId={selectedFeatureId || ''}
+                        onBack={() => handleNavigate('list')}
+                    />
+                )}
+            </PermissionGuard>
         </AdminLayout>
     );
 }

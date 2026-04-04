@@ -55,6 +55,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
+import { usePermission } from '../../hooks/usePermission';
+import { PermissionGuard } from './common/PermissionGuard';
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -404,6 +406,13 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
         'item_id', 'title', 'exam', 'difficulty', 'topic', 'status', 'updated_at', 'usage_30d'
     ]);
 
+    // RBAC
+    const { hasPermission: canCreate } = usePermission('ai-test-assistant', 'create');
+    const { hasPermission: canEdit } = usePermission('ai-test-assistant', 'edit');
+    const { hasPermission: canDelete } = usePermission('ai-test-assistant', 'delete');
+    const { hasPermission: canExport } = usePermission('ai-test-assistant', 'export');
+    const { hasPermission: canImport } = usePermission('ai-test-assistant', 'import');
+
     // Fetch data from API
     const fetchLibraryItems = async () => {
         setIsLoading(true);
@@ -475,6 +484,15 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
         e.preventDefault();
         if (!editingItem) return;
 
+        if (editingItem.id && !canEdit) {
+            toast.error("Unauthorized", { description: "You don't have permission to edit items." });
+            return;
+        }
+        if (!editingItem.id && !canCreate) {
+            toast.error("Unauthorized", { description: "You don't have permission to create items." });
+            return;
+        }
+
         try {
             if (editingItem.id) {
                 await updateLibraryItem(editingItem.id, editingItem);
@@ -491,6 +509,10 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
     };
 
     const handleArchiveItem = async (id: string | number) => {
+        if (!canEdit) {
+            toast.error("Unauthorized", { description: "You don't have permission to modify items." });
+            return;
+        }
         if (window.confirm('Are you sure you want to archive this item?')) {
             try {
                 const item = libraryItems.find(i => i.id === id || i.item_id === id);
@@ -506,6 +528,10 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
     };
 
     const handleDeleteItem = async (id: string | number) => {
+        if (!canDelete) {
+            toast.error("Unauthorized", { description: "You don't have permission to delete items." });
+            return;
+        }
         if (window.confirm('Are you sure you want to delete this item?')) {
             try {
                 const item = libraryItems.find(i => i.id === id || i.item_id === id);
@@ -521,6 +547,7 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
     };
 
     const openCreateForm = () => {
+        if (!canCreate) return;
         const typePrefix = activeTab === 'Reading' ? 'R' : activeTab === 'Listening' ? 'L' : activeTab === 'Writing' ? 'W' : activeTab === 'Speaking' ? 'SP' : 'MT';
         const newId = `${typePrefix}${Math.floor(1000 + Math.random() * 9000)}`;
 
@@ -749,22 +776,25 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                     {/* Action Buttons */}
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => setShowExportDialog(true)}
-                            className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
+                            onClick={() => canExport && setShowExportDialog(true)}
+                            disabled={!canExport}
+                            className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Download size={18} className="text-[#253154]" />
                             <span className="text-sm text-[#253154] font-medium">Export</span>
                         </button>
                         <button
-                            onClick={() => setShowImportDialog(true)}
-                            className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
+                            onClick={() => canImport && setShowImportDialog(true)}
+                            disabled={!canImport}
+                            className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Upload size={18} className="text-[#253154]" />
                             <span className="text-sm text-[#253154] font-medium">Import</span>
                         </button>
                         <button
                             onClick={openCreateForm}
-                            className="flex items-center gap-2 px-5 py-3 bg-[#0e042f] rounded-xl hover:bg-[#1a0c4a] transition-colors shadow-lg"
+                            disabled={!canCreate}
+                            className="flex items-center gap-2 px-5 py-3 bg-[#0e042f] rounded-xl hover:bg-[#1a0c4a] transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <Plus size={18} className="text-white" />
                             <span className="text-sm text-white font-medium">Create Item</span>
@@ -1204,13 +1234,14 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <button
-                                                                        onClick={() => openEditForm(item)}
-                                                                        className="p-2 hover:bg-purple-50 rounded-lg transition-colors group"
+                                                                        onClick={() => canEdit && openEditForm(item)}
+                                                                        disabled={!canEdit}
+                                                                        className="p-2 hover:bg-purple-50 rounded-lg transition-colors group disabled:opacity-30 disabled:cursor-not-allowed"
                                                                     >
                                                                         <Edit size={16} className="text-gray-500 group-hover:text-purple-600" />
                                                                     </button>
                                                                 </TooltipTrigger>
-                                                                <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">Edit Item</TooltipContent>
+                                                                <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">{canEdit ? 'Edit Item' : 'Edit Restricted'}</TooltipContent>
                                                             </Tooltip>
                                                         </TooltipProvider>
 
@@ -1218,13 +1249,14 @@ export const AITestLibrary: React.FC<AITestLibraryProps> = ({ onNavigate }) => {
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
                                                                     <button
-                                                                        onClick={() => handleArchiveItem(itemId)}
-                                                                        className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                                                                        onClick={() => canDelete && handleArchiveItem(itemId)}
+                                                                        disabled={!canDelete}
+                                                                        className="p-2 hover:bg-red-50 rounded-lg transition-colors group disabled:opacity-30 disabled:cursor-not-allowed"
                                                                     >
                                                                         <Trash2 size={16} className="text-gray-500 group-hover:text-red-600" />
                                                                     </button>
                                                                 </TooltipTrigger>
-                                                                <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">Archive Item</TooltipContent>
+                                                                <TooltipContent className="bg-[#0e042f] text-white text-[10px] px-2 py-1">{canDelete ? 'Archive Item' : 'Delete Restricted'}</TooltipContent>
                                                             </Tooltip>
                                                         </TooltipProvider>
                                                     </div>

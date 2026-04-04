@@ -21,6 +21,7 @@ import { ImportDialog, ImportField } from './common/ImportDialog';
 import { AddVisaDialog } from './common/AddVisaDialog';
 import * as visaService from '@/app/services/visaService';
 import { Visa } from '@/app/services/visaService';
+import { PermissionGuard } from './common/PermissionGuard';
 
 // --- Components ---
 
@@ -534,15 +535,21 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Download size={20} strokeWidth={1.5} />Export
-            </button>
-            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Upload size={20} strokeWidth={1.5} />Import
-            </button>
-            <button onClick={handleAddVisa} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/10 hover:bg-[#1a0c4a] transition-all hover:scale-[1.02] active:scale-[0.98] text-[16px] font-medium">
-              <Plus size={20} strokeWidth={1.5} />Add Visa Type
-            </button>
+            <PermissionGuard module="services" action="export">
+              <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Download size={20} strokeWidth={1.5} />Export
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="services" action="create">
+              <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Upload size={20} strokeWidth={1.5} />Import
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="services" action="create">
+              <button onClick={handleAddVisa} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/10 hover:bg-[#1a0c4a] transition-all hover:scale-[1.02] active:scale-[0.98] text-[16px] font-medium">
+                <Plus size={20} strokeWidth={1.5} />Add Visa Type
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -712,27 +719,33 @@ export const VisaOverviewPage: React.FC<{ onNavigate?: (page: string) => void }>
                       )}
                       <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/visa/${visa.id}`); }}
-                            className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
-                            title="View Details"
-                          >
-                            <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleEditVisa(visa); }}
-                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
-                            title="Edit Visa Details"
-                          >
-                            <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDeleteVisa(visa.id); }}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
-                            title="Delete Pathway"
-                          >
-                            <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
-                          </button>
+                          <PermissionGuard module="services" action="view">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/visa/${visa.id}`); }}
+                              className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                              title="View Details"
+                            >
+                              <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard module="services" action="edit">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleEditVisa(visa); }}
+                              className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                              title="Edit Visa Details"
+                            >
+                              <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard module="services" action="delete">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteVisa(visa.id); }}
+                              className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                              title="Delete Pathway"
+                            >
+                              <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                            </button>
+                          </PermissionGuard>
                         </div>
                       </td>
                     </tr>

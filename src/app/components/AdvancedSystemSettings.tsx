@@ -35,17 +35,24 @@ import {
     MoreHorizontal
 } from 'lucide-react';
 import { SystemSettings } from '@/services/systemSettingsService';
+import { usePermission } from '@/hooks/usePermission';
 
 interface Props {
     settings: SystemSettings;
     setSettings: React.Dispatch<React.SetStateAction<SystemSettings>>;
     onSave?: () => void;
     isSaving?: boolean;
+    readOnly?: boolean;
 }
 
-const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving }) => {
+const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving, readOnly = false }) => {
+    const { hasPermission: canEditRaw } = usePermission('system', 'edit');
+    const { hasPermission: canExport } = usePermission('system', 'export');
+    
+    const canEdit = canEditRaw && !readOnly;
 
     const handleToggle = (field: keyof SystemSettings) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: !prev[field]
@@ -53,6 +60,7 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
     };
 
     const handleFeatureFlagToggle = (flagKey: string) => {
+        if (!canEdit) return;
         const currentFlags = settings.feature_flags || {};
         setSettings((prev: any) => ({
             ...prev,
@@ -64,6 +72,7 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
     };
 
     const handleInputChange = (field: keyof SystemSettings, value: any) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: value
@@ -100,7 +109,7 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
     );
 
     const ControlToggle = ({ label, description, enabled, onToggle, warning = false }: { label: string, description: string, enabled: boolean, onToggle: () => void, warning?: boolean }) => (
-        <div className="flex items-center justify-between p-5 bg-[#f8fafc] border border-slate-100 rounded-2xl">
+        <div className={`flex items-center justify-between p-5 bg-[#f8fafc] border border-slate-100 rounded-2xl ${!canEdit ? 'opacity-70' : ''}`}>
             <div className="space-y-0.5">
                 <p className="text-[14px] font-bold text-[#334155] flex items-center gap-2">
                     {label}
@@ -110,9 +119,10 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
             </div>
             <button
                 onClick={onToggle}
+                disabled={!canEdit}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${
                     enabled ? (warning ? 'bg-amber-500' : 'bg-[#0f172b]') : 'bg-slate-200'
-                }`}
+                } ${!canEdit ? 'cursor-not-allowed' : ''}`}
             >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
@@ -185,7 +195,8 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                                 type="number"
                                 value={settings.system_log_retention_days}
                                 onChange={(e) => handleInputChange('system_log_retention_days', parseInt(e.target.value))}
-                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium"
+                                disabled={!canEdit}
+                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="90"
                             />
                         </div>
@@ -215,13 +226,17 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                                 type="number"
                                 value={settings.email_bounce_threshold}
                                 onChange={(e) => handleInputChange('email_bounce_threshold', parseInt(e.target.value))}
-                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium"
+                                disabled={!canEdit}
+                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="15"
                             />
                         </div>
                     </div>
                     <div className="mt-8">
-                        <button className="px-6 h-[44px] bg-[#0f172b] text-white rounded-xl text-[13px] font-bold hover:bg-[#1e293b] transition-all flex items-center gap-2 shadow-lg shadow-slate-200">
+                        <button 
+                            className="px-6 h-[44px] bg-[#0f172b] text-white rounded-xl text-[13px] font-bold hover:bg-[#1e293b] transition-all flex items-center gap-2 shadow-lg shadow-slate-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canExport || !canEdit}
+                        >
                              Export Audit Logs
                              <Download size={16} />
                         </button>
@@ -256,7 +271,8 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                                 type="number"
                                 value={settings.session_timeout_minutes}
                                 onChange={(e) => handleInputChange('session_timeout_minutes', parseInt(e.target.value))}
-                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium"
+                                disabled={!canEdit}
+                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="60"
                             />
                         </div>
@@ -276,7 +292,8 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                                 type="number"
                                 value={settings.password_expiry_days}
                                 onChange={(e) => handleInputChange('password_expiry_days', parseInt(e.target.value))}
-                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium"
+                                disabled={!canEdit}
+                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="90"
                             />
                         </div>
@@ -287,12 +304,16 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                             <textarea 
                                 value={settings.ip_allowlist}
                                 onChange={(e) => handleInputChange('ip_allowlist', e.target.value)}
-                                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 text-[14px] font-medium h-[100px] resize-none"
+                                disabled={!canEdit}
+                                className="w-full bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 text-[14px] font-medium h-[100px] resize-none disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="192.168.1.0/24&#10;10.0.0.0/8"
                             />
                             <p className="text-[11px] text-slate-400 font-medium">Leave empty to allow all IPs.</p>
                         </div>
-                        <button className="px-6 h-[44px] border-2 border-red-100 text-red-600 rounded-xl text-[13px] font-bold hover:bg-red-50 transition-all flex items-center gap-2">
+                        <button 
+                            className="px-6 h-[44px] border-2 border-red-100 text-red-600 rounded-xl text-[13px] font-bold hover:bg-red-50 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             Force Logout All Users
                         </button>
                     </div>
@@ -315,16 +336,28 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                         />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <button className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-[14px] font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-[14px] font-medium text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             <RotateCw size={18} className="text-slate-400" /> Rebuild Search Index
                         </button>
-                        <button className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-[14px] font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-[14px] font-medium text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             <BarChart3 size={18} className="text-slate-400" /> Recalculate Analytics
                         </button>
-                        <button className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-[14px] font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-[14px] font-medium text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             <Zap size={18} className="text-slate-400" /> Re-run Failed Jobs
                         </button>
-                        <button className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-[14px] font-medium text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-3 text-[14px] font-medium text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             <Trash2 size={18} className="text-slate-400" /> Clear System Cache
                         </button>
                     </div>
@@ -343,7 +376,8 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                             <select 
                                 value={settings.backup_frequency}
                                 onChange={(e) => handleInputChange('backup_frequency', e.target.value)}
-                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium"
+                                disabled={!canEdit}
+                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option>Daily</option>
                                 <option>Weekly</option>
@@ -374,7 +408,10 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                         {[ '2024-03-30', '2024-03-29', '2024-03-28' ].map((date) => (
                             <div key={date} className="flex items-center justify-between py-3 px-4 bg-[#f8fafc] rounded-xl border border-slate-100 group hover:border-indigo-100 transition-all">
                                 <span className="text-[14px] font-medium text-slate-600">{date}</span>
-                                <button className="px-4 h-[32px] border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm">
+                                <button 
+                                    className="px-4 h-[32px] border border-slate-200 rounded-lg text-[12px] font-bold text-slate-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled={!canEdit}
+                                >
                                     Restore
                                 </button>
                             </div>
@@ -426,7 +463,8 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                                 type="number"
                                 value={settings.pagination_default_size}
                                 onChange={(e) => handleInputChange('pagination_default_size', parseInt(e.target.value))}
-                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium"
+                                disabled={!canEdit}
+                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder="25"
                             />
                         </div>
@@ -460,9 +498,10 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                                     </div>
                                     <button
                                         onClick={() => handleFeatureFlagToggle(flag)}
+                                        disabled={!canEdit}
                                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all focus:outline-none ${
                                             settings.feature_flags?.[flag] ? 'bg-[#0f172b]' : 'bg-slate-200'
-                                        }`}
+                                        } ${!canEdit ? 'cursor-not-allowed opacity-50' : ''}`}
                                     >
                                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settings.feature_flags?.[flag] ? 'translate-x-6' : 'translate-x-1'}`} />
                                     </button>
@@ -477,7 +516,8 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                             <select 
                                 value={settings.environment_scope}
                                 onChange={(e) => handleInputChange('environment_scope', e.target.value)}
-                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium"
+                                disabled={!canEdit}
+                                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option>Production</option>
                                 <option>Staging</option>
@@ -495,13 +535,22 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                         icon={Terminal}
                     />
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-                        <button className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             Send Test Email
                         </button>
-                        <button className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             Send Test SMS
                         </button>
-                        <button className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[52px] border border-slate-200 rounded-xl flex items-center justify-center gap-2 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             Test Webhook Ping
                         </button>
                     </div>
@@ -556,10 +605,16 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                         </div>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="h-[44px] border border-slate-200 rounded-xl px-6 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[44px] border border-slate-200 rounded-xl px-6 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canEdit}
+                        >
                             Reprocess Failed Imports
                         </button>
-                        <button className="h-[44px] border border-slate-200 rounded-xl px-6 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                        <button 
+                            className="h-[44px] border border-slate-200 rounded-xl px-6 text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={!canExport || !canEdit}
+                        >
                             Download Error Reports
                         </button>
                     </div>
@@ -589,7 +644,10 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
                                     <p className="text-[15px] font-bold text-red-900">{item.label}</p>
                                     <p className="text-[12px] text-red-400 font-medium italic">{item.desc}</p>
                                 </div>
-                                <button className="px-6 h-[34px] border-2 border-red-200 text-red-600 rounded-lg text-[11px] font-extrabold hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm">
+                                <button 
+                                    className="px-6 h-[34px] border-2 border-red-200 text-red-600 rounded-lg text-[11px] font-extrabold hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                                    disabled={!canEdit}
+                                >
                                     {item.btn}
                                 </button>
                             </div>
@@ -599,26 +657,27 @@ const AdvancedSystemSettings: React.FC<Props> = ({ settings, setSettings, onSave
 
             </div>
             
-            {/* Save Status (Floating) */}
-            <div className="fixed bottom-10 right-10 z-[60] flex items-center gap-4">
-                <button
-                    onClick={onSave}
-                    disabled={isSaving}
-                    className="flex items-center gap-3 px-10 h-[64px] bg-[#0f172b] hover:bg-[#1e293b] text-white rounded-full text-[15px] font-heavy tracking-tight transition-all shadow-[0_20px_50px_rgba(0,0,0,0.2)] hover:scale-105 active:scale-95 disabled:opacity-50"
-                >
-                    {isSaving ? (
-                        <>
-                            <Activity size={22} className="animate-spin" />
-                            Synchronizing System...
-                        </>
-                    ) : (
-                        <>
-                            <Save size={22} />
-                            Deploy System Configuration
-                        </>
-                    )}
-                </button>
-            </div>
+            {canEdit && (
+                <div className="fixed bottom-10 right-10 z-[60] flex items-center gap-4">
+                    <button
+                        onClick={onSave}
+                        disabled={isSaving}
+                        className="flex items-center gap-3 px-10 h-[64px] bg-[#0f172b] hover:bg-[#1e293b] text-white rounded-full text-[15px] font-heavy tracking-tight transition-all shadow-[0_20px_50px_rgba(0,0,0,0.2)] hover:scale-105 active:scale-95 disabled:opacity-50"
+                    >
+                        {isSaving ? (
+                            <>
+                                <Activity size={22} className="animate-spin" />
+                                Synchronizing System...
+                            </>
+                        ) : (
+                            <>
+                                <Save size={22} />
+                                Deploy System Configuration
+                            </>
+                        )}
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

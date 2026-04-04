@@ -66,11 +66,14 @@ import { Button } from './ui/button';
 interface Props {
     settings: CommunicationSettings;
     setSettings: React.Dispatch<React.SetStateAction<CommunicationSettings>>;
+    readOnly?: boolean;
 }
 
 type SubTab = 'providers' | 'email' | 'campaign' | 'templates' | 'identity';
 
-const CommunicationsSettings: React.FC<Props> = ({ settings, setSettings }) => {
+const CommunicationsSettings: React.FC<Props> = ({ settings, setSettings, readOnly = false }) => {
+    const { hasPermission: userHasEditPermission } = usePermission('communications', 'edit');
+    const canEdit = userHasEditPermission && !readOnly;
     const [activeSubTab, setActiveSubTab] = useState<SubTab>('providers');
     const [showApiKey, setShowApiKey] = useState(false);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -148,6 +151,7 @@ const CommunicationsSettings: React.FC<Props> = ({ settings, setSettings }) => {
     };
 
     const handleChange = (field: keyof CommunicationSettings, value: any) => {
+        if (!canEdit) return;
         setSettings((prev: CommunicationSettings) => ({ ...prev, [field]: value }));
     };
 
@@ -196,10 +200,11 @@ const CommunicationsSettings: React.FC<Props> = ({ settings, setSettings }) => {
                 {sublabel && <p className="text-[13px] text-gray-400 font-medium">{sublabel}</p>}
             </div>
             <button
-                onClick={() => onChange(!enabled)}
+                onClick={() => canEdit && onChange(!enabled)}
+                disabled={!canEdit}
                 className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
                     enabled ? 'bg-[#6929c4] shadow-[0_0_15px_rgba(105,41,196,0.2)]' : 'bg-gray-200 shadow-inner'
-                }`}
+                } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 <span
                     className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-300 ease-spring ${
@@ -255,9 +260,10 @@ const CommunicationsSettings: React.FC<Props> = ({ settings, setSettings }) => {
                             </label>
                             <div className="relative group">
                                 <select 
-                                    className="w-full h-[64px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white appearance-none cursor-pointer text-[16px] font-bold pr-12 shadow-sm"
+                                    className="w-full h-[64px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white appearance-none cursor-pointer text-[16px] font-bold pr-12 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                     value={settings.email_provider}
                                     onChange={(e) => handleChange('email_provider', e.target.value)}
+                                    disabled={!canEdit}
                                 >
                                     <option value="SendGrid">SendGrid</option>
                                     <option value="Mailchimp">Mailchimp Transactional (Mandrill)</option>
@@ -277,10 +283,11 @@ const CommunicationsSettings: React.FC<Props> = ({ settings, setSettings }) => {
                                 <div className="relative group">
                                     <input 
                                         type={showApiKey ? "text" : "password"}
-                                        className="w-full h-[64px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white text-[16px] font-bold pr-14 shadow-sm"
+                                        className="w-full h-[64px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white text-[16px] font-bold pr-14 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                         placeholder="········································"
                                         value={settings.api_key}
                                         onChange={(e) => handleChange('api_key', e.target.value)}
+                                        disabled={!canEdit}
                                     />
                                     <button 
                                         onClick={() => setShowApiKey(!showApiKey)}

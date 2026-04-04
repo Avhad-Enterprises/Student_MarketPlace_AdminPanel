@@ -28,9 +28,11 @@ interface Props {
     setGlobalSettings: React.Dispatch<React.SetStateAction<PolicyGlobalSettings>>;
     onSaveGlobal?: () => void;
     isSaving?: boolean;
+    readOnly?: boolean;
 }
 
-const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSettings, onSaveGlobal, isSaving }) => {
+const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSettings, onSaveGlobal, isSaving, readOnly = false }) => {
+    const canEdit = !readOnly;
     const [pages, setPages] = useState<PolicyPage[]>([]);
     const [isLoadingPages, setIsLoadingPages] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +72,7 @@ const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSetting
 
     const handleCreateSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!canEdit) return;
         if (!newPage.title) {
             toast.error('Policy Title is required');
             return;
@@ -99,6 +102,7 @@ const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSetting
     };
 
     const handleToggle = (field: keyof PolicyGlobalSettings) => {
+        if (!canEdit) return;
         setGlobalSettings((prev: any) => ({
             ...prev,
             [field]: !prev[field]
@@ -106,6 +110,7 @@ const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSetting
     };
 
     const handleInputChange = (field: keyof PolicyGlobalSettings, value: any) => {
+        if (!canEdit) return;
         setGlobalSettings((prev: any) => ({
             ...prev,
             [field]: value
@@ -125,16 +130,17 @@ const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSetting
     );
 
     const ToggleRow = ({ label, sublabel, enabled, onToggle }: { label: string, sublabel: string, enabled: boolean, onToggle: () => void }) => (
-        <div className="flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0 grow">
+        <div className={`flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0 grow ${!canEdit ? 'opacity-70' : ''}`}>
             <div className="space-y-1">
                 <p className="text-[15px] font-bold text-[#334155]">{label}</p>
                 <p className="text-[13px] text-slate-400 font-medium">{sublabel}</p>
             </div>
             <button
                 onClick={onToggle}
+                disabled={!canEdit}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
                     enabled ? 'bg-[#0f172b]' : 'bg-slate-200'
-                }`}
+                } ${!canEdit ? 'cursor-not-allowed' : ''}`}
             >
                 <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
@@ -157,7 +163,8 @@ const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSetting
                     value={value}
                     onChange={(e) => onChange(type === 'number' ? parseInt(e.target.value) || 0 : e.target.value)}
                     placeholder={placeholder}
-                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all"
+                    disabled={!canEdit}
+                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {rightLabel && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 font-bold text-[12px]">
@@ -268,13 +275,15 @@ const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSetting
                                 <option>Private</option>
                             </select>
                             
-                            <button 
-                                onClick={() => setIsCreateModalOpen(true)}
-                                className="bg-[#0f172b] hover:bg-[#1e293b] text-white px-6 h-[52px] rounded-xl text-[13px] font-bold transition-all flex items-center gap-2"
-                            >
-                                <Plus size={18} />
-                                Create Policy Page
-                            </button>
+                            {canEdit && (
+                                <button 
+                                    onClick={() => setIsCreateModalOpen(true)}
+                                    className="bg-[#0f172b] hover:bg-[#1e293b] text-white px-6 h-[52px] rounded-xl text-[13px] font-bold transition-all flex items-center gap-2"
+                                >
+                                    <Plus size={18} />
+                                    Create Policy Page
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -338,13 +347,22 @@ const PolicyLegalSettings: React.FC<Props> = ({ globalSettings, setGlobalSetting
                                         </td>
                                         <td className="py-6 px-4 text-right">
                                             <div className="flex items-center justify-end gap-2">
-                                                <button className="p-2 hover:bg-white hover:shadow-md rounded-lg text-slate-400 hover:text-[#0f172b] transition-all">
+                                                <button 
+                                                    className="p-2 hover:bg-white hover:shadow-md rounded-lg text-slate-400 hover:text-[#0f172b] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    disabled={!canEdit}
+                                                >
                                                     <Edit size={16} />
                                                 </button>
-                                                <button className="p-2 hover:bg-white hover:shadow-md rounded-lg text-slate-400 hover:text-[#0f172b] transition-all">
+                                                <button 
+                                                    className="p-2 hover:bg-white hover:shadow-md rounded-lg text-slate-400 hover:text-[#0f172b] transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    disabled={!canEdit}
+                                                >
                                                     <Copy size={16} />
                                                 </button>
-                                                <button className="p-2 hover:bg-white hover:shadow-md rounded-lg text-slate-400 hover:text-red-600 transition-all">
+                                                <button 
+                                                    className="p-2 hover:bg-white hover:shadow-md rounded-lg text-slate-400 hover:text-red-600 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    disabled={!canEdit}
+                                                >
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>

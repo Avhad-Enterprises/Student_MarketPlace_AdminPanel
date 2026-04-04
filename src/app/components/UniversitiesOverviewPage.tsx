@@ -23,6 +23,8 @@ import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '@/hooks/usePermission';
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -208,12 +210,14 @@ const MobileUniversityCard: React.FC<MobileUniversityCardProps> = ({ university,
               <div className="text-sm text-gray-700 font-medium">{university.status}</div>
             </div>
           </div>
-          <button
-            onClick={onEdit}
-            className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm"
-          >
-            View Details
-          </button>
+          <PermissionGuard module="universities" action="edit">
+            <button
+              onClick={onEdit}
+              className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm"
+            >
+              View Details
+            </button>
+          </PermissionGuard>
         </div>
       )}
     </div>
@@ -228,6 +232,10 @@ interface UniversitiesOverviewPageProps {
 
 export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> = ({ onNavigate, onEditUniversity }) => {
   const router = useRouter();
+  const { hasPermission: canEdit } = usePermission('universities', 'edit');
+  const { hasPermission: canCreate } = usePermission('universities', 'create');
+  const { hasPermission: canDelete } = usePermission('universities', 'delete');
+  const { hasPermission: canExport } = usePermission('universities', 'export');
   // State management
   const [date, setDate] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),
@@ -399,14 +407,26 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   };
 
   const handleAddUniversity = () => {
+    if (!canCreate) {
+      toast.error('Unauthorized', { description: 'You do not have permission to add universities.' });
+      return;
+    }
     router.push('/universities/add');
   };
 
   const handleEditUniversity = (id: string, tab: string = 'basic-info') => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to edit universities.' });
+      return;
+    }
     router.push(`/universities/edit/${id}?tab=${tab}`);
   };
 
   const handleDeleteUniversity = async (id: string) => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to delete universities.' });
+      return;
+    }
     if (window.confirm("Are you sure you want to delete this university? This action cannot be undone.")) {
       try {
         toast.loading("Deleting university...");
@@ -498,6 +518,10 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   ];
 
   const handleExport = async (options: any) => {
+    if (!canExport) {
+      toast.error('Unauthorized', { description: 'You do not have permission to export universities.' });
+      return;
+    }
     try {
       toast.info(`Exporting ${options.scope} universities...`);
       const data = await universityService.export(options.format);
@@ -518,6 +542,14 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   };
 
   const handleImport = async (data: any[], mode: any) => {
+    if (!canCreate && mode === 'create') {
+      toast.error('Unauthorized', { description: 'You do not have permission to import new universities.' });
+      return;
+    }
+    if (!canEdit && (mode === 'update' || mode === 'merge')) {
+      toast.error('Unauthorized', { description: 'You do not have permission to update universities via import.' });
+      return;
+    }
     let successCount = 0;
     let failCount = 0;
 
@@ -577,6 +609,10 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
 
 
   const handleBulkUpdateStatus = async (status: 'active' | 'disabled') => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to modify university statuses.' });
+      return;
+    }
     try {
       toast.loading(`Updating ${selectedUniversities.length} universities...`);
       await universityService.bulkUpdateStatus(selectedUniversities, status);
@@ -592,6 +628,10 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
   };
 
   const handleExportSelected = async () => {
+    if (!canExport) {
+      toast.error('Unauthorized', { description: 'You do not have permission to export university data.' });
+      return;
+    }
     try {
       // Filter the universities data on client side based on selection
       const selectedData = universities.filter(u => selectedUniversities.includes(u.id));
@@ -639,10 +679,34 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
           dateRange={date} 
           onDateChange={setDate}
           onRefresh={handleRefresh}
-          onExport={() => setShowExportDialog(true)}
-          onImport={() => setShowImportDialog(true)}
-          onAdd={handleAddUniversity}
-          addLabel="Add University"
+          actions={
+            <div className="flex items-center gap-3">
+              <PermissionGuard module="universities" action="export">
+                <button
+                  onClick={() => setShowExportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Download size={20} strokeWidth={1.5} />Export
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="universities" action="create">
+                <button
+                  onClick={() => setShowImportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Upload size={20} strokeWidth={1.5} />Import
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="universities" action="create">
+                <button
+                  onClick={handleAddUniversity}
+                  className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+                >
+                  <Plus size={20} strokeWidth={1.5} />Add University
+                </button>
+              </PermissionGuard>
+            </div>
+          }
         />
 
         {/* Metrics Section - Desktop Grid */}
@@ -876,30 +940,42 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
                   <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-20 p-2 w-56 animate-in fade-in zoom-in-95 duration-200">
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <Eye size={16} />
-                      View University Details
-                    </button>
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <Edit size={16} />
-                      Edit University Data
-                    </button>
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <CalendarAltIcon size={16} />
-                      Manage Intakes
-                    </button>
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                      <FileText size={16} />
-                      Manage Programs
-                    </button>
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                       <ToggleLeft size={16} />
-                       Enable/Disable
-                    </button>
-                    <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
-                       <Users size={16} />
-                       View Linked Applications
-                    </button>
+                    <PermissionGuard module="universities" action="view">
+                      <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
+                        <Eye size={16} />
+                        View University Details
+                      </button>
+                    </PermissionGuard>
+                    <PermissionGuard module="universities" action="edit">
+                      <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
+                        <Edit size={16} />
+                        Edit University Data
+                      </button>
+                    </PermissionGuard>
+                    <PermissionGuard module="universities" action="edit">
+                      <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
+                        <CalendarAltIcon size={16} />
+                        Manage Intakes
+                      </button>
+                    </PermissionGuard>
+                    <PermissionGuard module="universities" action="edit">
+                      <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
+                        <FileText size={16} />
+                        Manage Programs
+                      </button>
+                    </PermissionGuard>
+                    <PermissionGuard module="universities" action="edit">
+                      <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
+                        <ToggleLeft size={16} />
+                        Enable/Disable
+                      </button>
+                    </PermissionGuard>
+                    <PermissionGuard module="students" action="view">
+                      <button className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2">
+                        <Users size={16} />
+                        View Linked Applications
+                      </button>
+                    </PermissionGuard>
                   </div>
                 </>
               )}
@@ -1060,9 +1136,15 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-3">
-                  <button onClick={() => handleBulkUpdateStatus('active')} className="text-purple-700 font-bold hover:underline">Bulk Enable</button>
-                  <button onClick={() => handleBulkUpdateStatus('disabled')} className="text-purple-700 font-bold hover:underline">Bulk Disable</button>
-                  <button onClick={handleExportSelected} className="text-purple-700 font-bold hover:underline">Export Selected</button>
+                  <PermissionGuard module="universities" action="edit">
+                    <button onClick={() => handleBulkUpdateStatus('active')} className="text-purple-700 font-bold hover:underline">Bulk Enable</button>
+                  </PermissionGuard>
+                  <PermissionGuard module="universities" action="edit">
+                    <button onClick={() => handleBulkUpdateStatus('disabled')} className="text-purple-700 font-bold hover:underline">Bulk Disable</button>
+                  </PermissionGuard>
+                  <PermissionGuard module="universities" action="export">
+                    <button onClick={handleExportSelected} className="text-purple-700 font-bold hover:underline">Export Selected</button>
+                  </PermissionGuard>
                   <button onClick={handleClearSelection} className="text-purple-700 font-bold hover:underline">Clear</button>
                 </div>
               </div>
@@ -1100,7 +1182,11 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
                       if ((e.target as HTMLElement).closest('td:first-child') || (e.target as HTMLElement).closest('td:last-child')) {
                         return;
                       }
-                      handleEditUniversity(university.id);
+                      if (canEdit) {
+                        handleEditUniversity(university.id);
+                      } else {
+                        toast.error("Permission Denied", { description: "You don't have permission to view university details." });
+                      }
                     }}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1145,34 +1231,42 @@ export const UniversitiesOverviewPage: React.FC<UniversitiesOverviewPageProps> =
                     )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => { e.stopPropagation(); }}>
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditUniversity(university.id); }}
-                          className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
-                          title="View Details"
-                        >
-                          <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEditUniversity(university.id, 'basic-info'); }}
-                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
-                          title="Edit Basic Info"
-                        >
-                          <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleAddApplication(university.id); }}
-                          className="p-2 hover:bg-green-50 rounded-lg transition-colors group"
-                          title="Add Application"
-                        >
-                          <Plus size={18} className="text-gray-400 group-hover:text-green-600" />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDeleteUniversity(university.id); }}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
-                        </button>
+                        <PermissionGuard module="universities" action="edit">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEditUniversity(university.id); }}
+                            className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                            title="View Details"
+                          >
+                            <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard module="universities" action="edit">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEditUniversity(university.id, 'basic-info'); }}
+                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                            title="Edit Basic Info"
+                          >
+                            <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard module="students" action="create">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleAddApplication(university.id); }}
+                            className="p-2 hover:bg-green-50 rounded-lg transition-colors group"
+                            title="Add Application"
+                          >
+                            <Plus size={18} className="text-gray-400 group-hover:text-green-600" />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard module="universities" action="delete">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDeleteUniversity(university.id); }}
+                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
+                          </button>
+                        </PermissionGuard>
                       </div>
                     </td>
                   </tr>

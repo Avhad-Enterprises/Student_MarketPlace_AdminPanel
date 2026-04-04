@@ -38,6 +38,7 @@ import Slider from "react-slick";
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
+import { PermissionGuard } from './common/PermissionGuard';
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -448,24 +449,30 @@ export const OrdersOverviewPage: React.FC = () => {
 
           {/* Right: Action Buttons */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Download size={20} strokeWidth={1.5} />
-              Export
-            </button>
-            <button
-              onClick={() => setShowImportDialog(true)}
-              className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-            >
-              <Upload size={20} strokeWidth={1.5} />
-              Import
-            </button>
-            <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
-              <Plus size={20} strokeWidth={1.5} />
-              Add New
-            </button>
+            <PermissionGuard module="online-store" action="export">
+              <button
+                onClick={() => setShowExportDialog(true)}
+                className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+              >
+                <Download size={20} strokeWidth={1.5} />
+                Export
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="online-store" action="create">
+              <button
+                onClick={() => setShowImportDialog(true)}
+                className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+              >
+                <Upload size={20} strokeWidth={1.5} />
+                Import
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="online-store" action="create">
+              <button className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+                <Plus size={20} strokeWidth={1.5} />
+                Add New
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -663,10 +670,12 @@ export const OrdersOverviewPage: React.FC = () => {
                       Merge
                     </button>
                     <div className="h-px bg-gray-100 my-1" />
-                    <button className="w-full px-3 py-2 hover:bg-red-50 rounded-lg text-sm text-red-600 text-left flex items-center gap-2">
-                      <XCircle size={16} />
-                      Delete All
-                    </button>
+                    <PermissionGuard module="online-store" action="delete">
+                      <button className="w-full px-3 py-2 hover:bg-red-50 rounded-lg text-sm text-red-600 text-left flex items-center gap-2">
+                        <XCircle size={16} />
+                        Delete All
+                      </button>
+                    </PermissionGuard>
                   </div>
                 </>
               )}
@@ -841,14 +850,18 @@ export const OrdersOverviewPage: React.FC = () => {
                 )}
               </div>
               <div className="flex items-center gap-4">
-                <button className="text-purple-700 font-bold hover:underline">
-                  <Edit size={16} className="inline mr-1" />
-                  Edit
-                </button>
-                <button className="text-purple-700 font-bold hover:underline">
-                  <Archive size={16} className="inline mr-1" />
-                  Archive
-                </button>
+                <PermissionGuard module="online-store" action="edit">
+                  <button className="text-purple-700 font-bold hover:underline">
+                    <Edit size={16} className="inline mr-1" />
+                    Edit
+                  </button>
+                </PermissionGuard>
+                <PermissionGuard module="online-store" action="delete">
+                  <button className="text-purple-700 font-bold hover:underline">
+                    <Archive size={16} className="inline mr-1" />
+                    Archive
+                  </button>
+                </PermissionGuard>
                 <button onClick={handleClearSelection} className="text-purple-700 font-bold hover:underline">
                   Clear
                 </button>
@@ -917,9 +930,11 @@ export const OrdersOverviewPage: React.FC = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{order.shipping}</td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <button className="text-[#0e042f] hover:text-purple-700 transition-colors">
-                        <Edit size={18} />
-                      </button>
+                      <PermissionGuard module="online-store" action="edit">
+                        <button className="text-[#0e042f] hover:text-purple-700 transition-colors">
+                          <Edit size={18} />
+                        </button>
+                      </PermissionGuard>
                     </td>
                   </tr>
                 ))}

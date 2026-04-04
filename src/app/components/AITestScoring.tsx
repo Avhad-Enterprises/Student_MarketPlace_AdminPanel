@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * AI TEST ASSISTANT - SCORING CONFIGURATION
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getScoringSettings, updateScoringSettings } from '../services/aiTestScoringService';
+import { usePermission } from '../../hooks/usePermission';
 
 // Types
 type BandMapping = { range: string; band: string };
@@ -102,6 +103,9 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
     const [expandedSections, setExpandedSections] = useState<string[]>(['reading-listening']);
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    // RBAC
+    const { hasPermission: canEdit } = usePermission('ai-test-assistant', 'edit');
 
     // Fetch initial settings
     React.useEffect(() => {
@@ -192,6 +196,13 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
     };
 
     const handleSave = async () => {
+        if (!canEdit) {
+            toast.error('Unauthorized', {
+                description: 'You do not have permission to edit scoring settings.'
+            });
+            return;
+        }
+
         if (!isFormValid) {
             toast.error('Invalid configuration', {
                 description: 'All criteria weights must total 100%'
@@ -264,7 +275,7 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving || !isFormValid}
+                                disabled={isSaving || !isFormValid || !canEdit}
                                 className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-sm font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSaving ? (
@@ -319,8 +330,9 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                     <input
                                         type="number"
                                         value={readingTotalQuestions}
+                                        disabled={!canEdit}
                                         onChange={(e) => setReadingTotalQuestions(parseInt(e.target.value) || 0)}
-                                        className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
@@ -340,24 +352,26 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                                     <input
                                                         type="text"
                                                         value={mapping.range}
+                                                        disabled={!canEdit}
                                                         onChange={(e) => {
                                                             const newMapping = [...readingMapping];
                                                             newMapping[idx].range = e.target.value;
                                                             setReadingMapping(newMapping);
                                                         }}
-                                                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                                     />
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <input
                                                         type="text"
                                                         value={mapping.band}
+                                                        disabled={!canEdit}
                                                         onChange={(e) => {
                                                             const newMapping = [...readingMapping];
                                                             newMapping[idx].band = e.target.value;
                                                             setReadingMapping(newMapping);
                                                         }}
-                                                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                        className="w-full px-2 py-1 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                                     />
                                                 </td>
                                             </tr>
@@ -370,8 +384,9 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                 <input
                                     type="checkbox"
                                     checked={readingNegativeMarking}
+                                    disabled={!canEdit}
                                     onChange={(e) => setReadingNegativeMarking(e.target.checked)}
-                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                                 <span className="text-sm text-[#253154]">Enable negative marking</span>
                             </label>
@@ -386,8 +401,9 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                     <input
                                         type="number"
                                         value={listeningTotalQuestions}
+                                        disabled={!canEdit}
                                         onChange={(e) => setListeningTotalQuestions(parseInt(e.target.value) || 0)}
-                                        className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-16 px-2 py-1 border border-gray-200 rounded-lg text-xs text-center focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
@@ -437,8 +453,9 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                 <input
                                     type="checkbox"
                                     checked={listeningNegativeMarking}
+                                    disabled={!canEdit}
                                     onChange={(e) => setListeningNegativeMarking(e.target.checked)}
-                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                    className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                                 <span className="text-sm text-[#253154]">Enable negative marking</span>
                             </label>
@@ -482,8 +499,9 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                             min="0"
                                             max="100"
                                             value={value}
+                                            disabled={!canEdit}
                                             onChange={(e) => handleWritingWeightChange(key, parseInt(e.target.value))}
-                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                     </div>
                                 ))}
@@ -509,10 +527,11 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                 <h3 className="text-base font-semibold text-[#253154]">Strictness Level</h3>
                                 <TooltipHelper text="Controls how strictly the AI evaluates writing quality" />
                             </div>
-                            <select
+                             <select
                                 value={writingStrictness}
+                                disabled={!canEdit}
                                 onChange={(e) => setWritingStrictness(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                             >
                                 <option value="lenient">Lenient - More forgiving, higher scores</option>
                                 <option value="standard">Standard - IELTS-like evaluation</option>
@@ -530,8 +549,9 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                         <input
                                             type="checkbox"
                                             checked={applyWordCountPenalty}
+                                            disabled={!canEdit}
                                             onChange={(e) => setApplyWordCountPenalty(e.target.checked)}
-                                            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                         <span className="text-sm font-medium text-[#253154]">Apply word count penalty</span>
                                     </label>
@@ -540,19 +560,21 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                         <div className="grid grid-cols-2 gap-4 pl-6">
                                             <div>
                                                 <label className="text-xs text-gray-600 block mb-2">Minimum word count</label>
-                                                <input
+                                                 <input
                                                     type="number"
                                                     value={minWordCount}
+                                                    disabled={!canEdit}
                                                     onChange={(e) => setMinWordCount(parseInt(e.target.value) || 0)}
-                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                                 />
                                             </div>
                                             <div>
                                                 <label className="text-xs text-gray-600 block mb-2">Penalty band</label>
-                                                <select
+                                                 <select
                                                     value={wordCountPenalty}
+                                                    disabled={!canEdit}
                                                     onChange={(e) => setWordCountPenalty(e.target.value)}
-                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                                 >
                                                     <option value="-0.5">-0.5 band</option>
                                                     <option value="-1.0">-1.0 band</option>
@@ -568,8 +590,9 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                         <input
                                             type="checkbox"
                                             checked={enableOffTopicDetection}
+                                            disabled={!canEdit}
                                             onChange={(e) => setEnableOffTopicDetection(e.target.checked)}
-                                            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                            className="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                         <span className="text-sm font-medium text-[#253154]">Enable off-topic detection</span>
                                     </label>
@@ -579,13 +602,14 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                             <label className="text-xs text-gray-600 block mb-2">Sensitivity</label>
                                             <div className="flex gap-2">
                                                 {['low', 'medium', 'high'].map((level) => (
-                                                    <button
+                                                     <button
                                                         key={level}
+                                                        disabled={!canEdit}
                                                         onClick={() => setOffTopicSensitivity(level)}
                                                         className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium capitalize transition-colors ${offTopicSensitivity === level
                                                             ? 'bg-purple-600 text-white'
                                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                                            }`}
+                                                            } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                     >
                                                         {level}
                                                     </button>
@@ -620,13 +644,14 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                                 {value}%
                                             </span>
                                         </div>
-                                        <input
+                                         <input
                                             type="range"
                                             min="0"
                                             max="100"
                                             value={value}
+                                            disabled={!canEdit}
                                             onChange={(e) => handleSpeakingWeightChange(key, parseInt(e.target.value))}
-                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
+                                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                     </div>
                                 ))}
@@ -652,39 +677,43 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                             <div className="grid grid-cols-3 gap-4">
                                 <div>
                                     <label className="text-xs text-gray-600 block mb-2">Minimum duration (sec)</label>
-                                    <input
+                                     <input
                                         type="number"
                                         value={minSpeakingDuration}
+                                        disabled={!canEdit}
                                         onChange={(e) => setMinSpeakingDuration(parseInt(e.target.value) || 0)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-xs text-gray-600 block mb-2">Ideal range min (sec)</label>
-                                    <input
+                                     <input
                                         type="number"
                                         value={idealRangeMin}
+                                        disabled={!canEdit}
                                         onChange={(e) => setIdealRangeMin(parseInt(e.target.value) || 0)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                                 <div>
                                     <label className="text-xs text-gray-600 block mb-2">Ideal range max (sec)</label>
-                                    <input
+                                     <input
                                         type="number"
                                         value={idealRangeMax}
+                                        disabled={!canEdit}
                                         onChange={(e) => setIdealRangeMax(parseInt(e.target.value) || 0)}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
 
                             <label className="flex items-center gap-2 cursor-pointer mt-4">
-                                <input
+                                 <input
                                     type="checkbox"
                                     checked={applyDurationPenalty}
+                                    disabled={!canEdit}
                                     onChange={(e) => setApplyDurationPenalty(e.target.checked)}
-                                    className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                    className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                 />
                                 <span className="text-sm text-[#253154]">Apply penalty if too short</span>
                             </label>
@@ -695,13 +724,14 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                             <h3 className="text-base font-semibold text-[#253154] mb-4">Filler Word Sensitivity</h3>
                             <div className="flex gap-3">
                                 {['low', 'medium', 'high'].map((level) => (
-                                    <button
+                                     <button
                                         key={level}
+                                        disabled={!canEdit}
                                         onClick={() => setFillerSensitivity(level)}
                                         className={`flex-1 px-6 py-3 rounded-xl text-sm font-medium capitalize transition-colors ${fillerSensitivity === level
                                             ? 'bg-green-600 text-white shadow-sm'
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                            }`}
+                                            } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         {level}
                                     </button>
@@ -726,10 +756,11 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                         <div className="grid grid-cols-2 gap-6">
                             <div>
                                 <label className="text-sm font-medium text-[#253154] block mb-2">Writing model</label>
-                                <select
+                                 <select
                                     value={writingModel}
+                                    disabled={!canEdit}
                                     onChange={(e) => setWritingModel(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                 >
                                     <option value="gpt-4-turbo">GPT-4 Turbo (Recommended)</option>
                                     <option value="gpt-4">GPT-4</option>
@@ -739,10 +770,11 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
 
                             <div>
                                 <label className="text-sm font-medium text-[#253154] block mb-2">Speech transcription model</label>
-                                <select
+                                 <select
                                     value={speechModel}
+                                    disabled={!canEdit}
                                     onChange={(e) => setSpeechModel(e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                 >
                                     <option value="whisper-1">Whisper v1 (Recommended)</option>
                                     <option value="whisper-large">Whisper Large</option>
@@ -756,18 +788,20 @@ export const AITestScoring: React.FC<AITestScoringProps> = ({ onNavigate }) => {
                                 <input
                                     type="number"
                                     value={retryAttempts}
+                                    disabled={!canEdit}
                                     onChange={(e) => setRetryAttempts(parseInt(e.target.value) || 0)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                 />
                             </div>
 
                             <div>
                                 <label className="text-sm font-medium text-[#253154] block mb-2">Timeout (seconds)</label>
-                                <input
+                                 <input
                                     type="number"
                                     value={timeoutDuration}
+                                    disabled={!canEdit}
                                     onChange={(e) => setTimeoutDuration(parseInt(e.target.value) || 0)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed"
                                 />
                             </div>
 

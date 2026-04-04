@@ -15,6 +15,8 @@ import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { blogService, Blog, BlogFormData } from '@/services/blogService';
 import { BlogModal } from './BlogModal';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '@/hooks/usePermission';
 
 const CustomCheckbox: React.FC<{ checked: boolean; partial?: boolean; onChange: () => void }> = ({ checked, partial = false, onChange }) => (
   <div onClick={onChange} className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
@@ -76,6 +78,9 @@ interface BlogsOverviewPageProps {
 }
 
 const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => {
+  const { hasPermission: canCreate } = usePermission('blogs', 'create');
+  const { hasPermission: canEdit } = usePermission('blogs', 'edit');
+  const { hasPermission: canDelete } = usePermission('blogs', 'delete');
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 30), to: new Date() });
@@ -126,6 +131,14 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
   };
 
   const handleSaveBlog = async (data: BlogFormData) => {
+    if (!canCreate && !selectedBlog) {
+      toast.error('Unauthorized', { description: 'You do not have permission to create blog posts.' });
+      return;
+    }
+    if (!canEdit && selectedBlog) {
+      toast.error('Unauthorized', { description: 'You do not have permission to edit blog posts.' });
+      return;
+    }
     try {
       if (selectedBlog) {
         await blogService.updateBlog(selectedBlog.id, data);
@@ -140,6 +153,10 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
   };
 
   const handleDelete = async (id: number) => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to delete blog posts.' });
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this blog post?')) {
       try {
         await blogService.deleteBlog(id);
@@ -275,15 +292,21 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Download size={20} strokeWidth={1.5} />Export
-            </button>
-            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Upload size={20} strokeWidth={1.5} />Import
-            </button>
-            <button onClick={() => handleOpenModal(null)} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
-              <Plus size={20} strokeWidth={1.5} />New Blog
-            </button>
+            <PermissionGuard module="blogs" action="export">
+              <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Download size={20} strokeWidth={1.5} />Export
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="blogs" action="create">
+              <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Upload size={20} strokeWidth={1.5} />Import
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="blogs" action="create">
+              <button onClick={() => handleOpenModal(null)} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+                <Plus size={20} strokeWidth={1.5} />New Blog
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -485,18 +508,22 @@ const BlogsOverviewPage: React.FC<BlogsOverviewPageProps> = ({ onNavigate }) => 
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-40 p-1" align="end">
-                            <button
-                              onClick={() => handleOpenModal(blog)}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
-                            >
-                              <Edit size={16} /> Edit Blog
-                            </button>
-                            <button
-                              onClick={() => handleDelete(blog.id)}
-                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <Archive size={16} /> Delete
-                            </button>
+                            <PermissionGuard module="blogs" action="edit">
+                              <button
+                                onClick={() => handleOpenModal(blog)}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
+                              >
+                                <Edit size={16} /> Edit Blog
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard module="blogs" action="delete">
+                              <button
+                                onClick={() => handleDelete(blog.id)}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              >
+                                <Archive size={16} /> Delete
+                              </button>
+                            </PermissionGuard>
                           </PopoverContent>
                         </Popover>
                       </td>

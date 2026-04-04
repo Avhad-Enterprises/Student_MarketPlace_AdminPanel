@@ -1099,12 +1099,16 @@ export const StatusTrackingOverviewPage: React.FC = () => {
                         )}
                         {visibleColumns.includes('counselor') && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold text-purple-700">
-                                {status.counselor.split(' ').map(n => n[0]).join('')}
+                            {status.counselor ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-[10px] font-bold text-purple-700">
+                                  {status.counselor.split(' ').map((n: string) => n[0]).join('')}
+                                </div>
+                                {status.counselor}
                               </div>
-                              {status.counselor}
-                            </div>
+                            ) : (
+                              <span className="text-gray-400 italic">Unassigned</span>
+                            )}
                           </td>
                         )}
                         {visibleColumns.includes('risk') && (

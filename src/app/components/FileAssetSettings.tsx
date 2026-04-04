@@ -23,11 +23,14 @@ interface Props {
     setSettings: React.Dispatch<React.SetStateAction<FileSettings>>;
     onSave?: () => void;
     isSaving?: boolean;
+    readOnly?: boolean;
 }
 
-const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving }) => {
+const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving, readOnly = false }) => {
+    const canEdit = !readOnly;
 
     const handleToggle = (field: keyof FileSettings) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: !prev[field]
@@ -35,6 +38,7 @@ const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isS
     };
 
     const handleInputChange = (field: keyof FileSettings, value: any) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: value
@@ -42,6 +46,7 @@ const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isS
     };
 
     const handleCheckboxGridUpdate = (field: 'allowed_file_types', value: string) => {
+        if (!canEdit) return;
         const currentArray = JSON.parse(settings[field]);
         let newArray;
         if (currentArray.includes(value)) {
@@ -65,16 +70,17 @@ const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isS
     );
 
     const ToggleRow = ({ label, sublabel, enabled, onToggle }: { label: string, sublabel: string, enabled: boolean, onToggle: () => void }) => (
-        <div className="flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0">
+        <div className={`flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0 ${!canEdit ? 'opacity-70' : ''}`}>
             <div className="space-y-1">
                 <p className="text-[15px] font-bold text-[#334155]">{label}</p>
                 <p className="text-[13px] text-slate-400 font-medium">{sublabel}</p>
             </div>
             <button
                 onClick={onToggle}
+                disabled={!canEdit}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
                     enabled ? 'bg-[#0f172b]' : 'bg-slate-200'
-                }`}
+                } ${!canEdit ? 'cursor-not-allowed' : ''}`}
             >
                 <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
@@ -97,7 +103,8 @@ const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isS
                     value={value}
                     onChange={(e) => onChange(type === 'number' ? parseInt(e.target.value) || 0 : e.target.value)}
                     placeholder={placeholder}
-                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all"
+                    disabled={!canEdit}
+                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {rightLabel && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 font-bold text-[12px]">
@@ -118,7 +125,8 @@ const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isS
                 <select 
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 appearance-none text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all"
+                    disabled={!canEdit}
+                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 appearance-none text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {options.map(opt => <option key={opt}>{opt}</option>)}
                 </select>
@@ -203,7 +211,9 @@ const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isS
                             {fileFormats.map((item) => (
                                 <label 
                                     key={item} 
-                                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
+                                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                                        !canEdit ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+                                    } ${
                                         JSON.parse(settings.allowed_file_types).includes(item) 
                                             ? 'bg-slate-50 border-slate-200 ring-2 ring-[#0f172b]/5' 
                                             : 'bg-white border-slate-100 hover:border-slate-200'
@@ -213,6 +223,7 @@ const FileAssetSettings: React.FC<Props> = ({ settings, setSettings, onSave, isS
                                         type="checkbox" 
                                         checked={JSON.parse(settings.allowed_file_types).includes(item)}
                                         onChange={() => handleCheckboxGridUpdate('allowed_file_types', item)}
+                                        disabled={!canEdit}
                                         className="hidden"
                                     />
                                     <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
+import { usePermission } from '@/hooks/usePermission';
+import { PermissionGuard } from './common/PermissionGuard';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
     ArrowLeft, Save, X, Globe, User, TrendingUp, 
@@ -42,6 +44,7 @@ export const UniversityForm: React.FC<UniversityFormProps> = ({
     onAdd
 }) => {
     const router = useRouter();
+    const { hasPermission: canModify } = usePermission('universities', isEdit ? 'edit' : 'create');
     const [isLoading, setIsLoading] = useState(false);
     const [activeTab, setActiveTab] = useState(initialTab);
     const searchParams = useSearchParams();
@@ -419,22 +422,26 @@ const defaultUniversityData: UniversityFormData = {
     }, [isEdit, initialData, countries]); // Re-run when countries load to resolve IDs
 
     const handleChange = (field: keyof UniversityFormData, value: any) => {
+        if (!canModify) return;
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
     const handleArrayChange = (field: keyof UniversityFormData, index: number, value: string) => {
+        if (!canModify) return;
         const arr = [...(formData[field] as string[])];
         arr[index] = value;
         handleChange(field, arr);
     };
 
     const addArrayItem = (field: keyof UniversityFormData, value: string = '') => {
+        if (!canModify) return;
         const arr = [...(formData[field] as string[])];
         arr.push(value);
         handleChange(field, arr);
     };
 
     const removeArrayItem = (field: keyof UniversityFormData, index: number) => {
+        if (!canModify) return;
         const arr = [...(formData[field] as string[])];
         arr.splice(index, 1);
         handleChange(field, arr);
@@ -442,6 +449,7 @@ const defaultUniversityData: UniversityFormData = {
 
     const handleSubmit = async (e: React.FormEvent) => {
         if (e) e.preventDefault();
+        if (!canModify) return;
         setIsLoading(true);
 
         try {
@@ -520,18 +528,20 @@ const defaultUniversityData: UniversityFormData = {
                     >
                         Cancel
                     </button>
-                    <button 
-                        onClick={handleSubmit}
-                        disabled={isLoading}
-                        className="px-6 h-11 bg-[#0f172b] text-white rounded-xl font-semibold shadow-lg hover:bg-slate-800 transition-all disabled:opacity-50 flex items-center gap-2 text-sm"
-                    >
-                        {isLoading ? 'Saving...' : (
-                            <>
-                                <Save size={16} />
-                                {isEdit ? 'Update Institution' : 'Publish Institution'}
-                            </>
-                        )}
-                    </button>
+                    <PermissionGuard module="universities" action={isEdit ? 'edit' : 'create'}>
+                        <button 
+                            onClick={handleSubmit}
+                            disabled={isLoading || !canModify}
+                            className="px-6 h-11 bg-[#0f172b] text-white rounded-xl font-semibold shadow-lg hover:bg-slate-800 transition-all disabled:opacity-50 flex items-center gap-2 text-sm"
+                        >
+                            {isLoading ? 'Saving...' : (
+                                <>
+                                    <Save size={16} />
+                                    {isEdit ? 'Update Institution' : 'Publish Institution'}
+                                </>
+                            )}
+                        </button>
+                    </PermissionGuard>
                 </div>
             </div>
 
@@ -599,7 +609,11 @@ const defaultUniversityData: UniversityFormData = {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium">University Type</Label>
-                                        <Select value={formData.university_type || undefined} onValueChange={(v) => handleChange('university_type', v)}>
+                                        <Select 
+                                            disabled={!canModify}
+                                            value={formData.university_type || undefined} 
+                                            onValueChange={(v) => handleChange('university_type', v)}
+                                        >
                                             <SelectTrigger className="h-[44px]">
                                                 <SelectValue placeholder="Select" />
                                             </SelectTrigger>
@@ -632,7 +646,11 @@ const defaultUniversityData: UniversityFormData = {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium">Country *</Label>
-                                        <Select value={formData.country || undefined} onValueChange={(v) => handleChange('country', v)}>
+                                        <Select 
+                                            disabled={!canModify}
+                                            value={formData.country || undefined} 
+                                            onValueChange={(v) => handleChange('country', v)}
+                                        >
                                             <SelectTrigger className="h-[44px]">
                                                 <SelectValue placeholder="Select Country" />
                                             </SelectTrigger>
@@ -661,7 +679,7 @@ const defaultUniversityData: UniversityFormData = {
                                             <Select 
                                                 value={formData.city || undefined} 
                                                 onValueChange={(v) => handleChange('city', v)}
-                                                disabled={!formData.country}
+                                                disabled={!formData.country || !canModify}
                                             >
                                                 <SelectTrigger className="h-[44px]">
                                                     <SelectValue placeholder={!formData.country ? "Select country first" : "Select City"} />
@@ -697,7 +715,11 @@ const defaultUniversityData: UniversityFormData = {
                                 </div>
                                 <div className="space-y-2">
                                     <Label className="text-sm font-medium">Primary Region</Label>
-                                    <Select value={formData.region || undefined} onValueChange={(v) => handleChange('region', v)}>
+                                    <Select 
+                                        disabled={!canModify}
+                                        value={formData.region || undefined} 
+                                        onValueChange={(v) => handleChange('region', v)}
+                                    >
                                         <SelectTrigger className="h-[44px]">
                                             <SelectValue placeholder="Select region" />
                                         </SelectTrigger>
@@ -766,6 +788,7 @@ const defaultUniversityData: UniversityFormData = {
                                         onValueChange={(v) => handleChange('application_deadline', v)}
                                         placeholder="Select deadline"
                                         className="rounded-xl border-slate-200"
+                                        disabled={!canModify}
                                     />
                                 </div>
 
@@ -1527,10 +1550,11 @@ const defaultUniversityData: UniversityFormData = {
                                             </div>
                                             <textarea
                                                 key={current.key}
-                                                className={`w-full min-h-[360px] p-5 border border-slate-200 rounded-[16px] text-sm leading-relaxed focus:ring-2 focus:ring-${current.color}-100 focus:border-${current.color}-400 outline-none transition-all resize-none`}
+                                                className={`w-full min-h-[360px] p-5 border border-slate-200 rounded-[16px] text-sm leading-relaxed focus:ring-2 focus:ring-${current.color}-100 focus:border-${current.color}-400 outline-none transition-all resize-none ${!canModify ? 'opacity-70 grayscale-[0.5]' : ''}`}
                                                 placeholder={current.placeholder}
                                                 value={(formData as any)[current.key]}
                                                 onChange={(e) => handleChange(current.key as any, e.target.value)}
+                                                disabled={!canModify}
                                             />
                                             <div className="flex justify-between items-center mt-3">
                                                 <p className="text-[10px] text-slate-400">Supports markdown-style formatting. Changes are saved when you submit the form.</p>
@@ -1988,7 +2012,11 @@ const defaultUniversityData: UniversityFormData = {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     <div className="space-y-2">
                                         <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Application Status</Label>
-                                        <Select value={formData.application_status || undefined} onValueChange={(v) => handleChange('application_status', v)}>
+                                        <Select 
+                                            disabled={!canModify}
+                                            value={formData.application_status || undefined} 
+                                            onValueChange={(v) => handleChange('application_status', v)}
+                                        >
                                             <SelectTrigger className="h-[48px] rounded-xl">
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -2000,7 +2028,11 @@ const defaultUniversityData: UniversityFormData = {
                                     </div>
                                     <div className="space-y-2">
                                         <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest">System Status</Label>
-                                        <Select value={formData.status || undefined} onValueChange={(v) => handleChange('status', v)}>
+                                        <Select 
+                                            disabled={!canModify}
+                                            value={formData.status || undefined} 
+                                            onValueChange={(v) => handleChange('status', v)}
+                                        >
                                             <SelectTrigger className="h-[48px] rounded-xl">
                                                 <SelectValue />
                                             </SelectTrigger>
@@ -2020,6 +2052,7 @@ const defaultUniversityData: UniversityFormData = {
                                             id="is_featured"
                                             checked={formData.is_featured}
                                             onCheckedChange={(v) => handleChange('is_featured', !!v)}
+                                            disabled={!canModify}
                                         />
                                         <div>
                                             <Label htmlFor="is_featured" className="text-sm font-medium cursor-pointer">Is Featured</Label>
@@ -2033,6 +2066,7 @@ const defaultUniversityData: UniversityFormData = {
                                             id="visible"
                                             checked={formData.visible}
                                             onCheckedChange={(v) => handleChange('visible', !!v)}
+                                            disabled={!canModify}
                                         />
                                         <div>
                                             <Label htmlFor="visible" className="text-sm font-medium cursor-pointer">Published</Label>

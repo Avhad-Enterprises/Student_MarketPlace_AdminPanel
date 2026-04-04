@@ -18,6 +18,7 @@ import { CustomCheckbox, StatusBadge } from './service-marketplace/CommonUI';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { AddHousingDialog } from './common/AddHousingDialog';
+import { PermissionGuard } from './common/PermissionGuard';
 import { getAllHousing, deleteHousing, createHousing, updateHousing, getHousingMetrics, Housing } from '@/app/services/housingService';
 
 // --- Shared Components Extracted ---
@@ -437,10 +438,34 @@ export const HousingOverviewPage: React.FC<{ onNavigate?: (page: string, data?: 
           dateRange={date} 
           onDateChange={setDate}
           onRefresh={handleRefresh}
-          onExport={() => setShowExportDialog(true)}
-          onImport={() => setShowImportDialog(true)}
-          onAdd={handleAdd}
-          addLabel="Add Housing"
+          actions={
+            <div className="flex items-center gap-3">
+              <PermissionGuard module="services" action="export">
+                <button
+                  onClick={() => setShowExportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Download size={20} strokeWidth={1.5} />Export
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="services" action="create">
+                <button
+                  onClick={() => setShowImportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Upload size={20} strokeWidth={1.5} />Import
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="services" action="create">
+                <button
+                  onClick={handleAdd}
+                  className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+                >
+                  <Plus size={20} strokeWidth={1.5} />Add Housing
+                </button>
+              </PermissionGuard>
+            </div>
+          }
         />
 
         {/* Metrics - Standard Grid */}
@@ -562,27 +587,33 @@ export const HousingOverviewPage: React.FC<{ onNavigate?: (page: string, data?: 
                   {visibleColumns.includes('popularity') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.popularity}</td>}
                   <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleRowClick(item.id); }}
-                        className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
-                        title="View Details"
-                      >
-                        <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
-                        className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
-                        title="Edit"
-                      >
-                        <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                        className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
-                        title="Delete"
-                      >
-                        <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
-                      </button>
+                      <PermissionGuard module="services" action="view">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleRowClick(item.id); }}
+                          className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                          title="View Details"
+                        >
+                          <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard module="services" action="edit">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
+                          className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                          title="Edit"
+                        >
+                          <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                        </button>
+                      </PermissionGuard>
+                      <PermissionGuard module="services" action="delete">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                          title="Delete"
+                        >
+                          <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                        </button>
+                      </PermissionGuard>
                     </div>
                   </td>
                 </tr>

@@ -17,6 +17,8 @@ import { ImportDialog, ImportField } from './common/ImportDialog';
 import { enquiryService, Enquiry as ApiEnquiry } from '../../services/enquiryService';
 import { AddEnquiryModal } from './AddEnquiryModal';
 import { EditEnquiryModal } from './EditEnquiryModal';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '../../hooks/usePermission';
 
 interface CustomCheckboxProps {
   checked: boolean;
@@ -124,6 +126,11 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingEnquiry, setEditingEnquiry] = useState<ApiEnquiry | null>(null);
 
+  const { hasPermission: canView } = usePermission('enquiries', 'view');
+  const { hasPermission: canCreate } = usePermission('enquiries', 'create');
+  const { hasPermission: canEdit } = usePermission('enquiries', 'edit');
+  const { hasPermission: canDelete } = usePermission('enquiries', 'delete');
+
   const fetchEnquiries = async () => {
     try {
       setIsLoading(true);
@@ -212,6 +219,10 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
   const paginatedBookings = filteredEnquiries.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const handleDelete = async (id: string) => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to delete enquiries.' });
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this enquiry?')) {
       try {
         await enquiryService.deleteEnquiry(id);
@@ -224,6 +235,10 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
   };
 
   const handleEdit = (enquiry: ApiEnquiry) => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to edit enquiries.' });
+      return;
+    }
     setEditingEnquiry(enquiry);
     setIsEditModalOpen(true);
   };
@@ -255,6 +270,14 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
   };
 
   const handleImport = async (data: any[], mode: any) => {
+    if (!canCreate && mode === 'create') {
+      toast.error('Unauthorized', { description: 'You do not have permission to create enquiries.' });
+      return;
+    }
+    if (!canEdit && (mode === 'update' || mode === 'merge')) {
+      toast.error('Unauthorized', { description: 'You do not have permission to update enquiries.' });
+      return;
+    }
     let successCount = 0;
     let failCount = 0;
 
@@ -355,15 +378,21 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Download size={20} strokeWidth={1.5} />Export
-            </button>
-            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Upload size={20} strokeWidth={1.5} />Import
-            </button>
-            <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
-              <Plus size={20} strokeWidth={1.5} />Add Enquiry
-            </button>
+            <PermissionGuard module="enquiries" action="export">
+              <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Download size={20} strokeWidth={1.5} />Export
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="enquiries" action="create">
+              <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Upload size={20} strokeWidth={1.5} />Import
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="enquiries" action="create">
+              <button onClick={() => setIsAddModalOpen(true)} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+                <Plus size={20} strokeWidth={1.5} />Add Enquiry
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -379,9 +408,11 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
             </button>
           </div>
           <div className="flex gap-3">
-            <button onClick={() => setIsAddModalOpen(true)} className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium">
-              <Plus size={18} />Add Enquiry
-            </button>
+            <PermissionGuard module="enquiries" action="create">
+              <button onClick={() => setIsAddModalOpen(true)} className="flex-1 h-[50px] bg-[#0e042f] text-white rounded-xl shadow-lg shadow-purple-900/20 flex items-center justify-center gap-2 font-medium">
+                <Plus size={18} />Add Enquiry
+              </button>
+            </PermissionGuard>
             <button className="w-[50px] h-[50px] bg-white border border-gray-200 rounded-xl shadow-sm flex items-center justify-center">
               <MoreHorizontal size={22} className="text-[#253154]" />
             </button>
@@ -556,7 +587,13 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
                 {paginatedBookings.map((enquiry) => (
                   <tr
                     key={enquiry.enquiry_id}
-                    onClick={() => onNavigate?.('enquiry-detail', enquiry.enquiry_id)}
+                    onClick={() => {
+                      if (canView) {
+                        onNavigate?.('enquiry-detail', enquiry.enquiry_id);
+                      } else {
+                        toast.error("Access Denied", { description: "You don't have permission to view enquiry details." });
+                      }
+                    }}
                     className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                   >
                     <td
@@ -574,20 +611,24 @@ const EnquiriesOverviewPage: React.FC<EnquiriesOverviewPageProps> = ({ onNavigat
                     {visibleColumns.includes('status') && <td className="px-6 py-4"><StatusBadge status={enquiry.status} /></td>}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleEdit(enquiry); }}
-                          className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(enquiry.enquiry_id); }}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <PermissionGuard module="enquiries" action="edit">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleEdit(enquiry); }}
+                            className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard module="enquiries" action="delete">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(enquiry.enquiry_id); }}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </PermissionGuard>
                       </div>
                     </td>
                   </tr>

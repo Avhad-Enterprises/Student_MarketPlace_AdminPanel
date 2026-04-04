@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * AI TEST ASSISTANT - PLANS CONFIGURATION
@@ -35,6 +35,8 @@ import {
 import { toast } from 'sonner';
 import { aiTestPlansService } from '../../services/aiTestPlansService';
 import { useEffect } from 'react';
+import { usePermission } from '../../hooks/usePermission';
+import { PermissionGuard } from './common/PermissionGuard';
 
 type IntensityMode = 'light' | 'normal' | 'intense';
 type MockFrequency = 'conservative' | 'balanced' | 'aggressive';
@@ -85,6 +87,9 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
     const [isSaving, setIsSaving] = useState(false);
     const [showSimulation, setShowSimulation] = useState(false);
 
+    // RBAC
+    const { hasPermission: canEdit } = usePermission('ai-test-assistant', 'edit');
+
     // Fetch settings on mount
     useEffect(() => {
         const fetchSettings = async () => {
@@ -133,6 +138,10 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
     };
 
     const handleSave = async () => {
+        if (!canEdit) {
+            toast.error("Unauthorized", { description: "You don't have permission to modify plans." });
+            return;
+        }
         if (!isReadinessValid) {
             toast.error('Invalid configuration', {
                 description: 'Readiness weights must total 100%'
@@ -172,6 +181,10 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
     };
 
     const handleLoadPreset = () => {
+        if (!canEdit) {
+            toast.error("Unauthorized", { description: "You don't have permission to modify plans." });
+            return;
+        }
         // Reset to IELTS recommended defaults
         setWeakSkillBoost(30);
         setEnsureMinSkills(true);
@@ -214,7 +227,8 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                         <div className="flex items-center gap-3">
                             <button
                                 onClick={handleLoadPreset}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-[#253154] rounded-xl text-sm font-medium transition-colors"
+                                disabled={!canEdit}
+                                className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 hover:bg-gray-50 text-[#253154] rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <RotateCcw size={16} />
                                 <span>Load IELTS Preset</span>
@@ -228,7 +242,7 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                             </button>
                             <button
                                 onClick={handleSave}
-                                disabled={isSaving || !isReadinessValid}
+                                disabled={isSaving || !isReadinessValid || !canEdit}
                                 className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl text-sm font-medium transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isSaving ? (
@@ -284,11 +298,12 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                 {[20, 30, 40].map((value) => (
                                     <button
                                         key={value}
-                                        onClick={() => setWeakSkillBoost(value)}
+                                        onClick={() => canEdit && setWeakSkillBoost(value)}
+                                        disabled={!canEdit}
                                         className={`flex-1 px-6 py-4 rounded-xl text-sm font-semibold transition-all ${weakSkillBoost === value
                                             ? 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-md'
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                            }`}
+                                            } ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
                                     >
                                         <div className="text-base">{value === 20 ? 'Low' : value === 30 ? 'Medium' : 'High'}</div>
                                         <div className={`text-xs mt-1 ${weakSkillBoost === value ? 'text-red-100' : 'text-gray-600'}`}>
@@ -310,11 +325,12 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                         <div>
                             <h3 className="text-base font-semibold text-[#253154] mb-4">Skill Balance Rules</h3>
                             <div className="space-y-3">
-                                <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                                <label className={`flex items-center gap-3 p-4 border border-gray-200 rounded-xl transition-colors ${canEdit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-not-allowed opacity-60'}`}>
                                     <input
                                         type="checkbox"
                                         checked={ensureMinSkills}
-                                        onChange={(e) => setEnsureMinSkills(e.target.checked)}
+                                        onChange={(e) => canEdit && setEnsureMinSkills(e.target.checked)}
+                                        disabled={!canEdit}
                                         className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                                     />
                                     <div>
@@ -323,11 +339,12 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                     </div>
                                 </label>
 
-                                <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                                <label className={`flex items-center gap-3 p-4 border border-gray-200 rounded-xl transition-colors ${canEdit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-not-allowed opacity-60'}`}>
                                     <input
                                         type="checkbox"
                                         checked={preventOverload}
-                                        onChange={(e) => setPreventOverload(e.target.checked)}
+                                        onChange={(e) => canEdit && setPreventOverload(e.target.checked)}
+                                        disabled={!canEdit}
                                         className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                                     />
                                     <div>
@@ -359,11 +376,12 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                     return (
                                         <button
                                             key={mode}
-                                            onClick={() => setIntensityMode(mode)}
+                                            onClick={() => canEdit && setIntensityMode(mode)}
+                                            disabled={!canEdit}
                                             className={`p-5 rounded-xl border-2 transition-all text-left ${isSelected
                                                 ? 'border-blue-600 bg-blue-50 shadow-md'
                                                 : 'border-gray-200 bg-white hover:border-gray-300'
-                                                }`}
+                                                } ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
                                         >
                                             <div className="flex items-center justify-between mb-3">
                                                 <h4 className={`text-base font-bold capitalize ${isSelected ? 'text-blue-700' : 'text-[#253154]'}`}>
@@ -395,21 +413,23 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                         <input
                                             type="number"
                                             value={customIntensity[intensityMode].timeMin}
+                                            disabled={!canEdit}
                                             onChange={(e) => setCustomIntensity(prev => ({
                                                 ...prev,
                                                 [intensityMode]: { ...prev[intensityMode], timeMin: parseInt(e.target.value) }
                                             }))}
-                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                         <span className="text-gray-400">—</span>
                                         <input
                                             type="number"
                                             value={customIntensity[intensityMode].timeMax}
+                                            disabled={!canEdit}
                                             onChange={(e) => setCustomIntensity(prev => ({
                                                 ...prev,
                                                 [intensityMode]: { ...prev[intensityMode], timeMax: parseInt(e.target.value) }
                                             }))}
-                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                     </div>
                                 </div>
@@ -419,21 +439,23 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                         <input
                                             type="number"
                                             value={customIntensity[intensityMode].tasksMin}
+                                            disabled={!canEdit}
                                             onChange={(e) => setCustomIntensity(prev => ({
                                                 ...prev,
                                                 [intensityMode]: { ...prev[intensityMode], tasksMin: parseInt(e.target.value) }
                                             }))}
-                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                         <span className="text-gray-400">—</span>
                                         <input
                                             type="number"
                                             value={customIntensity[intensityMode].tasksMax}
+                                            disabled={!canEdit}
                                             onChange={(e) => setCustomIntensity(prev => ({
                                                 ...prev,
                                                 [intensityMode]: { ...prev[intensityMode], tasksMax: parseInt(e.target.value) }
                                             }))}
-                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                     </div>
                                 </div>
@@ -456,8 +478,9 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                             <h3 className="text-base font-semibold text-[#253154] mb-4">Mock Frequency Control</h3>
                             <select
                                 value={mockFrequency}
-                                onChange={(e) => setMockFrequency(e.target.value as MockFrequency)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                disabled={!canEdit}
+                                onChange={(e) => canEdit && setMockFrequency(e.target.value as MockFrequency)}
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="conservative">Conservative — 1 mock every 14 days</option>
                                 <option value="balanced">Balanced — 1 mock every 7 days</option>
@@ -467,11 +490,12 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
 
                         {/* Exam Countdown Boost */}
                         <div className="border border-gray-200 rounded-xl p-5">
-                            <label className="flex items-center gap-3 cursor-pointer mb-4">
+                            <label className={`flex items-center gap-3 transition-colors ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} mb-4`}>
                                 <input
                                     type="checkbox"
                                     checked={examCountdownBoost}
-                                    onChange={(e) => setExamCountdownBoost(e.target.checked)}
+                                    disabled={!canEdit}
+                                    onChange={(e) => canEdit && setExamCountdownBoost(e.target.checked)}
                                     className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                                 />
                                 <div>
@@ -486,8 +510,9 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                     <input
                                         type="number"
                                         value={boostDaysBefore}
+                                        disabled={!canEdit}
                                         onChange={(e) => setBoostDaysBefore(parseInt(e.target.value))}
-                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             )}
@@ -495,11 +520,12 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
 
                         {/* Auto Exam Ready Badge */}
                         <div className="border border-gray-200 rounded-xl p-5">
-                            <label className="flex items-center gap-3 cursor-pointer mb-4">
+                            <label className={`flex items-center gap-3 transition-colors ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} mb-4`}>
                                 <input
                                     type="checkbox"
                                     checked={autoExamReady}
-                                    onChange={(e) => setAutoExamReady(e.target.checked)}
+                                    disabled={!canEdit}
+                                    onChange={(e) => canEdit && setAutoExamReady(e.target.checked)}
                                     className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                                 />
                                 <div className="flex-1">
@@ -519,8 +545,9 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                             type="number"
                                             step="0.5"
                                             value={readyBandThreshold}
+                                            disabled={!canEdit}
                                             onChange={(e) => setReadyBandThreshold(parseFloat(e.target.value))}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                     </div>
                                     <div>
@@ -528,8 +555,9 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                         <input
                                             type="number"
                                             value={readyConsistency}
+                                            disabled={!canEdit}
                                             onChange={(e) => setReadyConsistency(parseInt(e.target.value))}
-                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                         />
                                     </div>
                                 </div>
@@ -583,8 +611,9 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                         min="0"
                                         max="100"
                                         value={value}
+                                        disabled={!canEdit}
                                         onChange={(e) => handleReadinessWeightChange(key, parseInt(e.target.value))}
-                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
+                                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600 disabled:opacity-30 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             ))}
@@ -632,11 +661,12 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                     <div className="space-y-6">
                         {/* Enable Streak System */}
                         <div className="border border-gray-200 rounded-xl p-5">
-                            <label className="flex items-center gap-3 cursor-pointer mb-4">
+                            <label className={`flex items-center gap-3 transition-colors ${canEdit ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} mb-4`}>
                                 <input
                                     type="checkbox"
                                     checked={enableStreak}
-                                    onChange={(e) => setEnableStreak(e.target.checked)}
+                                    disabled={!canEdit}
+                                    onChange={(e) => canEdit && setEnableStreak(e.target.checked)}
                                     className="w-5 h-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                                 />
                                 <div>
@@ -653,8 +683,9 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                             <input
                                                 type="number"
                                                 value={minDailyActivity}
+                                                disabled={!canEdit}
                                                 onChange={(e) => setMinDailyActivity(parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                             />
                                         </div>
                                         <div>
@@ -662,16 +693,18 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                                             <input
                                                 type="number"
                                                 value={graceDays}
+                                                disabled={!canEdit}
                                                 onChange={(e) => setGraceDays(parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                             />
                                         </div>
                                         <div>
                                             <label className="text-xs text-gray-600 block mb-2">Milestone (days)</label>
                                             <select
                                                 value={streakMilestone}
+                                                disabled={!canEdit}
                                                 onChange={(e) => setStreakMilestone(parseInt(e.target.value))}
-                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 <option value="7">7 days</option>
                                                 <option value="14">14 days</option>
@@ -684,11 +717,12 @@ export const AITestPlans: React.FC<AITestPlansProps> = ({ onNavigate }) => {
                         </div>
 
                         {/* Motivational Nudges */}
-                        <label className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                        <label className={`flex items-center gap-3 p-4 border border-gray-200 rounded-xl transition-colors ${canEdit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-not-allowed opacity-60'}`}>
                             <input
                                 type="checkbox"
                                 checked={showNudges}
-                                onChange={(e) => setShowNudges(e.target.checked)}
+                                disabled={!canEdit}
+                                onChange={(e) => canEdit && setShowNudges(e.target.checked)}
                                 className="w-5 h-5 rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                             />
                             <div>

@@ -2,8 +2,8 @@
 
 import { AdminLayout } from "@/components/AdminLayout";
 import { CountriesOverviewPage } from "@/components/CountriesOverviewPage";
-
 import { useRouter } from 'next/navigation';
+import { PermissionGuard } from "@/app/components/common/PermissionGuard";
 
 export default function CountriesPage() {
     const router = useRouter();
@@ -20,7 +20,9 @@ export default function CountriesPage() {
 
     return (
         <AdminLayout activePage="countries-list" onNavigate={handleNavigate}>
-            <CountriesOverviewPage onNavigate={handleNavigate} onEditCountry={handleEditCountry} />
+            <PermissionGuard module="countries" action="view">
+                <CountriesOverviewPage onNavigate={handleNavigate} onEditCountry={handleEditCountry} />
+            </PermissionGuard>
         </AdminLayout>
     );
 }

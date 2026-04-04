@@ -15,6 +15,8 @@ import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField, ImportMode } from './common/ImportDialog';
 import { financeService, Payment } from '@/services/financeService';
 import { FinanceModal } from './FinanceModal';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '@/hooks/usePermission';
 
 const MobileFinanceCard: React.FC<{
   item: Payment;
@@ -23,66 +25,81 @@ const MobileFinanceCard: React.FC<{
   onEdit: (item: Payment) => void;
   onDelete: (id: number) => void;
   onNavigate?: (page: string) => void;
-}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onNavigate }) => (
-  <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-purple-600 bg-purple-50/30' : 'border-gray-100'} shadow-sm space-y-4`}>
-    <div className="flex items-start justify-between">
-      <div className="flex items-center gap-3">
-        <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-xs"><Receipt size={14} /></div>
-          <div>
-            <h3 className="font-bold text-[#253154] text-[15px]">{item.invoice_number}</h3>
-            <p className="text-gray-500 text-[10px]">{item.first_name} {item.last_name}</p>
+}> = ({ item, isSelected, onToggleSelect, onEdit, onDelete, onNavigate }) => {
+  const { hasPermission: canViewDetails } = usePermission('finance', 'view');
+  
+  return (
+    <div className={`bg-white p-4 rounded-2xl border ${isSelected ? 'border-purple-600 bg-purple-50/30' : 'border-gray-100'} shadow-sm space-y-4`}>
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <CustomCheckbox checked={isSelected} onChange={onToggleSelect} />
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 font-bold text-xs"><Receipt size={14} /></div>
+            <div>
+              <h3 className="font-bold text-[#253154] text-[15px]">{item.invoice_number}</h3>
+              <p className="text-gray-500 text-[10px]">{item.first_name} {item.last_name}</p>
+            </div>
           </div>
         </div>
+        <StatusBadge status={item.status as any} />
       </div>
-      <StatusBadge status={item.status as any} />
-    </div>
 
-    <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-3 border-y border-gray-50">
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Amount</p>
-        <p className="text-sm font-bold text-indigo-600">{item.currency} {Number(item.amount).toFixed(2)}</p>
+      <div className="grid grid-cols-2 gap-y-3 gap-x-4 py-3 border-y border-gray-50">
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Amount</p>
+          <p className="text-sm font-bold text-indigo-600">{item.currency} {Number(item.amount).toFixed(2)}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date</p>
+          <p className="text-xs font-medium text-gray-700">{format(new Date(item.created_at), 'MMM d, y')}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Method</p>
+          <p className="text-xs font-medium text-gray-600">{item.payment_method}</p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Due Date</p>
+          <p className="text-xs font-bold text-red-500">{item.due_date}</p>
+        </div>
       </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date</p>
-        <p className="text-xs font-medium text-gray-700">{format(new Date(item.created_at), 'MMM d, y')}</p>
-      </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Method</p>
-        <p className="text-xs font-medium text-gray-600">{item.payment_method}</p>
-      </div>
-      <div>
-        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Due Date</p>
-        <p className="text-xs font-bold text-red-500">{item.due_date}</p>
-      </div>
-    </div>
 
-    <div className="flex items-center justify-end gap-2 pt-1">
-      <button
-        onClick={(e) => { e.stopPropagation(); onNavigate?.(`/finance/${item.id}`); }}
-        className="p-2.5 bg-indigo-50 text-indigo-610 rounded-xl hover:bg-indigo-100 transition-colors"
-        title="View Details"
-      >
-        <Eye size={18} />
-      </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-        className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
-        title="Edit"
-      >
-        <Edit3 size={18} />
-      </button>
-      <button
-        onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-        className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
-        title="Delete"
-      >
-        <Trash2 size={18} />
-      </button>
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <button
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            if (canViewDetails) {
+              onNavigate?.(`/finance/${item.id}`);
+            } else {
+              toast.error("Access Denied", { description: "You don't have permission to view invoice details." });
+            }
+          }}
+          className="p-2.5 bg-indigo-50 text-indigo-610 rounded-xl hover:bg-indigo-100 transition-colors"
+          title="View Details"
+        >
+          <Eye size={18} />
+        </button>
+        <PermissionGuard module="finance" action="edit">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+            className="p-2.5 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-100 transition-colors"
+            title="Edit"
+          >
+            <Edit3 size={18} />
+          </button>
+        </PermissionGuard>
+        <PermissionGuard module="finance" action="delete">
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+            className="p-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors"
+            title="Delete"
+          >
+            <Trash2 size={18} />
+          </button>
+        </PermissionGuard>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const CustomCheckbox: React.FC<{ checked: boolean; partial?: boolean; onChange: () => void }> = ({ checked, partial = false, onChange }) => (
   <div onClick={(e) => { e.stopPropagation(); onChange(); }} className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center cursor-pointer ${checked || partial ? 'bg-white border-purple-600' : 'bg-white border-gray-300 hover:border-gray-400'}`}>
@@ -122,6 +139,10 @@ interface FinanceOverviewPageProps {
 }
 
 export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavigate, onEditEntry }) => {
+  const { hasPermission: canViewDetails } = usePermission('finance', 'view');
+  const { hasPermission: canCreate } = usePermission('finance', 'create');
+  const { hasPermission: canEdit } = usePermission('finance', 'edit');
+  const { hasPermission: canDelete } = usePermission('finance', 'delete');
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState<DateRange | undefined>({ from: subDays(new Date(), 30), to: new Date() });
@@ -229,6 +250,10 @@ export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavi
   const handleToggle = (id: number) => setSelected(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const handleDelete = async (id: number) => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to delete invoices.' });
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this invoice?')) {
       try {
         await financeService.deletePayment(id);
@@ -259,9 +284,15 @@ export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavi
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Download size={20} strokeWidth={1.5} />Export</button>
-            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Upload size={20} strokeWidth={1.5} />Import</button>
-            <button onClick={() => { setSelectedPayment(null); setShowModal(true); }} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 font-medium"><Plus size={20} />Create Invoice</button>
+            <PermissionGuard module="finance" action="export">
+              <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Download size={20} strokeWidth={1.5} />Export</button>
+            </PermissionGuard>
+            <PermissionGuard module="finance" action="create">
+              <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"><Upload size={20} strokeWidth={1.5} />Import</button>
+            </PermissionGuard>
+            <PermissionGuard module="finance" action="create">
+              <button onClick={() => { setSelectedPayment(null); setShowModal(true); }} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 font-medium"><Plus size={20} />Create Invoice</button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -430,7 +461,13 @@ export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavi
                 <tr 
                   key={t.id} 
                   className={`hidden md:table-row hover:bg-gray-50/50 transition-colors group cursor-pointer ${selected.includes(t.id) ? 'bg-purple-50/30' : ''}`}
-                  onClick={() => onNavigate?.(`/finance/${t.id}`)}
+                  onClick={() => {
+                    if (canViewDetails) {
+                      onNavigate?.(`/finance/${t.id}`);
+                    } else {
+                      toast.error("Access Denied", { description: "You don't have permission to view invoice details." });
+                    }
+                  }}
                 >
                   <td className="px-6 py-4"><CustomCheckbox checked={selected.includes(t.id)} onChange={() => handleToggle(t.id)} /></td>
                   {visibleColumns.includes('transactionId') && <td className="px-6 py-4"><span className="text-[14px] font-bold text-[#0e042f] group-hover:text-purple-600 transition-colors">{t.invoice_number}</span></td>}
@@ -451,20 +488,24 @@ export const FinanceOverviewPage: React.FC<FinanceOverviewPageProps> = ({ onNavi
                         >
                           <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
                         </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setSelectedPayment(t); setShowModal(true); }}
-                          className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors group/edit"
-                          title="Edit"
-                        >
-                          <Edit3 size={18} />
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors group/delete"
-                          title="Delete"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        <PermissionGuard module="finance" action="edit">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setSelectedPayment(t); setShowModal(true); }}
+                            className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors group/edit"
+                            title="Edit"
+                          >
+                            <Edit3 size={18} />
+                          </button>
+                        </PermissionGuard>
+                        <PermissionGuard module="finance" action="delete">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleDelete(t.id); }}
+                            className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors group/delete"
+                            title="Delete"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </PermissionGuard>
                       </div>
                     </td>
                   )}
@@ -581,6 +622,10 @@ fields={[
 ]}
 templateUrl="/templates/finance-import-template.xlsx"
 onImport={async (data: any[], mode: ImportMode) => {
+  if (!canCreate) {
+    toast.error('Unauthorized', { description: 'You do not have permission to import invoices.' });
+    return;
+  }
   let successCount = 0;
   let failCount = 0;
 

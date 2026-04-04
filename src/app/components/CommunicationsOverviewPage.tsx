@@ -17,6 +17,8 @@ import { ExportDialog, ExportOptions } from './common/ExportDialog';
 import { ImportDialog, ImportField, ImportMode } from './common/ImportDialog';
 import { communicationService, Communication, CommunicationFormData } from '@/services/communicationService';
 import { CommunicationModal } from './CommunicationModal';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '../../hooks/usePermission';
 
 interface CustomCheckboxProps {
   checked: boolean;
@@ -87,6 +89,10 @@ const CommunicationsOverviewPage: React.FC<CommunicationsOverviewPageProps> = ({
   const [showCommunicationModal, setShowCommunicationModal] = useState(false);
   const [selectedComm, setSelectedComm] = useState<Communication | null>(null);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['commId', 'dateSent', 'recipient', 'channel', 'subject', 'status']);
+
+  const { hasPermission: canCreate } = usePermission('communications', 'create');
+  const { hasPermission: canEdit } = usePermission('communications', 'edit');
+  const { hasPermission: canDelete } = usePermission('communications', 'delete');
 
   const fetchCommunications = useCallback(async () => {
     setLoading(true);
@@ -191,6 +197,10 @@ const CommunicationsOverviewPage: React.FC<CommunicationsOverviewPageProps> = ({
   ];
 
   const handleDelete = async (id: number) => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to delete communication logs.' });
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this communication log?')) {
       try {
         await communicationService.deleteCommunication(id);
@@ -208,6 +218,14 @@ const CommunicationsOverviewPage: React.FC<CommunicationsOverviewPageProps> = ({
   };
 
   const handleSaveCommunication = async (data: CommunicationFormData) => {
+    if (!canCreate && !selectedComm) {
+      toast.error('Unauthorized', { description: 'You do not have permission to create communications.' });
+      return;
+    }
+    if (!canEdit && selectedComm) {
+      toast.error('Unauthorized', { description: 'You do not have permission to edit communications.' });
+      return;
+    }
     try {
       if (selectedComm) {
         await communicationService.updateCommunication(selectedComm.id, data);
@@ -251,15 +269,21 @@ const CommunicationsOverviewPage: React.FC<CommunicationsOverviewPageProps> = ({
             </button>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Download size={20} strokeWidth={1.5} />Export
-            </button>
-            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-              <Upload size={20} strokeWidth={1.5} />Import
-            </button>
-            <button onClick={() => handleOpenModal(null)} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
-              <Plus size={20} strokeWidth={1.5} />New Message
-            </button>
+            <PermissionGuard module="communications" action="export">
+              <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Download size={20} strokeWidth={1.5} />Export
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="communications" action="create">
+              <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                <Upload size={20} strokeWidth={1.5} />Import
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="communications" action="create">
+              <button onClick={() => handleOpenModal(null)} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+                <Plus size={20} strokeWidth={1.5} />New Message
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -478,18 +502,22 @@ const CommunicationsOverviewPage: React.FC<CommunicationsOverviewPageProps> = ({
                           </button>
                         </PopoverTrigger>
                         <PopoverContent className="w-40 p-1" align="end">
-                          <button
-                            onClick={() => handleOpenModal(c)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
-                          >
-                            <Edit3 size={16} /> View Details
-                          </button>
-                          <button
-                            onClick={() => handleDelete(c.id)}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <Trash2 size={16} /> Delete Log
-                          </button>
+                          <PermissionGuard module="communications" action="edit">
+                            <button
+                              onClick={() => handleOpenModal(c)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
+                            >
+                              <Edit3 size={16} /> View Details
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard module="communications" action="delete">
+                            <button
+                              onClick={() => handleDelete(c.id)}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 size={16} /> Delete Log
+                            </button>
+                          </PermissionGuard>
                         </PopoverContent>
                       </Popover>
                     </td>
@@ -595,6 +623,10 @@ const CommunicationsOverviewPage: React.FC<CommunicationsOverviewPageProps> = ({
         ]}
         templateUrl="/templates/communications-import-template.xlsx"
         onImport={async (data: any[], mode: ImportMode) => {
+          if (!canCreate) {
+            toast.error('Unauthorized', { description: 'You do not have permission to import/create communications.' });
+            return;
+          }
           let successCount = 0;
           let failCount = 0;
 

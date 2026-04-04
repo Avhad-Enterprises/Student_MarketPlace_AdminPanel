@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { AdminLayout } from '../../components/AdminLayout';
 import { AITestPlans } from '../../components/AITestPlans';
+import { PermissionGuard } from '../../components/common/PermissionGuard';
 
 export default function AITestPlansPage() {
     const router = useRouter();
@@ -22,7 +23,9 @@ export default function AITestPlansPage() {
 
     return (
         <AdminLayout activePage="ai-test-plans">
-            <AITestPlans onNavigate={handleNavigate} />
+            <PermissionGuard module="ai-test-assistant" action="view">
+                <AITestPlans onNavigate={handleNavigate} />
+            </PermissionGuard>
         </AdminLayout>
     );
 }

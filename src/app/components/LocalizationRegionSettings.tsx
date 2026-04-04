@@ -22,11 +22,14 @@ interface Props {
     setSettings: React.Dispatch<React.SetStateAction<LocalizationSettings>>;
     onSave?: () => void;
     isSaving?: boolean;
+    readOnly?: boolean;
 }
 
-const LocalizationRegionSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving }) => {
+const LocalizationRegionSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving, readOnly = false }) => {
+    const canEdit = !readOnly;
 
     const handleToggle = (field: keyof LocalizationSettings) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: !prev[field]
@@ -34,6 +37,7 @@ const LocalizationRegionSettings: React.FC<Props> = ({ settings, setSettings, on
     };
 
     const handleInputChange = (field: keyof LocalizationSettings, value: any) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: value
@@ -41,6 +45,7 @@ const LocalizationRegionSettings: React.FC<Props> = ({ settings, setSettings, on
     };
 
     const handleCheckboxGridUpdate = (field: 'supported_languages' | 'operating_regions', value: string) => {
+        if (!canEdit) return;
         const currentArray = JSON.parse(settings[field]);
         let newArray;
         if (currentArray.includes(value)) {
@@ -94,7 +99,8 @@ const LocalizationRegionSettings: React.FC<Props> = ({ settings, setSettings, on
                 <select 
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 appearance-none text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all"
+                    disabled={!canEdit}
+                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 appearance-none text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {options.map(opt => <option key={opt}>{opt}</option>)}
                 </select>
@@ -110,7 +116,9 @@ const LocalizationRegionSettings: React.FC<Props> = ({ settings, setSettings, on
             {items.map((item) => (
                 <label 
                     key={item} 
-                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
+                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                        !canEdit ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+                    } ${
                         selectedItems.includes(item) 
                             ? 'bg-slate-50 border-slate-200 ring-2 ring-[#0f172b]/5' 
                             : 'bg-white border-slate-100 hover:border-slate-200'
@@ -120,6 +128,7 @@ const LocalizationRegionSettings: React.FC<Props> = ({ settings, setSettings, on
                         type="checkbox" 
                         checked={selectedItems.includes(item)}
                         onChange={() => onToggle(item)}
+                        disabled={!canEdit}
                         className="hidden"
                     />
                     <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${

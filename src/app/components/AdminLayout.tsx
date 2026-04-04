@@ -9,6 +9,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationPanel } from './common/NotificationPanel';
 import { useNotifications } from './common/useNotifications';
+import rbacService from '@/services/rbacService';
+import { PermissionGuard } from './common/PermissionGuard';
+
 
 function classNames(...classes: (string | undefined | null | false)[]) {
   return classes.filter(Boolean).join(' ');
@@ -246,6 +249,11 @@ export const AdminLayout = ({ children, activePage: propActivePage, onNavigate, 
 
   // State for expandedSections
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Auto-expand the section containing the active page
   useEffect(() => {
@@ -427,50 +435,65 @@ export const AdminLayout = ({ children, activePage: propActivePage, onNavigate, 
 
         {/* Scrollable Middle Section */}
         <div className="flex-1 overflow-y-auto px-6 py-2 space-y-1 custom-scrollbar-dark">
-          {NAV_SECTIONS.slice(1).map((section) => (
-            <div suppressHydrationWarning key={section.id}>
-              {section.items ? (
-                <>
-                  <NavItemExpandable
+          {mounted && NAV_SECTIONS.slice(1).map((section) => {
+            // For sections with sub-items, check the PARENT section ID for permission
+            // (sub-items like "students-all" are not RBAC modules — "students" is)
+            const hasSectionAccess = rbacService.canViewModule(section.id);
+            const hasAnySubItemAccess = section.items ? hasSectionAccess : false;
+
+            if (!hasSectionAccess && !hasAnySubItemAccess) return null;
+
+            return (
+              <div suppressHydrationWarning key={section.id}>
+                {section.items ? (
+                  <>
+                    <NavItemExpandable
+                      icon={section.icon}
+                      label={section.label}
+                      active={checkPageInSection(section, activePage)}
+                      expanded={expandedSections.includes(section.id)}
+                      onClick={() => toggleSection(section.id)}
+                    />
+                    {expandedSections.includes(section.id) && (
+                      <div suppressHydrationWarning className="ml-4 mt-1 space-y-1">
+                        {section.items.map((item) => {
+                          // Sub-items inherit their parent section's RBAC module permission
+                          if (!rbacService.canViewModule(section.id)) return null;
+                          return (
+                            <NavSubItem
+                              key={item.id}
+                              label={item.label}
+                              active={activePage === item.id}
+                              onClick={() => handleNav(item.id)}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <NavItem
                     icon={section.icon}
                     label={section.label}
-                    active={checkPageInSection(section, activePage)}
-                    expanded={expandedSections.includes(section.id)}
-                    onClick={() => toggleSection(section.id)}
+                    active={section.pages?.includes(activePage)}
+                    onClick={() => handleNav(section.pages?.[0] || section.id)}
                   />
-                  {expandedSections.includes(section.id) && (
-                    <div suppressHydrationWarning className="ml-4 mt-1 space-y-1">
-                      {section.items.map((item) => (
-                        <NavSubItem
-                          key={item.id}
-                          label={item.label}
-                          active={activePage === item.id}
-                          onClick={() => handleNav(item.id)}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <NavItem
-                  icon={section.icon}
-                  label={section.label}
-                  active={section.pages?.includes(activePage)}
-                  onClick={() => handleNav(section.pages?.[0] || section.id)}
-                />
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Fixed Bottom Section (Settings) */}
         <div className="flex-none px-6 py-6 pb-8 mt-auto">
-          <NavItem
-            icon={<Settings size={20} />}
-            label="Settings"
-            active={activePage === 'settings'}
-            onClick={() => handleNav('settings')}
-          />
+          {mounted && rbacService.canViewModule('settings') && (
+            <NavItem
+              icon={<Settings size={20} />}
+              label="Settings"
+              active={activePage === 'settings'}
+              onClick={() => handleNav('settings')}
+            />
+          )}
         </div>
       </aside>
 

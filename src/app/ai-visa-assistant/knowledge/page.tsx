@@ -5,6 +5,7 @@ import { AdminLayout } from '../../components/AdminLayout';
 import { KnowledgeBase } from '../../components/KnowledgeBase';
 import { ArticleDetail } from '../../components/ArticleDetail';
 import { CreateArticle } from '../../components/CreateArticle';
+import { PermissionGuard } from '../../components/common/PermissionGuard';
 
 export default function AIKnowledgePage() {
     const [view, setView] = useState<'list' | 'detail' | 'create'>('list');
@@ -23,22 +24,24 @@ export default function AIKnowledgePage() {
 
     return (
         <AdminLayout activePage="ai-knowledge">
-            {view === 'list' && (
-                <KnowledgeBase onNavigate={handleNavigate} />
-            )}
+            <PermissionGuard module="ai-visa-assistant" action="view">
+                {view === 'list' && (
+                    <KnowledgeBase onNavigate={handleNavigate} />
+                )}
 
-            {view === 'detail' && selectedArticleId && (
-                <ArticleDetail
-                    articleId={selectedArticleId}
-                    onBack={() => setView('list')}
-                />
-            )}
+                {view === 'detail' && selectedArticleId && (
+                    <ArticleDetail
+                        articleId={selectedArticleId}
+                        onBack={() => setView('list')}
+                    />
+                )}
 
-            {view === 'create' && (
-                <CreateArticle
-                    onBack={() => setView('list')}
-                />
-            )}
+                {view === 'create' && (
+                    <CreateArticle
+                        onBack={() => setView('list')}
+                    />
+                )}
+            </PermissionGuard>
         </AdminLayout>
     );
 }

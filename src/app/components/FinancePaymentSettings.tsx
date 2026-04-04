@@ -25,11 +25,14 @@ interface Props {
     setSettings: React.Dispatch<React.SetStateAction<FinanceSettings>>;
     onSave?: () => void;
     isSaving?: boolean;
+    readOnly?: boolean;
 }
 
-const FinancePaymentSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving }) => {
+const FinancePaymentSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving, readOnly = false }) => {
+    const canEdit = !readOnly;
 
     const handleToggle = (field: keyof FinanceSettings) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: !prev[field]
@@ -37,6 +40,7 @@ const FinancePaymentSettings: React.FC<Props> = ({ settings, setSettings, onSave
     };
 
     const handleInputChange = (field: keyof FinanceSettings, value: any) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: value
@@ -56,16 +60,17 @@ const FinancePaymentSettings: React.FC<Props> = ({ settings, setSettings, onSave
     );
 
     const ToggleRow = ({ label, sublabel, enabled, onToggle }: { label: string, sublabel: string, enabled: boolean, onToggle: () => void }) => (
-        <div className="flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0">
+        <div className={`flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0 ${!canEdit ? 'opacity-70' : ''}`}>
             <div className="space-y-1">
                 <p className="text-[15px] font-bold text-[#334155]">{label}</p>
                 <p className="text-[13px] text-slate-400 font-medium">{sublabel}</p>
             </div>
             <button
                 onClick={onToggle}
+                disabled={!canEdit}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
                     enabled ? 'bg-[#0f172b]' : 'bg-slate-200'
-                }`}
+                } ${!canEdit ? 'cursor-not-allowed' : ''}`}
             >
                 <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
@@ -93,7 +98,8 @@ const FinancePaymentSettings: React.FC<Props> = ({ settings, setSettings, onSave
                     value={value}
                     onChange={(e) => onChange(type === 'number' ? parseFloat(e.target.value) || 0 : e.target.value)}
                     placeholder={placeholder}
-                    className={`w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 ${prefix ? 'pl-10' : ''} text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all`}
+                    disabled={!canEdit}
+                    className={`w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 ${prefix ? 'pl-10' : ''} text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
                 />
             </div>
         </div>
@@ -109,7 +115,8 @@ const FinancePaymentSettings: React.FC<Props> = ({ settings, setSettings, onSave
                 <select 
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 appearance-none text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all"
+                    disabled={!canEdit}
+                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 appearance-none text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {options.map(opt => <option key={opt}>{opt}</option>)}
                 </select>
@@ -299,7 +306,8 @@ const FinancePaymentSettings: React.FC<Props> = ({ settings, setSettings, onSave
                         <textarea 
                             value={settings.invoice_footer_text}
                             onChange={(e) => handleInputChange('invoice_footer_text', e.target.value)}
-                            className="w-full min-h-[120px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all no-scrollbar"
+                            disabled={!canEdit}
+                            className="w-full min-h-[120px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all no-scrollbar disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder="Thank you for your business"
                         />
                     </div>

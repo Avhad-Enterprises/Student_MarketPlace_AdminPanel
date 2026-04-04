@@ -19,6 +19,7 @@ interface ServicePageHeaderProps {
   onImport?: () => void;
   onAdd?: () => void;
   addLabel?: string;
+  actions?: React.ReactNode;
 }
 
 export const ServicePageHeader: React.FC<ServicePageHeaderProps> = ({
@@ -29,7 +30,8 @@ export const ServicePageHeader: React.FC<ServicePageHeaderProps> = ({
   onExport,
   onImport,
   onAdd,
-  addLabel = "Add Record"
+  addLabel = "Add Record",
+  actions
 }) => {
   return (
     <div className="flex justify-between items-center gap-4 mb-8">
@@ -51,32 +53,36 @@ export const ServicePageHeader: React.FC<ServicePageHeaderProps> = ({
 
       {/* Action Buttons */}
       <div className="flex items-center gap-3">
-        {onExport && (
-          <button 
-            onClick={onExport} 
-            className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-          >
-            <Download size={20} strokeWidth={1.5} />
-            Export
-          </button>
-        )}
-        {onImport && (
-          <button 
-            onClick={onImport} 
-            className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
-          >
-            <Upload size={20} strokeWidth={1.5} />
-            Import
-          </button>
-        )}
-        {onAdd && (
-          <button
-            onClick={onAdd}
-            className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
-          >
-            <Plus size={20} strokeWidth={1.5} />
-            {addLabel}
-          </button>
+        {actions ? actions : (
+          <>
+            {onExport && (
+              <button 
+                onClick={onExport} 
+                className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+              >
+                <Download size={20} strokeWidth={1.5} />
+                Export
+              </button>
+            )}
+            {onImport && (
+              <button 
+                onClick={onImport} 
+                className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+              >
+                <Upload size={20} strokeWidth={1.5} />
+                Import
+              </button>
+            )}
+            {onAdd && (
+              <button
+                onClick={onAdd}
+                className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+              >
+                <Plus size={20} strokeWidth={1.5} />
+                {addLabel}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

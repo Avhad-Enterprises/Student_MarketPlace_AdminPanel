@@ -7,6 +7,7 @@ import { aiVisaSettingsService, AiVisaSettings } from '@/services/aiVisaSettings
 import { toast } from 'sonner';
 import { Loader2, Save, Activity, Settings } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { PermissionGuard } from '@/app/components/common/PermissionGuard';
 
 export default function AIVisaSettingsPage() {
     const [isLoading, setIsLoading] = useState(true);
@@ -69,55 +70,59 @@ export default function AIVisaSettingsPage() {
 
     return (
         <AdminLayout activePage="ai-setup">
-            <div className="max-w-[1400px] mx-auto py-8 px-4 sm:px-6 lg:px-8">
-                {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-gradient-to-tr from-[#6929c4] to-[#8a3ffc] rounded-2xl flex items-center justify-center shadow-xl shadow-purple-900/10 transition-transform hover:scale-105 duration-300">
-                                <Settings size={24} className="text-white" />
+            <PermissionGuard module="ai-visa-assistant" action="view">
+                <div className="max-w-[1400px] mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                    {/* Header Section */}
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-3">
+                                <div className="w-12 h-12 bg-gradient-to-tr from-[#6929c4] to-[#8a3ffc] rounded-2xl flex items-center justify-center shadow-xl shadow-purple-900/10 transition-transform hover:scale-105 duration-300">
+                                    <Settings size={24} className="text-white" />
+                                </div>
+                                <h1 className="text-[32px] font-extrabold text-[#0f172b] tracking-tight">AI Visa Intelligence</h1>
                             </div>
-                            <h1 className="text-[32px] font-extrabold text-[#0f172b] tracking-tight">AI Visa Intelligence</h1>
+                            <p className="text-gray-500 font-medium text-[16px] ml-1">Configure advanced AI parameters for visa assessment and risk analysis</p>
                         </div>
-                        <p className="text-gray-500 font-medium text-[16px] ml-1">Configure advanced AI parameters for visa assessment and risk analysis</p>
-                    </div>
 
-                    <div className="flex items-center gap-4">
-                        {lastUpdated && (
-                            <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl border border-purple-100">
-                                <Activity size={16} className="text-[#6929c4]" />
-                                <span className="text-xs font-bold text-[#6929c4]">Last Synced: {lastUpdated}</span>
-                            </div>
-                        )}
-                        <Button
-                            onClick={handleSave}
-                            disabled={isSaving || isLoading}
-                            className="bg-[#0f172b] hover:bg-[#1a2340] text-white h-[58px] px-10 rounded-2xl font-bold flex items-center gap-3 transition-all hover:translate-y-[-2px] active:translate-y-0 shadow-xl shadow-purple-900/10"
-                        >
-                            {isSaving ? (
-                                <Loader2 size={20} className="animate-spin" />
-                            ) : (
-                                <Save size={20} />
+                        <div className="flex items-center gap-4">
+                            {lastUpdated && (
+                                <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-purple-50 rounded-xl border border-purple-100">
+                                    <Activity size={16} className="text-[#6929c4]" />
+                                    <span className="text-xs font-bold text-[#6929c4]">Last Synced: {lastUpdated}</span>
+                                </div>
                             )}
-                            Save Configuration
-                        </Button>
-                    </div>
-                </div>
-
-                {isLoading ? (
-                    <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[40px] border border-gray-100 shadow-sm min-h-[500px]">
-                        <div className="relative">
-                            <div className="w-16 h-16 border-4 border-purple-100 border-t-[#6929c4] rounded-full animate-spin" />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-2 h-2 bg-[#6929c4] rounded-full animate-pulse" />
-                            </div>
+                            <PermissionGuard module="ai-visa-assistant" action="edit">
+                                <Button
+                                    onClick={handleSave}
+                                    disabled={isSaving || isLoading}
+                                    className="bg-[#0f172b] hover:bg-[#1a2340] text-white h-[58px] px-10 rounded-2xl font-bold flex items-center gap-3 transition-all hover:translate-y-[-2px] active:translate-y-0 shadow-xl shadow-purple-900/10"
+                                >
+                                    {isSaving ? (
+                                        <Loader2 size={20} className="animate-spin" />
+                                    ) : (
+                                        <Save size={20} />
+                                    )}
+                                    Save Configuration
+                                </Button>
+                            </PermissionGuard>
                         </div>
-                        <p className="mt-6 text-[#64748b] font-bold text-[15px] tracking-wide animate-pulse uppercase">Initializing AI Module...</p>
                     </div>
-                ) : (
-                    <AIVisaAssistantSettings settings={settings} setSettings={setSettings} />
-                )}
-            </div>
+
+                    {isLoading ? (
+                        <div className="flex flex-col items-center justify-center py-32 bg-white rounded-[40px] border border-gray-100 shadow-sm min-h-[500px]">
+                            <div className="relative">
+                                <div className="w-16 h-16 border-4 border-purple-100 border-t-[#6929c4] rounded-full animate-spin" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-2 h-2 bg-[#6929c4] rounded-full animate-pulse" />
+                                </div>
+                            </div>
+                            <p className="mt-6 text-[#64748b] font-bold text-[15px] tracking-wide animate-pulse uppercase">Initializing AI Module...</p>
+                        </div>
+                    ) : (
+                        <AIVisaAssistantSettings settings={settings} setSettings={setSettings} />
+                    )}
+                </div>
+            </PermissionGuard>
         </AdminLayout>
     );
 }

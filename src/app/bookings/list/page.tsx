@@ -3,8 +3,8 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import BookingsOverviewPage from '../../components/BookingsOverviewPage';
-
 import { AdminLayout } from '../../components/AdminLayout';
+import { PermissionGuard } from '../../components/common/PermissionGuard';
 
 export default function BookingsListPage() {
     const router = useRouter();
@@ -17,7 +17,9 @@ export default function BookingsListPage() {
 
     return (
         <AdminLayout activePage="bookings-list">
-            <BookingsOverviewPage onNavigate={handleNavigate} />
+            <PermissionGuard module="bookings" action="view">
+                <BookingsOverviewPage onNavigate={handleNavigate} />
+            </PermissionGuard>
         </AdminLayout>
     );
 }

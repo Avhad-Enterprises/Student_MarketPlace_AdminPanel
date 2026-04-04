@@ -13,6 +13,8 @@ import { ExpertModal } from './ExpertModal';
 import { ExportDialog, ExportOptions } from './common/ExportDialog';
 import { ImportDialog, ImportField, ImportMode } from './common/ImportDialog';
 import { toast } from 'sonner';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '@/hooks/usePermission';
 
 interface CustomCheckboxProps {
     checked: boolean;
@@ -67,6 +69,9 @@ interface ExpertsOverviewPageProps {
 
 export const ExpertsOverviewPage: React.FC<ExpertsOverviewPageProps> = ({ onNavigate }) => {
     // State
+    const { hasPermission: canCreate } = usePermission('experts', 'create');
+    const { hasPermission: canEdit } = usePermission('experts', 'edit');
+    const { hasPermission: canDelete } = usePermission('experts', 'delete');
     const [experts, setExperts] = useState<Expert[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -147,16 +152,28 @@ export const ExpertsOverviewPage: React.FC<ExpertsOverviewPageProps> = ({ onNavi
 
     // Handlers
     const handleAddExpert = () => {
+        if (!canCreate) {
+            toast.error('Unauthorized', { description: 'You do not have permission to add experts.' });
+            return;
+        }
         setSelectedExpertForEdit(null);
         setExpertModalOpen(true);
     };
 
     const handleEditExpert = (expert: Expert) => {
+        if (!canEdit) {
+            toast.error('Unauthorized', { description: 'You do not have permission to edit expert profiles.' });
+            return;
+        }
         setSelectedExpertForEdit(expert);
         setExpertModalOpen(true);
     };
 
     const handleDeleteExpert = async (id: number) => {
+        if (!canDelete) {
+            toast.error('Unauthorized', { description: 'You do not have permission to delete experts.' });
+            return;
+        }
         if (window.confirm('Are you sure you want to delete this expert?')) {
             try {
                 await expertService.deleteExpert(id);
@@ -272,15 +289,21 @@ export const ExpertsOverviewPage: React.FC<ExpertsOverviewPageProps> = ({ onNavi
                         </button>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-                            <Download size={20} strokeWidth={1.5} />Export
-                        </button>
-                        <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
-                            <Upload size={20} strokeWidth={1.5} />Import
-                        </button>
-                        <button onClick={handleAddExpert} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
-                            <Plus size={20} strokeWidth={1.5} />Add Expert
-                        </button>
+                        <PermissionGuard module="experts" action="export">
+                            <button onClick={() => setShowExportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                                <Download size={20} strokeWidth={1.5} />Export
+                            </button>
+                        </PermissionGuard>
+                        <PermissionGuard module="experts" action="create">
+                            <button onClick={() => setShowImportDialog(true)} className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium">
+                                <Upload size={20} strokeWidth={1.5} />Import
+                            </button>
+                        </PermissionGuard>
+                        <PermissionGuard module="experts" action="create">
+                            <button onClick={handleAddExpert} className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium">
+                                <Plus size={20} strokeWidth={1.5} />Add Expert
+                            </button>
+                        </PermissionGuard>
                     </div>
                 </div>
 
@@ -484,18 +507,22 @@ export const ExpertsOverviewPage: React.FC<ExpertsOverviewPageProps> = ({ onNavi
                                                     </button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-40 p-1" align="end">
-                                                    <button
-                                                        onClick={() => handleEditExpert(expert)}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
-                                                    >
-                                                        <Edit3 size={16} /> Edit Profile
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteExpert(expert.id)}
-                                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                    >
-                                                        <Trash2 size={16} /> Remove Expert
-                                                    </button>
+                                                    <PermissionGuard module="experts" action="edit">
+                                                        <button
+                                                            onClick={() => handleEditExpert(expert)}
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg transition-colors"
+                                                        >
+                                                            <Edit3 size={16} /> Edit Profile
+                                                        </button>
+                                                    </PermissionGuard>
+                                                    <PermissionGuard module="experts" action="delete">
+                                                        <button
+                                                            onClick={() => handleDeleteExpert(expert.id)}
+                                                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        >
+                                                            <Trash2 size={16} /> Remove Expert
+                                                        </button>
+                                                    </PermissionGuard>
                                                 </PopoverContent>
                                             </Popover>
                                         </td>

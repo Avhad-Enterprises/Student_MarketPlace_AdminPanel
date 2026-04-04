@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { AdminLayout } from '../../components/AdminLayout';
 import { FlowsAndForms } from '../../components/FlowsAndForms';
 import { FlowDetail } from '../../components/FlowDetail';
+import { PermissionGuard } from '../../components/common/PermissionGuard';
 
 export default function AIFlowsPage() {
     const [currentView, setCurrentView] = useState<'list' | 'detail'>('list');
@@ -23,11 +24,13 @@ export default function AIFlowsPage() {
 
     return (
         <AdminLayout activePage="ai-flows">
-            {currentView === 'list' ? (
-                <FlowsAndForms onNavigate={handleNavigate} />
-            ) : (
-                selectedFlowId && <FlowDetail onBack={handleBackToList} flowId={selectedFlowId} />
-            )}
+            <PermissionGuard module="ai-visa-assistant" action="view">
+                {currentView === 'list' ? (
+                    <FlowsAndForms onNavigate={handleNavigate} />
+                ) : (
+                    selectedFlowId && <FlowDetail onBack={handleBackToList} flowId={selectedFlowId} />
+                )}
+            </PermissionGuard>
         </AdminLayout>
     );
 }

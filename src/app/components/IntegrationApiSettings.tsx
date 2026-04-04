@@ -21,20 +21,29 @@ import {
     Database
 } from 'lucide-react';
 import { IntegrationSettings } from '../../services/integrationSettingsService';
+import { usePermission } from '@/hooks/usePermission';
 
 interface Props {
     settings: IntegrationSettings;
     setSettings: React.Dispatch<React.SetStateAction<IntegrationSettings>>;
     onSave?: () => void;
     isSaving?: boolean;
+    readOnly?: boolean;
 }
 
-const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving }) => {
+const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving, readOnly = false }) => {
+    const { hasPermission: canEditRaw } = usePermission('integration', 'edit');
+    const { hasPermission: canImport } = usePermission('integration', 'import');
+    const { hasPermission: canExport } = usePermission('integration', 'export');
+    
+    const canEdit = canEditRaw && !readOnly;
+    
     const [showApiKey, setShowApiKey] = useState(false);
     const [showWebhookSecret, setShowWebhookSecret] = useState(false);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
 
     const handleToggle = (field: keyof IntegrationSettings) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: !prev[field]
@@ -42,6 +51,7 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
     };
 
     const handleInputChange = (field: keyof IntegrationSettings, value: any) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: value
@@ -49,6 +59,7 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
     };
 
     const handleCheckboxGridUpdate = (field: 'webhook_events', value: string) => {
+        if (!canEdit) return;
         const currentArray = JSON.parse(settings[field]);
         let newArray;
         if (currentArray.includes(value)) {
@@ -78,17 +89,18 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
         </div>
     );
 
-    const ToggleRow = ({ label, sublabel, enabled, onToggle }: { label: string, sublabel: string, enabled: boolean, onToggle: () => void }) => (
-        <div className="flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0">
+    const ToggleRow = ({ label, sublabel, enabled, onToggle, disabled = false }: { label: string, sublabel: string, enabled: boolean, onToggle: () => void, disabled?: boolean }) => (
+        <div className={`flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0 ${(disabled || !canEdit) ? 'opacity-70' : ''}`}>
             <div className="space-y-1">
                 <p className="text-[15px] font-bold text-[#334155]">{label}</p>
                 <p className="text-[13px] text-slate-400 font-medium">{sublabel}</p>
             </div>
             <button
                 onClick={onToggle}
+                disabled={disabled || !canEdit}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
                     enabled ? 'bg-[#0f172b]' : 'bg-slate-200'
-                }`}
+                } ${(disabled || !canEdit) ? 'cursor-not-allowed' : ''}`}
             >
                 <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
@@ -111,7 +123,8 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
                     value={value}
                     onChange={(e) => onChange(type === 'number' ? parseInt(e.target.value) || 0 : e.target.value)}
                     placeholder={placeholder}
-                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all"
+                    disabled={!canEdit}
+                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 {rightElement && (
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
@@ -132,7 +145,8 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
                 <select 
                     value={value}
                     onChange={(e) => onChange(e.target.value)}
-                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 appearance-none text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all"
+                    disabled={!canEdit}
+                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 appearance-none text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {options.map(opt => <option key={opt}>{opt}</option>)}
                 </select>
@@ -172,10 +186,16 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
                             type={showApiKey ? 'text' : 'password'}
                             rightElement={
                                 <>
-                                    <button onClick={() => setShowApiKey(!showApiKey)} className="text-slate-400 hover:text-[#0f172b] transition-colors">
+                                    <button 
+                                        onClick={() => setShowApiKey(!showApiKey)} 
+                                        className="text-slate-400 hover:text-[#0f172b] transition-colors"
+                                    >
                                         {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
-                                    <button className="text-slate-400 hover:text-[#0f172b] transition-colors">
+                                    <button 
+                                        className="text-slate-400 hover:text-[#0f172b] transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        disabled={!canEdit}
+                                    >
                                         <RotateCcw size={18} />
                                     </button>
                                 </>
@@ -207,7 +227,8 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
                         <textarea 
                             value={settings.allowed_ip_whitelist}
                             onChange={(e) => handleInputChange('allowed_ip_whitelist', e.target.value)}
-                            className="w-full min-h-[100px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all no-scrollbar"
+                            disabled={!canEdit}
+                            className="w-full min-h-[100px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl p-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all no-scrollbar disabled:opacity-50 disabled:cursor-not-allowed"
                             placeholder="192.168.1.1, 10.0.0.1"
                         />
                     </div>
@@ -275,7 +296,9 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
                             {webhookOptions.map((item) => (
                                 <label 
                                     key={item} 
-                                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all cursor-pointer ${
+                                    className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${
+                                        !canEdit ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+                                    } ${
                                         JSON.parse(settings.webhook_events).includes(item) 
                                             ? 'bg-slate-50 border-slate-200 ring-2 ring-[#0f172b]/5' 
                                             : 'bg-white border-slate-100 hover:border-slate-200'
@@ -283,6 +306,7 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
                                 >
                                     <input 
                                         type="checkbox" 
+                                        disabled={!canEdit}
                                         checked={JSON.parse(settings.webhook_events).includes(item)}
                                         onChange={() => handleCheckboxGridUpdate('webhook_events', item)}
                                         className="hidden"
@@ -343,8 +367,8 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
                         </div>
                         <button 
                             onClick={handleTestConnection}
-                            disabled={isTestingConnection}
-                            className="bg-[#0f172b] hover:bg-[#1e293b] text-white px-6 h-[44px] rounded-xl text-[13px] font-bold transition-all flex items-center gap-2 disabled:opacity-70"
+                            disabled={isTestingConnection || !canEdit}
+                            className="bg-[#0f172b] hover:bg-[#1e293b] text-white px-6 h-[44px] rounded-xl text-[13px] font-bold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isTestingConnection ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}
                             {isTestingConnection ? 'Testing...' : 'Test Connection'}
@@ -401,12 +425,14 @@ const IntegrationApiSettings: React.FC<Props> = ({ settings, setSettings, onSave
                             label="Allow CSV Import" 
                             sublabel="Enable bulk data import via CSV" 
                             enabled={settings.allow_csv_import} 
+                            disabled={!canImport || readOnly}
                             onToggle={() => handleToggle('allow_csv_import')} 
                         />
                         <ToggleRow 
                             label="Allow Bulk Data Export" 
                             sublabel="Enable bulk data export" 
                             enabled={settings.allow_bulk_data_export} 
+                            disabled={!canExport || readOnly}
                             onToggle={() => handleToggle('allow_bulk_data_export')} 
                         />
                         <ToggleRow 

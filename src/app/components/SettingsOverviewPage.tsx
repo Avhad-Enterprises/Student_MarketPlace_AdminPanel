@@ -74,8 +74,8 @@ import rbacService from '@/services/rbacService';
 import { AIVisaAssistantSettings } from './AIVisaAssistantSettings';
 import CommunicationsSettings from './CommunicationsSettings';
 import { communicationSettingsService, CommunicationSettings } from '@/services/communicationSettingsService';
-import { deliverySafetySettingsService, DeliverySafetySettings } from '@/services/deliverySafetySettingsService';
-import DeliverySafetySettingsComp from './DeliverySafetySettings';
+import { deliverySafetySettingsService, DeliverySafetySettings as DeliverySafetySettingsType } from '@/services/deliverySafetySettingsService';
+import DeliverySafetySettings from './DeliverySafetySettings';
 import NotificationAlertSettings from './NotificationAlertSettings';
 import { adminNotificationSettingsService, AdminNotificationSettings } from '@/services/adminNotificationSettingsService';
 import CompliancePrivacySettings from './CompliancePrivacySettings';
@@ -89,10 +89,10 @@ import { integrationSettingsService, IntegrationSettings } from '@/services/inte
 import FileAssetSettings from './FileAssetSettings';
 import { fileSettingsService, FileSettings } from '@/services/fileSettingsService';
 import PolicyLegalSettings from './PolicyLegalSettings';
-import PolicySettingsRoute from './PolicyLegalSettings';
 import { policySettingsService, PolicyGlobalSettings } from '@/services/policySettingsService';
 import AdvancedSystemSettings from './AdvancedSystemSettings';
-import LegalComplianceSettings from './LegalComplianceSettings';
+import { usePermission } from '../../hooks/usePermission';
+import PermissionGuard from './common/PermissionGuard';
 
 type SettingsView = 'grid' | 'detail';
 type SettingsTab = 'general' | 'ai' | 'security' | 'people' | 'services_countries' | 'comparison_rules' | 'notifications' | 'communications' | 'delivery_safety' | 'compliance' | 'finance' | 'localization' | 'integrations' | 'files' | 'policies' | 'advanced' | 'legal_readiness' | 'placeholder';
@@ -110,6 +110,11 @@ export const SettingsOverviewPage: React.FC = () => {
 
     const [view, setView] = useState<SettingsView>('grid');
     const [activeTab, setActiveTab] = useState<SettingsTab>('general');
+    
+    const { hasPermission: canCreate } = usePermission('settings', 'create');
+    const { hasPermission: canEdit } = usePermission('settings', 'edit');
+    const { hasPermission: canDelete } = usePermission('settings', 'delete');
+
     const [activeSubTab, setActiveSubTab] = useState('general');
     const [activeCategoryTitle, setActiveCategoryTitle] = useState('');
     const [isLoading, setIsLoading] = useState(true);
@@ -284,7 +289,7 @@ export const SettingsOverviewPage: React.FC = () => {
         sender_name_list: 'Global Visa Services, Support Team, Marketing Team',
         default_sender_name: 'Global Visa Services',
     });
-    const [deliverySafetySettings, setDeliverySafetySettings] = useState<DeliverySafetySettings>({
+    const [deliverySafetySettings, setDeliverySafetySettings] = useState<DeliverySafetySettingsType>({
         api_requests_per_minute: 100,
         login_attempts_per_hour: 5,
         booking_creation_limit_per_user: 10,
@@ -543,10 +548,21 @@ export const SettingsOverviewPage: React.FC = () => {
                 perms = JSON.parse(perms);
             } catch (e) { return 0; }
         }
-        if (perms.all) return 41;
+        
+        // Handle "all" shortcut if still used
+        if (perms.all) return 42; 
+
         let count = 0;
-        Object.values(perms).forEach((val: any) => {
-            if (Array.isArray(val)) count += val.length;
+        Object.values(perms).forEach((modulePerms: any) => {
+            if (modulePerms && typeof modulePerms === 'object' && !Array.isArray(modulePerms)) {
+                // Count true boolean values in the new structure
+                Object.values(modulePerms).forEach((val: any) => {
+                    if (val === true) count++;
+                });
+            } else if (Array.isArray(modulePerms)) {
+                // Backward compatibility for array-based actions
+                count += modulePerms.length;
+            }
         });
         return count;
     };
@@ -650,6 +666,10 @@ export const SettingsOverviewPage: React.FC = () => {
     };
 
     const handleSaveSystem = async () => {
+        if (!canEdit) {
+            toast.error('Unauthorized', { description: 'You do not have permission to modify system settings.' });
+            return;
+        }
         setIsSaving(true);
         try {
             if (activeTab === 'services_countries') {
@@ -728,6 +748,10 @@ export const SettingsOverviewPage: React.FC = () => {
     };
 
     const handlePasswordChange = async () => {
+        if (!canEdit) {
+            toast.error('Unauthorized', { description: 'You do not have permission to change passwords.' });
+            return;
+        }
         if (!currentPassword || !newPassword || !confirmPassword) {
             toast.error('Please fill all fields');
             return;
@@ -757,6 +781,10 @@ export const SettingsOverviewPage: React.FC = () => {
     };
 
     const handleCreateUser = async () => {
+        if (!canCreate) {
+            toast.error('Unauthorized', { description: 'You do not have permission to create users.' });
+            return;
+        }
         if (!newUser.first_name || !newUser.email || !newUser.role_id) {
             toast.error('Please fill required fields');
             return;
@@ -782,6 +810,10 @@ export const SettingsOverviewPage: React.FC = () => {
     };
 
     const handleDeleteUser = async (id: string) => {
+        if (!canDelete) {
+            toast.error('Unauthorized', { description: 'You do not have permission to delete users.' });
+            return;
+        }
         if (!confirm('Are you sure you want to delete this user?')) return;
         try {
             await rbacService.api.deleteUser(id);
@@ -797,20 +829,28 @@ export const SettingsOverviewPage: React.FC = () => {
             ...user,
             first_name: user.full_name?.split(' ')[0] || user.first_name || '',
             last_name: user.full_name?.split(' ').slice(1).join(' ') || user.last_name || '',
-            status: user.account_status?.toLowerCase() === 'active' ? 'Active' : 'Inactive'
+            status: user.account_status?.toLowerCase() === 'active' ? 'Active' : 'Inactive',
+            // Resolve role_id: handle both flat role_id and nested role.id
+            role_id: user.role_id || user.role?.id || '',
+            password: '' // empty means don't update
         });
         setIsEditUserModalOpen(true);
     };
 
     const handleUpdateUser = async () => {
+        if (!canEdit) {
+            toast.error('Unauthorized', { description: 'You do not have permission to update users.' });
+            return;
+        }
         if (!editingUser.first_name || !editingUser.email || !editingUser.role_id) {
             toast.error('Please fill required fields');
             return;
         }
         setIsUpdatingUser(true);
         try {
-            // Sanitise payload for backend
-            const updatePayload = {
+            // Sanitise payload for backend — password is NOT included here
+            // because the users table stores it separately (hashed)
+            const updatePayload: any = {
                 first_name: editingUser.first_name,
                 last_name: editingUser.last_name,
                 full_name: `${editingUser.first_name} ${editingUser.last_name}`.trim(),
@@ -820,11 +860,31 @@ export const SettingsOverviewPage: React.FC = () => {
             };
             
             await rbacService.api.updateUser(editingUser.id, updatePayload);
-            toast.success('User updated successfully');
+
+            // If a new password was provided, send it to the dedicated endpoint
+            if (editingUser.password) {
+                try {
+                    await rbacService.api.resetUserPassword(editingUser.id, editingUser.password);
+                    toast.success('User updated and password changed successfully');
+                } catch (pwErr: any) {
+                    // Main update succeeded but password reset failed
+                    const pwMsg = pwErr.response?.data?.message || 'Password update failed — contact your backend admin';
+                    toast.warning(`User details saved, but: ${pwMsg}`);
+                }
+            } else {
+                toast.success('User updated successfully');
+            }
+
             setIsEditUserModalOpen(false);
             fetchSettings();
         } catch (error: any) {
-            toast.error(error.response?.data?.message || 'Failed to update user');
+            console.error('[UpdateUser] Error:', error.response?.data || error.message);
+            const msg = error.response?.data?.error?.message 
+                || error.response?.data?.message 
+                || error.response?.data?.error
+                || error.message
+                || 'Failed to update user';
+            toast.error(`Failed to update user: ${msg}`);
         } finally {
             setIsUpdatingUser(false);
         }
@@ -832,6 +892,10 @@ export const SettingsOverviewPage: React.FC = () => {
 
     // Role Handlers
     const handleCreateRole = async () => {
+        if (!canCreate) {
+            toast.error('Unauthorized', { description: 'You do not have permission to create roles.' });
+            return;
+        }
         if (!newRole.name) {
             toast.error('Please enter a role name');
             return;
@@ -856,6 +920,10 @@ export const SettingsOverviewPage: React.FC = () => {
     };
 
     const handleUpdateRole = async () => {
+        if (!canEdit) {
+            toast.error('Unauthorized', { description: 'You do not have permission to update roles.' });
+            return;
+        }
         if (!editingRole.name) {
             toast.error('Please enter a role name');
             return;
@@ -881,6 +949,10 @@ export const SettingsOverviewPage: React.FC = () => {
     };
 
     const handleDeleteRole = async (id: string) => {
+        if (!canDelete) {
+            toast.error('Unauthorized', { description: 'You do not have permission to delete roles.' });
+            return;
+        }
         if (!confirm('Are you sure you want to delete this role? This will affect all users assigned to it.')) return;
         try {
             await rbacService.api.deleteRole(id);
@@ -892,20 +964,29 @@ export const SettingsOverviewPage: React.FC = () => {
     };
 
     const handlePermissionToggle = async (module: string, action: string) => {
+        if (!canEdit) {
+            toast.error('Unauthorized', { description: 'You do not have permission to modify role permissions.' });
+            return;
+        }
         const role = roles.find(r => r.id === selectedRoleIdForMatrix);
         if (!role) return;
 
         const lowModule = module.toLowerCase();
         const lowAction = action.toLowerCase();
         
-        // Ensure structure exists
+        // Ensure structure exists without mutating original role object directly
         const currentPermissions = { ...(role.permissions || {}) };
-        if (!currentPermissions[lowModule]) {
-            currentPermissions[lowModule] = {};
-        }
-
-        // Toggle
-        currentPermissions[lowModule][lowAction] = !currentPermissions[lowModule][lowAction];
+        
+        // Deep copy of the module object to avoid mutation issues
+        const modulePermissions = currentPermissions[lowModule] 
+            ? { ...currentPermissions[lowModule] } 
+            : { view: false, create: false, edit: false, delete: false, approve: false, export: false };
+            
+        // Toggle the specific action
+        modulePermissions[lowAction as keyof typeof modulePermissions] = !modulePermissions[lowAction as keyof typeof modulePermissions];
+        
+        // Update the clone
+        currentPermissions[lowModule] = modulePermissions;
 
         setIsSavingPermission(true);
         try {
@@ -916,6 +997,7 @@ export const SettingsOverviewPage: React.FC = () => {
             setRoles(prev => prev.map(r => r.id === role.id ? { ...r, permissions: currentPermissions } : r));
             toast.success(`${action} permission for ${module} updated`);
         } catch (error: any) {
+            console.error('Permission update error:', error);
             toast.error('Failed to update permission');
         } finally {
             setIsSavingPermission(false);
@@ -1181,18 +1263,20 @@ export const SettingsOverviewPage: React.FC = () => {
                     </div>
                     
                     <div className="flex items-center gap-4">
-                        <Button
-                            onClick={['general', 'people', 'services_countries', 'comparison_rules', 'notifications', 'ai', 'communications', 'delivery_safety', 'compliance', 'finance', 'localization', 'integrations', 'files', 'policies', 'advanced'].includes(activeTab) ? handleSaveSystem : undefined}
-                            disabled={isSaving}
-                            className="bg-[#0a061d] hover:bg-[#1a1438] text-white px-8 h-[54px] rounded-[18px] text-[15px] font-bold shadow-xl shadow-purple-950/10 transition-all active:scale-95 flex items-center gap-2.5"
-                        >
-                            {isSaving ? (
-                                <Loader2 size={20} className="animate-spin" />
-                            ) : (
-                                <Save size={20} />
-                            )}
-                            Save Changes
-                        </Button>
+                        <PermissionGuard module="settings" action="edit">
+                            <Button
+                                onClick={['general', 'people', 'services_countries', 'comparison_rules', 'notifications', 'ai', 'communications', 'delivery_safety', 'compliance', 'finance', 'localization', 'integrations', 'files', 'policies', 'advanced'].includes(activeTab) ? handleSaveSystem : undefined}
+                                disabled={isSaving}
+                                className="bg-[#0a061d] hover:bg-[#1a1438] text-white px-8 h-[54px] rounded-[18px] text-[15px] font-bold shadow-xl shadow-purple-950/10 transition-all active:scale-95 flex items-center gap-2.5"
+                            >
+                                {isSaving ? (
+                                    <Loader2 size={20} className="animate-spin" />
+                                ) : (
+                                    <Save size={20} />
+                                )}
+                                Save Changes
+                            </Button>
+                        </PermissionGuard>
                     </div>
                 </div>
 
@@ -1211,25 +1295,29 @@ export const SettingsOverviewPage: React.FC = () => {
                         {activeTab === 'ai' && (
                             <AIVisaAssistantSettings 
                                 settings={aiSettings} 
-                                setSettings={setAiSettings} 
+                                setSettings={setAiSettings}
+                                readOnly={!canEdit}
                             />
                         )}
                         {activeTab === 'communications' && (
                             <CommunicationsSettings 
                                 settings={communicationSettings} 
-                                setSettings={setCommunicationSettings} 
+                                setSettings={setCommunicationSettings}
+                                readOnly={!canEdit}
                             />
                         )}
                         {activeTab === 'delivery_safety' && (
-                            <DeliverySafetySettingsComp 
+                            <DeliverySafetySettings 
                                 settings={deliverySafetySettings} 
-                                setSettings={setDeliverySafetySettings} 
+                                setSettings={setDeliverySafetySettings}
+                                readOnly={!canEdit}
                             />
                         )}
                         {activeTab === 'compliance' && (
                             <CompliancePrivacySettings 
                                 settings={complianceSettings} 
-                                setSettings={setComplianceSettings} 
+                                setSettings={setComplianceSettings}
+                                readOnly={!canEdit}
                                 onSave={handleSaveSystem}
                                 isSaving={isSaving}
                             />
@@ -1237,7 +1325,8 @@ export const SettingsOverviewPage: React.FC = () => {
                         {activeTab === 'finance' && (
                             <FinancePaymentSettings 
                                 settings={financeSettings} 
-                                setSettings={setFinanceSettings} 
+                                setSettings={setFinanceSettings}
+                                readOnly={!canEdit}
                                 onSave={handleSaveSystem}
                                 isSaving={isSaving}
                             />
@@ -1245,7 +1334,8 @@ export const SettingsOverviewPage: React.FC = () => {
                         {activeTab === 'localization' && (
                             <LocalizationRegionSettings 
                                 settings={localizationSettings} 
-                                setSettings={setLocalizationSettings} 
+                                setSettings={setLocalizationSettings}
+                                readOnly={!canEdit}
                                 onSave={handleSaveSystem}
                                 isSaving={isSaving}
                             />
@@ -1253,7 +1343,8 @@ export const SettingsOverviewPage: React.FC = () => {
                         {activeTab === 'integrations' && (
                             <IntegrationApiSettings 
                                 settings={integrationSettings} 
-                                setSettings={setIntegrationSettings} 
+                                setSettings={setIntegrationSettings}
+                                readOnly={!canEdit}
                                 onSave={handleSaveSystem}
                                 isSaving={isSaving}
                             />
@@ -1261,7 +1352,8 @@ export const SettingsOverviewPage: React.FC = () => {
                         {activeTab === 'files' && (
                             <FileAssetSettings 
                                 settings={fileSettings} 
-                                setSettings={setFileSettings} 
+                                setSettings={setFileSettings}
+                                readOnly={!canEdit}
                                 onSave={handleSaveSystem}
                                 isSaving={isSaving}
                             />
@@ -1269,7 +1361,8 @@ export const SettingsOverviewPage: React.FC = () => {
                         {activeTab === 'policies' && (
                             <PolicyLegalSettings 
                                 globalSettings={policyGlobalSettings} 
-                                setGlobalSettings={setPolicyGlobalSettings} 
+                                setGlobalSettings={setPolicyGlobalSettings}
+                                readOnly={!canEdit}
                                 onSaveGlobal={handleSaveSystem}
                                 isSaving={isSaving}
                             />
@@ -1280,6 +1373,7 @@ export const SettingsOverviewPage: React.FC = () => {
                                 setSettings={setSystemSettings}
                                 onSave={handleSaveSystem}
                                 isSaving={isSaving}
+                                readOnly={!canEdit}
                             />
                         )}
                         {activeTab === 'general' && (
@@ -1323,7 +1417,8 @@ export const SettingsOverviewPage: React.FC = () => {
                                                         type="text"
                                                         value={systemSettings.platform_name}
                                                         onChange={(e) => setSystemSettings(prev => ({ ...prev, platform_name: e.target.value }))}
-                                                        className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300 bg-gray-50/30 focus:bg-white text-[16px] font-medium"
+                                                        disabled={!canEdit}
+                                                        className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300 bg-gray-50/30 focus:bg-white text-[16px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                         placeholder="Enter organization name"
                                                     />
                                                 </div>
@@ -1334,7 +1429,8 @@ export const SettingsOverviewPage: React.FC = () => {
                                                         type="text"
                                                         value={systemSettings.legal_entity_name || ''}
                                                         onChange={(e) => setSystemSettings(prev => ({ ...prev, legal_entity_name: e.target.value }))}
-                                                        className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300 bg-gray-50/30 focus:bg-white text-[16px] font-medium"
+                                                        disabled={!canEdit}
+                                                        className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300 bg-gray-50/30 focus:bg-white text-[16px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                         placeholder="e.g. Global Visa Services Pvt Ltd"
                                                     />
                                                 </div>
@@ -1345,7 +1441,8 @@ export const SettingsOverviewPage: React.FC = () => {
                                                         <select
                                                             value={systemSettings.organization_type || 'Marketplace'}
                                                             onChange={(e) => setSystemSettings(prev => ({ ...prev, organization_type: e.target.value }))}
-                                                            className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-gray-50/30 focus:bg-white appearance-none cursor-pointer text-[16px] font-medium pr-12"
+                                                            disabled={!canEdit}
+                                                            className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-gray-50/30 focus:bg-white appearance-none cursor-pointer text-[16px] font-medium pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             <option value="Marketplace">Marketplace</option>
                                                             <option value="Agency">Agency</option>
@@ -1364,7 +1461,8 @@ export const SettingsOverviewPage: React.FC = () => {
                                                         type="email"
                                                         value={systemSettings.support_email}
                                                         onChange={(e) => setSystemSettings(prev => ({ ...prev, support_email: e.target.value }))}
-                                                        className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300 bg-gray-50/30 focus:bg-white text-[16px] font-medium"
+                                                        disabled={!canEdit}
+                                                        className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300 bg-gray-50/30 focus:bg-white text-[16px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                         placeholder="e.g. support@globalvisa.com"
                                                     />
                                                 </div>
@@ -1375,7 +1473,8 @@ export const SettingsOverviewPage: React.FC = () => {
                                                         type="tel"
                                                         value={systemSettings.support_phone || ''}
                                                         onChange={(e) => setSystemSettings(prev => ({ ...prev, support_phone: e.target.value }))}
-                                                        className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300 bg-gray-50/30 focus:bg-white text-[16px] font-medium"
+                                                        disabled={!canEdit}
+                                                        className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all placeholder:text-gray-300 bg-gray-50/30 focus:bg-white text-[16px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                                                         placeholder="+1-555-0100"
                                                     />
                                                 </div>
@@ -1386,7 +1485,8 @@ export const SettingsOverviewPage: React.FC = () => {
                                                         <select
                                                             value={systemSettings.timezone || 'UTC'}
                                                             onChange={(e) => setSystemSettings(prev => ({ ...prev, timezone: e.target.value }))}
-                                                            className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-gray-50/30 focus:bg-white appearance-none cursor-pointer text-[16px] font-medium pr-12"
+                                                            disabled={!canEdit}
+                                                            className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-gray-50/30 focus:bg-white appearance-none cursor-pointer text-[16px] font-medium pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             <option value="UTC">UTC (Universal Coordinated Time)</option>
                                                             <option value="GMT">GMT (Greenwich Mean Time)</option>
@@ -1406,7 +1506,8 @@ export const SettingsOverviewPage: React.FC = () => {
                                                         <select
                                                             value={systemSettings.primary_currency}
                                                             onChange={(e) => setSystemSettings(prev => ({ ...prev, primary_currency: e.target.value }))}
-                                                            className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-gray-50/30 focus:bg-white appearance-none cursor-pointer text-[16px] font-medium pr-12"
+                                                            disabled={!canEdit}
+                                                            className="w-full h-[58px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-gray-50/30 focus:bg-white appearance-none cursor-pointer text-[16px] font-medium pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
                                                             <option value="USD">USD - US Dollar</option>
                                                             <option value="GBP">GBP - British Pound</option>
@@ -1846,16 +1947,20 @@ export const SettingsOverviewPage: React.FC = () => {
                                                 <h2 className="text-[26px] font-bold text-[#0f172b] mb-2">User Management</h2>
                                                 <p className="text-gray-500 text-[16px]">Manage platform users and their access</p>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                <Button variant="outline" className="h-[52px] px-8 rounded-2xl font-bold border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center gap-2 transition-all active:scale-95">
-                                                    <Mail size={18} /> Invite User
-                                                </Button>
-                                                <Button 
-                                                    onClick={() => setIsAddUserModalOpen(true)}
-                                                    className="h-[52px] px-8 rounded-2xl font-bold bg-[#0a061d] hover:bg-[#1a1438] text-white flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-purple-900/10"
-                                                >
-                                                    <Plus size={18} /> Add User
-                                                </Button>
+                                             <div className="flex items-center gap-3">
+                                                <PermissionGuard module="settings" action="create">
+                                                    <Button variant="outline" className="h-[52px] px-8 rounded-2xl font-bold border-gray-200 hover:bg-gray-50 text-gray-700 flex items-center gap-2 transition-all active:scale-95">
+                                                        <Mail size={18} /> Invite User
+                                                    </Button>
+                                                </PermissionGuard>
+                                                <PermissionGuard module="settings" action="create">
+                                                    <Button 
+                                                        onClick={() => setIsAddUserModalOpen(true)}
+                                                        className="h-[52px] px-8 rounded-2xl font-bold bg-[#0a061d] hover:bg-[#1a1438] text-white flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-purple-900/10"
+                                                    >
+                                                        <Plus size={18} /> Add User
+                                                    </Button>
+                                                </PermissionGuard>
                                             </div>
                                         </div>
 
@@ -1931,28 +2036,34 @@ export const SettingsOverviewPage: React.FC = () => {
                                                                 <span className="text-[14px] text-gray-400 font-medium">{user.lastLogin || '-'}</span>
                                                             </td>
                                                             <td className="py-8 px-10 md:px-14 text-right">
-                                                                <div className="flex items-center justify-end gap-3">
-                                                                    <button 
-                                                                        onClick={() => handleEditUser(user)}
-                                                                        className="p-2 text-gray-300 hover:text-[#6929c4] transition-colors" 
-                                                                        title="Edit User"
-                                                                    >
-                                                                        <Edit size={19} />
-                                                                    </button>
-                                                                    <button 
-                                                                        onClick={() => toast.info('Password reset triggered for ' + user.email)}
-                                                                        className="p-2 text-gray-300 hover:text-blue-500 transition-colors" 
-                                                                        title="Reset Password"
-                                                                    >
-                                                                        <RotateCcw size={19} />
-                                                                    </button>
-                                                                    <button 
-                                                                        onClick={() => handleDeleteUser(user.id)}
-                                                                        className="p-2 text-gray-300 hover:text-red-500 transition-colors" 
-                                                                        title="Delete User"
-                                                                    >
-                                                                        <Trash2 size={19} />
-                                                                    </button>
+                                                                 <div className="flex items-center justify-end gap-3">
+                                                                    <PermissionGuard module="settings" action="edit">
+                                                                        <button 
+                                                                            onClick={() => handleEditUser(user)}
+                                                                            className="p-2 text-gray-300 hover:text-[#6929c4] transition-colors" 
+                                                                            title="Edit User"
+                                                                        >
+                                                                            <Edit size={19} />
+                                                                        </button>
+                                                                    </PermissionGuard>
+                                                                    <PermissionGuard module="settings" action="edit">
+                                                                        <button 
+                                                                            onClick={() => toast.info('Password reset triggered for ' + user.email)}
+                                                                            className="p-2 text-gray-300 hover:text-blue-500 transition-colors" 
+                                                                            title="Reset Password"
+                                                                        >
+                                                                            <RotateCcw size={19} />
+                                                                        </button>
+                                                                    </PermissionGuard>
+                                                                    <PermissionGuard module="settings" action="delete">
+                                                                        <button 
+                                                                            onClick={() => handleDeleteUser(user.id)}
+                                                                            className="p-2 text-gray-300 hover:text-red-500 transition-colors" 
+                                                                            title="Delete User"
+                                                                        >
+                                                                            <Trash2 size={19} />
+                                                                        </button>
+                                                                    </PermissionGuard>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -1970,12 +2081,14 @@ export const SettingsOverviewPage: React.FC = () => {
                                                 <h2 className="text-[26px] font-bold text-[#0f172b] mb-2">Role Management</h2>
                                                 <p className="text-gray-500 text-[16px]">Define roles and assign permissions</p>
                                             </div>
-                                            <Button 
-                                                onClick={() => setIsAddRoleModalOpen(true)}
-                                                className="h-[52px] px-8 rounded-2xl font-bold bg-[#0a061d] hover:bg-[#1a1438] text-white flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-purple-900/10"
-                                            >
-                                                <Plus size={18} /> Create Role
-                                            </Button>
+                                            <PermissionGuard module="settings" action="create">
+                                                <Button 
+                                                    onClick={() => setIsAddRoleModalOpen(true)}
+                                                    className="h-[52px] px-8 rounded-2xl font-bold bg-[#0a061d] hover:bg-[#1a1438] text-white flex items-center gap-2 transition-all active:scale-95 shadow-lg shadow-purple-900/10"
+                                                >
+                                                    <Plus size={18} /> Create Role
+                                                </Button>
+                                            </PermissionGuard>
                                         </div>
 
                                         <div className="overflow-x-auto -mx-10 md:-mx-14">
@@ -2009,21 +2122,25 @@ export const SettingsOverviewPage: React.FC = () => {
                                                                 </span>
                                                             </td>
                                                             <td className="py-8 px-10 md:px-14 text-right">
-                                                                <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                    <button 
-                                                                        onClick={() => handleEditRole(role)}
-                                                                        className="p-2.5 text-gray-400 hover:text-[#6929c4] hover:bg-purple-50 rounded-xl transition-all" 
-                                                                        title="Edit Role"
-                                                                    >
-                                                                        <Edit size={19} />
-                                                                    </button>
-                                                                    <button 
-                                                                        onClick={() => handleDeleteRole(role.id)}
-                                                                        className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" 
-                                                                        title="Delete Role"
-                                                                    >
-                                                                        <Trash2 size={19} />
-                                                                    </button>
+                                                                 <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <PermissionGuard module="settings" action="edit">
+                                                                        <button 
+                                                                            onClick={() => handleEditRole(role)}
+                                                                            className="p-2.5 text-gray-400 hover:text-[#6929c4] hover:bg-purple-50 rounded-xl transition-all" 
+                                                                            title="Edit Role"
+                                                                        >
+                                                                            <Edit size={19} />
+                                                                        </button>
+                                                                    </PermissionGuard>
+                                                                    <PermissionGuard module="settings" action="delete">
+                                                                        <button 
+                                                                            onClick={() => handleDeleteRole(role.id)}
+                                                                            className="p-2.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" 
+                                                                            title="Delete Role"
+                                                                        >
+                                                                            <Trash2 size={19} />
+                                                                        </button>
+                                                                    </PermissionGuard>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -2093,18 +2210,20 @@ export const SettingsOverviewPage: React.FC = () => {
                                                                     const isEnabled = role?.permissions?.[module.toLowerCase()]?.[action.toLowerCase()];
                                                                     return (
                                                                         <td key={action} className="py-8 px-4 text-center">
-                                                                            <button
-                                                                                onClick={() => handlePermissionToggle(module, action)}
-                                                                                disabled={isSavingPermission}
-                                                                                className={`w-10 h-10 rounded-xl transition-all duration-300 flex items-center justify-center mx-auto relative transform active:scale-90 ${
-                                                                                    isEnabled 
-                                                                                        ? 'bg-[#0f172b] shadow-lg shadow-purple-900/10' 
-                                                                                        : 'bg-gray-100 hover:bg-gray-200'
-                                                                                }`}
-                                                                            >
-                                                                                {isEnabled && <div className="w-2 h-2 rounded-full bg-white/40 animate-pulse" />}
-                                                                                {isSavingPermission && <Loader2 className="w-4 h-4 text-white animate-spin absolute" />}
-                                                                            </button>
+                                                                            <PermissionGuard module="settings" action="edit">
+                                                                                <button
+                                                                                    onClick={() => handlePermissionToggle(module, action)}
+                                                                                    disabled={isSavingPermission}
+                                                                                    className={`w-10 h-10 rounded-xl transition-all duration-300 flex items-center justify-center mx-auto relative transform active:scale-90 ${
+                                                                                        isEnabled 
+                                                                                            ? 'bg-[#0f172b] shadow-lg shadow-purple-900/10' 
+                                                                                            : 'bg-gray-100 hover:bg-gray-200'
+                                                                                    }`}
+                                                                                >
+                                                                                    {isEnabled && <div className="w-2 h-2 rounded-full bg-white/40 animate-pulse" />}
+                                                                                    {isSavingPermission && <Loader2 className="w-4 h-4 text-white animate-spin absolute" />}
+                                                                                </button>
+                                                                            </PermissionGuard>
                                                                         </td>
                                                                     );
                                                                 })}
@@ -3320,7 +3439,7 @@ export const SettingsOverviewPage: React.FC = () => {
                         </DialogHeader>
                         
                         {editingUser && (
-                            <div className="px-8 py-6 space-y-6">
+                            <div className="px-8 py-6 space-y-6 max-h-[60vh] overflow-y-auto">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label className="text-[13px] font-bold text-gray-500 uppercase tracking-wider ml-1">First Name</Label>
@@ -3350,6 +3469,20 @@ export const SettingsOverviewPage: React.FC = () => {
                                         value={editingUser.email}
                                         onChange={(e) => setEditingUser((prev: any) => ({ ...prev, email: e.target.value }))}
                                         className="h-12 rounded-xl border-gray-200 focus:border-purple-200 focus:ring-purple-50"
+                                    />
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center pr-1">
+                                        <Label className="text-[13px] font-bold text-gray-500 uppercase tracking-wider ml-1">New Password</Label>
+                                        <span className="text-[11px] text-gray-400">Optional</span>
+                                    </div>
+                                    <Input 
+                                        type="password"
+                                        placeholder="Leave blank to keep unchanged"
+                                        value={editingUser.password}
+                                        onChange={(e) => setEditingUser((prev: any) => ({ ...prev, password: e.target.value }))}
+                                        className="h-12 rounded-xl border-gray-200 focus:border-purple-200 focus:ring-purple-50 placeholder:text-[13px]"
                                     />
                                 </div>
 

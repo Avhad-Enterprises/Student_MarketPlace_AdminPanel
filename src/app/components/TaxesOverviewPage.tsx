@@ -13,6 +13,7 @@ import Slider from "react-slick";
 import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
 import { ServiceMetricGrid } from './service-marketplace/ServiceMetricGrid';
 import { CustomCheckbox, StatusBadge } from './service-marketplace/CommonUI';
+import { PermissionGuard } from './common/PermissionGuard';
 
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
@@ -399,10 +400,34 @@ export const TaxesOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
             dateRange={date} 
             onDateChange={setDate}
             onRefresh={() => fetchTaxes()}
-            onExport={() => setShowExportDialog(true)}
-            onImport={() => setShowImportDialog(true)}
-            onAdd={() => { setEditTax(null); setShowAddDialog(true); }}
-            addLabel="Add Tax Service"
+            actions={
+              <div className="flex items-center gap-3">
+                <PermissionGuard module="services" action="export">
+                  <button
+                    onClick={() => setShowExportDialog(true)}
+                    className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                  >
+                    <Download size={20} strokeWidth={1.5} />Export
+                  </button>
+                </PermissionGuard>
+                <PermissionGuard module="services" action="create">
+                  <button
+                    onClick={() => setShowImportDialog(true)}
+                    className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                  >
+                    <Upload size={20} strokeWidth={1.5} />Import
+                  </button>
+                </PermissionGuard>
+                <PermissionGuard module="services" action="create">
+                  <button
+                    onClick={() => { setEditTax(null); setShowAddDialog(true); }}
+                    className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+                  >
+                    <Plus size={20} strokeWidth={1.5} />Add Tax Service
+                  </button>
+                </PermissionGuard>
+              </div>
+            }
           />
 
           <ServiceMetricGrid metrics={metricCards} />
@@ -588,27 +613,33 @@ export const TaxesOverviewPage: React.FC<{ onNavigate?: (page: string) => void }
                       {visibleColumns.includes('visible') && <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{tax.student_visible ? 'Yes' : 'No'}</td>}
                       <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/taxes/${tax.id}`); }}
-                            className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
-                            title="View Details"
-                          >
-                            <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setEditTax(tax); setShowAddDialog(true); }}
-                            className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
-                            title="Edit"
-                          >
-                            <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
-                          </button>
-                          <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(tax.id); }}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
-                            title="Delete"
-                          >
-                            <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
-                          </button>
+                          <PermissionGuard module="services" action="view">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/taxes/${tax.id}`); }}
+                              className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                              title="View Details"
+                            >
+                              <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard module="services" action="edit">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setEditTax(tax); setShowAddDialog(true); }}
+                              className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
+                              title="Edit"
+                            >
+                              <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
+                            </button>
+                          </PermissionGuard>
+                          <PermissionGuard module="services" action="delete">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDelete(tax.id); }}
+                              className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                              title="Delete"
+                            >
+                              <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
+                            </button>
+                          </PermissionGuard>
                         </div>
                       </td>
                     </tr>

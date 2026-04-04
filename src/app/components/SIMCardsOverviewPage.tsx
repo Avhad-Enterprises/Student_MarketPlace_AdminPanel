@@ -49,6 +49,7 @@ import { CustomCheckbox, StatusBadge } from './service-marketplace/CommonUI';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { AddSIMCardDialog } from './common/AddSIMCardDialog';
+import { PermissionGuard } from './common/PermissionGuard';
 
 // --- Shared Components Extracted ---
 
@@ -549,10 +550,34 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
           dateRange={date} 
           onDateChange={setDate}
           onRefresh={handleRefresh}
-          onExport={() => setShowExportDialog(true)}
-          onImport={() => setShowImportDialog(true)}
-          onAdd={handleAddSIM}
-          addLabel="Add SIM"
+          actions={
+            <div className="flex items-center gap-3">
+              <PermissionGuard module="services" action="export">
+                <button
+                  onClick={() => setShowExportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Download size={20} strokeWidth={1.5} />Export
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="services" action="create">
+                <button
+                  onClick={() => setShowImportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Upload size={20} strokeWidth={1.5} />Import
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="services" action="create">
+                <button
+                  onClick={handleAddSIM}
+                  className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+                >
+                  <Plus size={20} strokeWidth={1.5} />Add SIM
+                </button>
+              </PermissionGuard>
+            </div>
+          }
         />
 
         {/* Metrics Section */}
@@ -1097,30 +1122,35 @@ export const SIMCardsOverviewPage: React.FC<{ onNavigate?: (page: string) => voi
                             </td>
                           )}
 
-                          <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex items-center gap-2">
-                              {/* Standard table action buttons */}
-                              <button
-                                onClick={() => onNavigate?.(`/services/sim-cards/${sim.id}`)}
-                                className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
-                                title="View Details"
-                              >
-                                <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
-                              </button>
-                              <button
-                                onClick={() => handleEditSIM(sim)}
-                                className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
-                                title="Edit"
-                              >
-                                <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteSIM(sim.id)}
-                                className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
-                                title="Delete"
-                              >
-                                <Trash2 size={18} className="text-gray-400 group-hover:text-red-600" />
-                              </button>
+                          <td className="px-6 py-4 whitespace-nowrap text-right" onClick={(e) => { e.stopPropagation(); }}>
+                            <div className="flex items-center justify-end gap-2">
+                              <PermissionGuard module="services" action="view">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); onNavigate?.(`/services/sim-cards/${sim.id}`); }}
+                                  className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
+                                  title="View Details"
+                                >
+                                  <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
+                                </button>
+                              </PermissionGuard>
+                              <PermissionGuard module="services" action="edit">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleEditSIM(sim); }}
+                                  className="p-2 hover:bg-blue-50 rounded-lg transition-colors group/edit"
+                                  title="Edit SIM Card"
+                                >
+                                  <Edit size={18} className="text-gray-400 group-hover/edit:text-blue-600" />
+                                </button>
+                              </PermissionGuard>
+                              <PermissionGuard module="services" action="delete">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDeleteSIM(sim.id); }}
+                                  className="p-2 hover:bg-red-50 rounded-lg transition-colors group/delete"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={18} className="text-gray-400 group-hover/delete:text-red-600" />
+                                </button>
+                              </PermissionGuard>
                             </div>
                           </td>
                         </tr>

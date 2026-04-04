@@ -26,16 +26,21 @@ import {
 } from 'lucide-react';
 import { DeliverySafetySettings } from '@/services/deliverySafetySettingsService';
 import { Switch } from './ui/switch';
+import { usePermission } from '@/hooks/usePermission';
 
 interface DeliverySafetySettingsProps {
     settings: DeliverySafetySettings;
     setSettings: React.Dispatch<React.SetStateAction<DeliverySafetySettings>>;
+    readOnly?: boolean;
 }
 
-const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ settings, setSettings }) => {
+const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ settings, setSettings, readOnly = false }) => {
+    const { hasPermission: userHasEditPermission } = usePermission('delivery_safety', 'edit');
+    const canEdit = userHasEditPermission && !readOnly;
     const [activeSubTab, setActiveSubTab] = useState<'rate_limits' | 'abuse_prevention' | 'data_protection' | 'access_control' | 'monitoring'>('rate_limits');
 
     const handleChange = (field: keyof DeliverySafetySettings, value: any) => {
+        if (!canEdit) return;
         setSettings(prev => ({
             ...prev,
             [field]: value
@@ -95,9 +100,10 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 <div className="relative group">
                                     <input 
                                         type="number"
-                                        className="w-full h-[64px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white text-[18px] font-bold shadow-sm"
+                                        className="w-full h-[64px] px-6 rounded-2xl border border-gray-200 focus:border-[#6929c4] focus:ring-4 focus:ring-purple-50 outline-none transition-all bg-white text-[18px] font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                         value={settings.api_requests_per_minute}
                                         onChange={(e) => handleChange('api_requests_per_minute', parseInt(e.target.value))}
+                                        disabled={!canEdit}
                                     />
                                     <span className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-300 font-bold">REQ/M</span>
                                 </div>
@@ -212,6 +218,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.enable_captcha}
                                 onChange={(val: boolean) => handleChange('enable_captcha', val)}
                                 color="emerald"
+                                canEdit={canEdit}
                             />
                             <SecurityToggle 
                                 label="Block Disposable Emails"
@@ -220,6 +227,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.block_disposable_emails}
                                 onChange={(val: boolean) => handleChange('block_disposable_emails', val)}
                                 color="emerald"
+                                canEdit={canEdit}
                             />
                             <SecurityToggle 
                                 label="Auto Block Repeated Failed Logins"
@@ -228,6 +236,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.auto_block_failed_logins}
                                 onChange={(val: boolean) => handleChange('auto_block_failed_logins', val)}
                                 color="emerald"
+                                canEdit={canEdit}
                             />
                             <SecurityToggle 
                                 label="Auto Flag Suspicious Activity"
@@ -236,6 +245,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.auto_flag_suspicious}
                                 onChange={(val: boolean) => handleChange('auto_flag_suspicious', val)}
                                 color="emerald"
+                                canEdit={canEdit}
                             />
                         </div>
 
@@ -319,6 +329,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.pii_masking}
                                 onChange={(val: boolean) => handleChange('pii_masking', val)}
                                 color="indigo"
+                                canEdit={canEdit}
                             />
                             <SecurityToggle 
                                 label="Encrypt Uploaded Documents"
@@ -327,6 +338,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.encrypt_documents}
                                 onChange={(val: boolean) => handleChange('encrypt_documents', val)}
                                 color="indigo"
+                                canEdit={canEdit}
                             />
                         </div>
 
@@ -393,6 +405,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.allow_multiple_sessions}
                                 onChange={(val: boolean) => handleChange('allow_multiple_sessions', val)}
                                 color="purple"
+                                canEdit={canEdit}
                             />
                         </div>
 
@@ -431,6 +444,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.enable_activity_logging}
                                 onChange={(val: boolean) => handleChange('enable_activity_logging', val)}
                                 color="orange"
+                                canEdit={canEdit}
                             />
                             <SecurityToggle 
                                 label="Enable Admin Action Logs"
@@ -439,6 +453,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.enable_admin_logs}
                                 onChange={(val: boolean) => handleChange('enable_admin_logs', val)}
                                 color="orange"
+                                canEdit={canEdit}
                             />
                             <SecurityToggle 
                                 label="Enable IP Tracking"
@@ -447,6 +462,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.enable_ip_tracking}
                                 onChange={(val: boolean) => handleChange('enable_ip_tracking', val)}
                                 color="orange"
+                                canEdit={canEdit}
                             />
                             <SecurityToggle 
                                 label="Enable AI Decision Logs"
@@ -455,6 +471,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
                                 enabled={settings.enable_ai_logs}
                                 onChange={(val: boolean) => handleChange('enable_ai_logs', val)}
                                 color="orange"
+                                canEdit={canEdit}
                             />
                         </div>
 
@@ -499,7 +516,7 @@ const DeliverySafetySettingsComp: React.FC<DeliverySafetySettingsProps> = ({ set
     );
 };
 
-const SecurityToggle = ({ label, sublabel, icon: Icon, enabled, onChange, color }: any) => {
+const SecurityToggle = ({ label, sublabel, icon: Icon, enabled, onChange, color, canEdit }: any) => {
     const colorClasses: any = {
         emerald: 'text-emerald-500 bg-emerald-50 border-emerald-100',
         indigo: 'text-indigo-500 bg-indigo-50 border-indigo-100',
@@ -522,6 +539,7 @@ const SecurityToggle = ({ label, sublabel, icon: Icon, enabled, onChange, color 
                 <Switch 
                     checked={enabled} 
                     onCheckedChange={onChange}
+                    disabled={!canEdit}
                     className="data-[state=checked]:bg-[#0f172b]"
                 />
             </div>

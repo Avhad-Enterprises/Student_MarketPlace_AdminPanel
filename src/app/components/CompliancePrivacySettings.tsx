@@ -24,11 +24,14 @@ interface Props {
     setSettings: React.Dispatch<React.SetStateAction<ComplianceSettings>>;
     onSave?: () => void;
     isSaving?: boolean;
+    readOnly?: boolean;
 }
 
-const CompliancePrivacySettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving }) => {
+const CompliancePrivacySettings: React.FC<Props> = ({ settings, setSettings, onSave, isSaving, readOnly = false }) => {
+    const canEdit = !readOnly;
 
     const handleToggle = (field: keyof ComplianceSettings) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: !prev[field]
@@ -36,6 +39,7 @@ const CompliancePrivacySettings: React.FC<Props> = ({ settings, setSettings, onS
     };
 
     const handleInputChange = (field: keyof ComplianceSettings, value: any) => {
+        if (!canEdit) return;
         setSettings((prev: any) => ({
             ...prev,
             [field]: value
@@ -55,16 +59,17 @@ const CompliancePrivacySettings: React.FC<Props> = ({ settings, setSettings, onS
     );
 
     const ToggleRow = ({ label, sublabel, enabled, onToggle }: { label: string, sublabel: string, enabled: boolean, onToggle: () => void }) => (
-        <div className="flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0">
+        <div className={`flex items-center justify-between py-6 px-1 border-b border-gray-50 last:border-0 ${!canEdit ? 'opacity-70' : ''}`}>
             <div className="space-y-1">
                 <p className="text-[15px] font-bold text-[#334155]">{label}</p>
                 <p className="text-[13px] text-slate-400 font-medium">{sublabel}</p>
             </div>
             <button
                 onClick={onToggle}
+                disabled={!canEdit}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all duration-300 focus:outline-none ${
                     enabled ? 'bg-[#0f172b]' : 'bg-slate-200'
-                }`}
+                } ${!canEdit ? 'cursor-not-allowed' : ''}`}
             >
                 <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-300 ${
@@ -86,7 +91,8 @@ const CompliancePrivacySettings: React.FC<Props> = ({ settings, setSettings, onS
                 value={value}
                 onChange={(e) => onChange(type === 'number' ? parseInt(e.target.value) || 0 : e.target.value)}
                 placeholder={placeholder}
-                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all"
+                disabled={!canEdit}
+                className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             />
         </div>
     );
@@ -315,9 +321,10 @@ const CompliancePrivacySettings: React.FC<Props> = ({ settings, setSettings, onS
                             <span className="text-[14px] font-bold text-[#334155]">Primary Compliance Framework</span>
                             <div className="relative">
                                 <select 
-                                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] appearance-none focus:outline-none focus:border-[#6929c4] transition-all"
+                                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] appearance-none focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                     value={settings.primary_framework}
                                     onChange={(e) => handleInputChange('primary_framework', e.target.value)}
+                                    disabled={!canEdit}
                                 >
                                     <option>GDPR (European Union)</option>
                                     <option>CCPA (California)</option>
@@ -334,9 +341,10 @@ const CompliancePrivacySettings: React.FC<Props> = ({ settings, setSettings, onS
                             <span className="text-[14px] font-bold text-[#334155]">Data Residency Region</span>
                             <div className="relative">
                                 <select 
-                                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] appearance-none focus:outline-none focus:border-[#6929c4] transition-all"
+                                    className="w-full h-[52px] bg-[#f8fafc] border border-[#e2e8f0] rounded-xl px-4 text-[14px] font-medium text-[#0f172b] appearance-none focus:outline-none focus:border-[#6929c4] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                     value={settings.data_residency}
                                     onChange={(e) => handleInputChange('data_residency', e.target.value)}
+                                    disabled={!canEdit}
                                 >
                                     <option>European Union</option>
                                     <option>United States</option>

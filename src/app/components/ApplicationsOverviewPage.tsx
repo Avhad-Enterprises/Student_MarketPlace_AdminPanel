@@ -42,6 +42,7 @@ import Slider from "react-slick";
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { useRouter } from 'next/navigation';
 import { ServicePageHeader } from './service-marketplace/ServicePageHeader';
+import { PermissionGuard } from './common/PermissionGuard';
 
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import {
@@ -603,6 +604,10 @@ export const ApplicationsOverviewPage: React.FC = () => {
     setSelectedApplications(applications.map(a => a.id));
   };
 
+  const handleExportSelected = () => {
+    setShowExportDialog(true);
+  };
+
   const handleClearSelection = () => {
     setSelectedApplications([]);
     setSelectAllStore(false);
@@ -890,14 +895,38 @@ export const ApplicationsOverviewPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar-light">
 
         <ServicePageHeader 
-          title="Applications" 
+          title="Applications Overview" 
           dateRange={date} 
           onDateChange={setDate}
           onRefresh={handleRefresh}
-          onExport={() => setShowExportDialog(true)}
-          onImport={() => setShowImportDialog(true)}
-          onAdd={() => setShowAddDialog(true)}
-          addLabel="Add Application"
+          actions={
+            <div className="flex items-center gap-3">
+              <PermissionGuard module="students" action="export">
+                <button
+                  onClick={() => setShowExportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Download size={20} strokeWidth={1.5} />Export
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="students" action="create">
+                <button
+                  onClick={() => setShowImportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Upload size={20} strokeWidth={1.5} />Import
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="students" action="create">
+                <button
+                  onClick={() => setShowAddDialog(true)}
+                  className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+                >
+                  <Plus size={20} strokeWidth={1.5} />Add Application
+                </button>
+              </PermissionGuard>
+            </div>
+          }
         />
 
         {/* Metrics Section - Desktop Grid */}
@@ -1226,9 +1255,15 @@ export const ApplicationsOverviewPage: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={() => setShowAssignCounselorModal(true)} className="text-purple-700 font-bold hover:underline">Assign Counselor</button>
-              <button onClick={() => setShowChangeStatusModal(true)} className="text-purple-700 font-bold hover:underline">Change Status</button>
-              <button onClick={() => setShowExportDialog(true)} className="text-purple-700 font-bold hover:underline">Export Selected</button>
+              <PermissionGuard module="students" action="edit">
+                <button onClick={() => setShowAssignCounselorModal(true)} className="text-purple-700 font-bold hover:underline">Assign Counselor</button>
+              </PermissionGuard>
+              <PermissionGuard module="students" action="approve">
+                <button onClick={() => setShowChangeStatusModal(true)} className="text-purple-700 font-bold hover:underline">Change Status</button>
+              </PermissionGuard>
+              <PermissionGuard module="students" action="export">
+                <button onClick={handleExportSelected} className="text-purple-700 font-bold hover:underline">Export selected</button>
+              </PermissionGuard>
               <button onClick={handleClearSelection} className="text-purple-700 font-bold hover:underline">Clear</button>
             </div>
           </div>
@@ -1367,36 +1402,28 @@ export const ApplicationsOverviewPage: React.FC = () => {
                         {visibleColumns.includes('updated') && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium italic">{application.lastUpdated}</td>
                         )}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm" onClick={(e) => { e.stopPropagation(); }}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleViewApplication(application); }}
-                              className="p-2 hover:bg-purple-50 rounded-lg transition-colors group/view"
-                              title="View Details"
-                            >
-                              <Eye size={18} className="text-gray-400 group-hover/view:text-purple-600" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleEditApplication(application); }}
-                              className="p-2 hover:bg-blue-50 rounded-lg transition-colors group"
-                              title="Edit"
-                            >
-                              <Edit size={18} className="text-gray-400 group-hover:text-blue-600" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleViewTimeline(application); }}
-                              className="p-2 hover:bg-amber-50 rounded-lg transition-colors group"
-                              title="Timeline"
-                            >
-                              <Clock size={18} className="text-gray-400 group-hover:text-amber-600" />
-                            </button>
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleCloseApplication(application); }}
-                              className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
-                              title="Close Application"
-                            >
-                              <XCircle size={18} className="text-gray-400 group-hover:text-red-500" />
-                            </button>
+                            <PermissionGuard module="students" action="view">
+                              <button onClick={(e) => { e.stopPropagation(); handleViewApplication(application); }} className="p-2 hover:bg-blue-50 text-blue-600 rounded-lg transition-colors" title="View Details">
+                                <Eye size={18} />
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard module="students" action="edit">
+                              <button onClick={(e) => { e.stopPropagation(); handleEditApplication(application); }} className="p-2 hover:bg-purple-50 text-purple-600 rounded-lg transition-colors" title="Edit">
+                                <Edit size={18} />
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard module="students" action="edit">
+                              <button onClick={(e) => { e.stopPropagation(); handleViewTimeline(application); }} className="p-2 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors" title="View Timeline">
+                                <Clock size={18} />
+                              </button>
+                            </PermissionGuard>
+                            <PermissionGuard module="students" action="edit">
+                              <button onClick={(e) => { e.stopPropagation(); handleCloseApplication(application); }} className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors" title="Close/Archive">
+                                <XCircle size={18} />
+                              </button>
+                            </PermissionGuard>
                           </div>
                         </td>
                       </tr>

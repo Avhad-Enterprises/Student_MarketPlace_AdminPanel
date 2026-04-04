@@ -3,6 +3,7 @@
 import { AdminLayout } from "@/components/AdminLayout";
 import { StudentsOverviewPage } from "@/components/StudentsOverviewPage";
 import { useRouter } from "next/navigation";
+import { PermissionGuard } from "@/app/components/common/PermissionGuard";
 
 export default function StudentsPage() {
     const router = useRouter();
@@ -26,7 +27,9 @@ export default function StudentsPage() {
 
     return (
         <AdminLayout activePage="students-all">
-            <StudentsOverviewPage onNavigate={handleNavigate} />
+            <PermissionGuard module="students" action="view">
+                <StudentsOverviewPage onNavigate={handleNavigate} />
+            </PermissionGuard>
         </AdminLayout>
     );
 }

@@ -55,6 +55,8 @@ import { CountryForm } from './CountryForm';
 import { ExportDialog, ExportColumn } from './common/ExportDialog';
 import { ImportDialog, ImportField } from './common/ImportDialog';
 import { getAll, getMetrics, deleteCountry, getCountryById, Country, CountryFormData, createCountry, updateCountry, bulkUpdateCountries, exportCountries } from '@/services/countriesService';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '@/hooks/usePermission';
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -216,12 +218,14 @@ const MobileCountryCard: React.FC<MobileCountryCardProps> = ({ country, isSelect
               <div className="text-sm text-gray-700 font-medium">{country.popularity}%</div>
             </div>
           </div>
-          <button
-            onClick={onEdit}
-            className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm"
-          >
-            View Details
-          </button>
+          <PermissionGuard module="countries" action="edit">
+            <button
+              onClick={onEdit}
+              className="w-full h-10 bg-[#0e042f] text-white rounded-xl hover:bg-[#1a0c4a] transition-colors font-medium text-sm"
+            >
+              View Details
+            </button>
+          </PermissionGuard>
         </div>
       )}
     </div>
@@ -236,6 +240,11 @@ interface CountriesOverviewPageProps {
 
 export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ onNavigate, onEditCountry }) => {
   const router = useRouter();
+  const { hasPermission: canCreate } = usePermission('countries', 'create');
+  const { hasPermission: canEdit } = usePermission('countries', 'edit');
+  const { hasPermission: canDelete } = usePermission('countries', 'delete');
+  const { hasPermission: canExport } = usePermission('countries', 'export');
+
   // State management
   const [date, setDate] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),
@@ -427,6 +436,10 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   };
 
   const handleBulkEnable = async () => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to modify countries.' });
+      return;
+    }
     try {
       await bulkUpdateCountries(selectedCountries, 'active');
       toast.success(`Enabled ${selectedCountries.length} countries`);
@@ -439,6 +452,10 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   };
 
   const handleBulkDisable = async () => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to modify countries.' });
+      return;
+    }
     try {
       await bulkUpdateCountries(selectedCountries, 'inactive');
       toast.success(`Disabled ${selectedCountries.length} countries`);
@@ -451,6 +468,10 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   };
 
   const handleExportSelected = async () => {
+    if (!canExport) {
+      toast.error('Unauthorized', { description: 'You do not have permission to export country data.' });
+      return;
+    }
     try {
       if (selectedCountries.length === 0) {
         toast.error("No countries selected");
@@ -702,6 +723,10 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   };
 
   const handleImport = async (data: any[], mode: any) => {
+    if (!canCreate) {
+      toast.error('Unauthorized', { description: 'You do not have permission to import country data.' });
+      return;
+    }
     let successCount = 0;
     let failCount = 0;
 
@@ -768,6 +793,10 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   };
 
   const handleAddCountry = () => {
+    if (!canCreate) {
+      toast.error('Unauthorized', { description: 'You do not have permission to add countries.' });
+      return;
+    }
     onNavigate?.('add-country');
   };
 
@@ -781,6 +810,10 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
   };
 
   const handleDeleteCountry = async (country: Country) => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to delete countries.' });
+      return;
+    }
     setIsDeleting(true);
     try {
       await deleteCountry(country.id);
@@ -860,10 +893,34 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
           dateRange={date} 
           onDateChange={setDate}
           onRefresh={loadCountriesData}
-          onExport={() => setShowExportDialog(true)}
-          onImport={() => setShowImportDialog(true)}
-          onAdd={handleAddCountry}
-          addLabel="Add Country"
+          actions={
+            <div className="flex items-center gap-3">
+              <PermissionGuard module="countries" action="export">
+                <button
+                  onClick={() => setShowExportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Download size={20} strokeWidth={1.5} />Export
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="countries" action="create">
+                <button
+                  onClick={() => setShowImportDialog(true)}
+                  className="flex items-center gap-2 bg-white text-[#253154] px-6 h-[50px] rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm text-[16px] font-medium"
+                >
+                  <Upload size={20} strokeWidth={1.5} />Import
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="countries" action="create">
+                <button
+                  onClick={handleAddCountry}
+                  className="flex items-center gap-2 bg-[#0e042f] text-white px-6 h-[50px] rounded-xl shadow-lg shadow-purple-900/20 hover:bg-[#1a0c4a] transition-colors text-[16px] font-medium"
+                >
+                  <Plus size={20} strokeWidth={1.5} />Add Country
+                </button>
+              </PermissionGuard>
+            </div>
+          }
         />
 
         {/* Metrics Section - Desktop Grid */}
@@ -1381,46 +1438,54 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
                             </PopoverTrigger>
                             <PopoverContent className="w-48 p-2" align="end">
                               <div className="space-y-1">
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditCountry(country.id, 'basic-info');
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                                >
-                                  <Edit size={14} />
-                                  Edit Basic Info
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditCountry(country.id, 'visa');
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                                >
-                                  <Settings size={14} />
-                                  Manage Visa
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditCountry(country.id, 'costs');
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                                >
-                                  <DollarSign size={14} />
-                                  Manage Costs
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditCountry(country.id, 'academic');
-                                  }}
-                                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
-                                >
-                                  <GraduationCap size={14} />
-                                  Academic System
-                                </button>
+                                <PermissionGuard module="countries" action="edit">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditCountry(country.id, 'basic-info');
+                                    }}
+                                    className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                  >
+                                    <Edit size={14} />
+                                    Edit Basic Info
+                                  </button>
+                                </PermissionGuard>
+                                <PermissionGuard module="countries" action="edit">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditCountry(country.id, 'visa');
+                                    }}
+                                    className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                  >
+                                    <Settings size={14} />
+                                    Manage Visa
+                                  </button>
+                                </PermissionGuard>
+                                <PermissionGuard module="countries" action="edit">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditCountry(country.id, 'costs');
+                                    }}
+                                    className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                  >
+                                    <DollarSign size={14} />
+                                    Manage Costs
+                                  </button>
+                                </PermissionGuard>
+                                <PermissionGuard module="countries" action="edit">
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditCountry(country.id, 'academic');
+                                    }}
+                                    className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg text-sm text-gray-700 text-left flex items-center gap-2"
+                                  >
+                                    <GraduationCap size={14} />
+                                    Academic System
+                                  </button>
+                                </PermissionGuard>
                                 <div className="h-px bg-gray-100 my-1" />
                                 <button 
                                   onClick={(e) => {
@@ -1435,15 +1500,17 @@ export const CountriesOverviewPage: React.FC<CountriesOverviewPageProps> = ({ on
                               </div>
                             </PopoverContent>
                           </Popover>
-                          <button
-                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDeleteConfirmCountry(country);
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <PermissionGuard module="countries" action="delete">
+                            <button
+                              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteConfirmCountry(country);
+                              }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </PermissionGuard>
                         </div>
                       </td>
                     </tr>

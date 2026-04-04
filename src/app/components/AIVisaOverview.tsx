@@ -42,6 +42,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from './ui/select';
+import { PermissionGuard } from './common/PermissionGuard';
 
 export const AIVisaOverview: React.FC = () => {
     const [dateRange, setDateRange] = useState('today');
@@ -293,16 +294,20 @@ export const AIVisaOverview: React.FC = () => {
                             </Select>
 
                             {/* Export Report */}
-                            <Button variant="outline">
-                                <Download size={16} className="mr-2" />
-                                Export Report
-                            </Button>
+                            <PermissionGuard module="ai-visa" action="export">
+                                <Button variant="outline">
+                                    <Download size={16} className="mr-2" />
+                                    Export Report
+                                </Button>
+                            </PermissionGuard>
 
                             {/* View Error Logs */}
-                            <Button variant="outline" className="text-red-600 hover:text-red-700">
-                                <AlertTriangle size={16} className="mr-2" />
-                                View Error Logs
-                            </Button>
+                            <PermissionGuard module="ai-visa" action="view">
+                                <Button variant="outline" className="text-red-600 hover:text-red-700">
+                                    <AlertTriangle size={16} className="mr-2" />
+                                    View Error Logs
+                                </Button>
+                            </PermissionGuard>
                         </div>
                     </div>
                 </div>

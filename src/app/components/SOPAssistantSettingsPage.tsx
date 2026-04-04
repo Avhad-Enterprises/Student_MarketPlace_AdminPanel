@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
+import { usePermission } from '../../hooks/usePermission';
+import { PermissionGuard } from './common/PermissionGuard';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -32,7 +34,8 @@ import {
 import { sopAssistantService, SOPAssistantSettings } from '@/services/sopAssistantService';
 
 // Fallback Select component for consistency
-const Select = ({ children, value, onValueChange }: any) => {
+const Select = (props: any) => {
+    const { children, value, onValueChange } = props;
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
@@ -47,10 +50,10 @@ const Select = ({ children, value, onValueChange }: any) => {
     }, []);
 
     return (
-        <div className="relative w-full" ref={containerRef}>
+        <div className={`relative w-full ${props.disabled ? 'opacity-60 cursor-not-allowed pointer-events-none' : ''}`} ref={containerRef}>
             <div
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0f172b] focus:ring-offset-2 cursor-pointer transition-all"
+                onClick={() => !props.disabled && setIsOpen(!isOpen)}
+                className={`flex h-11 w-full items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm ring-offset-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#0f172b] focus:ring-offset-2 transition-all ${props.disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
             >
                 <span className="font-medium text-gray-700">{value}</span>
                 <ChevronDown className={`h-4 w-4 opacity-50 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -83,6 +86,7 @@ const SelectContent = ({ children }: any) => children;
 const SelectItem = ({ children, value }: any) => <div data-value={value}>{children}</div>;
 
 export const SOPAssistantSettingsPage: React.FC = () => {
+    const { hasPermission: canEdit } = usePermission('sop-assistant', 'edit');
     const [activeSection, setActiveSection] = useState('runtime');
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -124,6 +128,10 @@ export const SOPAssistantSettingsPage: React.FC = () => {
     };
 
     const handleSave = async () => {
+        if (!canEdit) {
+            toast.error('You do not have permission to modify these settings');
+            return;
+        }
         setIsSaving(true);
         try {
             await sopAssistantService.updateSettings(settings);
@@ -176,8 +184,8 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                         )}
                         <Button
                             onClick={handleSave}
-                            disabled={isSaving}
-                            className="bg-[#0f172b] hover:bg-[#1a2340] text-white px-8 rounded-xl h-12 shadow-lg shadow-purple-900/20 transition-all hover:translate-y-[-2px] active:translate-y-0"
+                            disabled={isSaving || !canEdit}
+                            className={`bg-[#0f172b] hover:bg-[#1a2340] text-white px-8 rounded-xl h-12 shadow-lg shadow-purple-900/20 transition-all ${!canEdit ? 'opacity-50 grayscale cursor-not-allowed' : 'hover:translate-y-[-2px] active:translate-y-0'}`}
                         >
                             {isSaving ? (
                                 <Loader2 size={20} className="mr-2 animate-spin" />
@@ -235,7 +243,11 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         <div className="space-y-2">
                                             <label className="text-sm font-bold text-[#0f172b] ml-1">AI Model Provider</label>
-                                            <Select value={settings.model_provider} onValueChange={(val: any) => setSettings({ ...settings, model_provider: val })}>
+                                            <Select 
+                                                disabled={!canEdit}
+                                                value={settings.model_provider} 
+                                                onValueChange={(val: any) => setSettings({ ...settings, model_provider: val })}
+                                            >
                                                 <SelectContent>
                                                     <SelectItem value="openai">OpenAI (Pro)</SelectItem>
                                                     <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
@@ -245,7 +257,11 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-sm font-bold text-[#0f172b] ml-1">Model Version</label>
-                                            <Select value={settings.model_version} onValueChange={(val: any) => setSettings({ ...settings, model_version: val })}>
+                                            <Select 
+                                                disabled={!canEdit}
+                                                value={settings.model_version} 
+                                                onValueChange={(val: any) => setSettings({ ...settings, model_version: val })}
+                                            >
                                                 <SelectContent>
                                                     <SelectItem value="gpt-4o">GPT-4o (Omni)</SelectItem>
                                                     <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
@@ -259,7 +275,8 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                                 type="number"
                                                 value={settings.max_tokens}
                                                 onChange={(e) => setSettings({ ...settings, max_tokens: parseInt(e.target.value) })}
-                                                className="w-full h-11 px-4 rounded-xl border border-gray-200 focus:border-[#0f172b] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium text-gray-700"
+                                                className={`w-full h-11 px-4 rounded-xl border border-gray-200 focus:border-[#0f172b] focus:ring-2 focus:ring-purple-100 outline-none transition-all font-medium text-gray-700 ${!canEdit ? 'bg-gray-50 opacity-70 cursor-not-allowed' : ''}`}
+                                                disabled={!canEdit}
                                             />
                                         </div>
                                         <div className="space-y-2">
@@ -274,7 +291,8 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                                 step="0.1"
                                                 value={settings.temperature}
                                                 onChange={(e) => setSettings({ ...settings, temperature: parseFloat(e.target.value) })}
-                                                className="w-full h-11 py-2"
+                                                className={`w-full h-11 py-2 ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                disabled={!canEdit}
                                             />
                                             <div className="flex justify-between text-[10px] text-gray-400 font-bold uppercase tracking-wider px-1">
                                                 <span>Fact-Based</span>
@@ -305,7 +323,11 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between ml-1">
                                             <label className="text-sm font-bold text-[#0f172b]">System Reasoning Engine</label>
-                                            <button onClick={() => setSettings({ ...settings, system_prompt: 'You are a professional Statement of Purpose (SOP) reviewer. Analyze the provided SOP for clarity, tone, structure, and impact. Provide a confidence score and detailed feedback.' })} className="text-xs font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1.5 translate-y-0.5">
+                                            <button 
+                                                disabled={!canEdit}
+                                                onClick={() => setSettings({ ...settings, system_prompt: 'You are a professional Statement of Purpose (SOP) reviewer. Analyze the provided SOP for clarity, tone, structure, and impact. Provide a confidence score and detailed feedback.' })} 
+                                                className={`text-xs font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1.5 translate-y-0.5 ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
                                                 <RotateCcw size={12} />
                                                 Reset to Global Default
                                             </button>
@@ -314,8 +336,9 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                             <textarea
                                                 value={settings.system_prompt}
                                                 onChange={(e) => setSettings({ ...settings, system_prompt: e.target.value })}
-                                                className="w-full min-h-[350px] p-6 rounded-2xl border border-gray-200 focus:border-[#0f172b] focus:ring-4 focus:ring-purple-50/50 outline-none transition-all font-mono text-[13px] leading-relaxed text-gray-700 bg-gray-50/30"
+                                                className={`w-full min-h-[350px] p-6 rounded-2xl border border-gray-200 focus:border-[#0f172b] focus:ring-4 focus:ring-purple-50/50 outline-none transition-all font-mono text-[13px] leading-relaxed text-gray-700 bg-gray-50/30 ${!canEdit ? 'opacity-70 grayscale-[0.3] cursor-not-allowed' : ''}`}
                                                 placeholder="Define the core logic here..."
+                                                disabled={!canEdit}
                                             />
                                             <div className="absolute bottom-4 right-4 text-[10px] font-bold text-gray-300 uppercase tracking-widest pointer-events-none group-focus-within:opacity-0 transition-opacity">
                                                 Advanced Engine Script
@@ -362,7 +385,8 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                             max="100"
                                             value={settings.confidence_threshold}
                                             onChange={(e) => setSettings({ ...settings, confidence_threshold: parseInt(e.target.value) })}
-                                            className="w-full accent-[#0f172b]"
+                                            className={`w-full accent-[#0f172b] ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            disabled={!canEdit}
                                         />
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className={`p-4 rounded-xl border transition-all ${settings.confidence_threshold <= 50 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
@@ -392,6 +416,7 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                                     type="checkbox"
                                                     className="sr-only peer"
                                                     checked={settings.auto_approval}
+                                                    disabled={!canEdit}
                                                     onChange={(e) => {
                                                         const newVal = e.target.checked;
                                                         if (newVal) {
@@ -402,7 +427,7 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                                         }
                                                     }}
                                                 />
-                                                <div className="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0f172b]"></div>
+                                                <div className={`w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0f172b] ${!canEdit ? 'opacity-50' : ''}`}></div>
                                             </label>
                                         </div>
 
@@ -475,7 +500,14 @@ export const SOPAssistantSettingsPage: React.FC = () => {
                                         <div>
                                             <h3 className="text-sm font-bold text-amber-900 mb-1">PII Data Sanitization</h3>
                                             <p className="text-xs text-amber-800 font-medium leading-relaxed mb-4">Automatically detect and mask student names, passport numbers, and contact information before sending data to LLM providers. Recommended for GDPR compliance.</p>
-                                            <Button variant="outline" size="sm" className="bg-white border-amber-200 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-bold h-9">Configure Data Stripping</Button>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm" 
+                                                disabled={!canEdit}
+                                                className={`bg-white border-amber-200 text-amber-700 hover:bg-amber-100 rounded-lg text-xs font-bold h-9 ${!canEdit ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
+                                                Configure Data Stripping
+                                            </Button>
                                         </div>
                                     </div>
 

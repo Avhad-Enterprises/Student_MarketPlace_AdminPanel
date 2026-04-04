@@ -119,6 +119,8 @@ import { mockDocuments, mockPaymentsForTable, mockTimelineEvents } from '@/compo
 import { getStudentById, updateStudent, Student as BackendStudent } from '../services/studentsService';
 import { getAllApplications, createApplication, Application as BackendApplication } from '../services/applicationsService';
 import { createActivity, getActivitiesByStudentId, Activity as BackendActivity } from '../services/activitiesService';
+import { usePermission } from '../../hooks/usePermission';
+import { PermissionGuard } from './common/PermissionGuard';
 
 interface StudentDetailProps {
   onBack: () => void;
@@ -130,8 +132,10 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
   const router = useRouter();
   const [activeTab, setActiveTab] = useState(initialTab);
   const [showNotifications, setShowNotifications] = useState(false);
-  // Removed showEditDrawer state
-  const [userRole] = useState<'admin' | 'editor' | 'viewer'>('admin');
+  // RBAC
+  const { hasPermission: canEdit } = usePermission('students', 'edit');
+  const { hasPermission: canCreate } = usePermission('students', 'create');
+  const { hasPermission: canDelete } = usePermission('students', 'delete');
 
   // Student data state
   const [student, setStudent] = useState<BackendStudent | null>(null);
@@ -666,6 +670,10 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
   };
 
   const handleServiceSave = async (serviceName: string, data: any) => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to modify services.' });
+      return;
+    }
     if (!studentId || !student) return;
 
     try {
@@ -900,12 +908,20 @@ export const StudentDetail: React.FC<StudentDetailProps> = ({ onBack, initialTab
 
   // Handle Add Note button - navigate to Internal Notes tab
   const handleAddNote = () => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to add notes.' });
+      return;
+    }
     setActiveTab('notes');
     // Scroll to top of content area
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleSaveApplication = async () => {
+    if (!canCreate) {
+      toast.error('Unauthorized', { description: 'You do not have permission to create applications.' });
+      return;
+    }
     if (!student || !newAppFormData.university || !newAppFormData.course) {
       toast.error('Please fill in required fields');
       return;
@@ -1109,74 +1125,84 @@ ${newAppFormData.notes || 'None'}
         <PopoverContent className="w-56 p-1" align="end">
           <div className="flex flex-col gap-0.5">
             {/* Primary Actions */}
-            <button 
-              onClick={() => setUpdateStatusModal({ isOpen: true, serviceName, currentStatus: status })}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
-            >
-              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
-                <RefreshCw size={14} className="text-gray-500 group-hover:text-purple-600" />
-              </div>
-              Update Status
-            </button>
+            <PermissionGuard module="students" action="edit">
+              <button 
+                onClick={() => setUpdateStatusModal({ isOpen: true, serviceName, currentStatus: status })}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+              >
+                <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                  <RefreshCw size={14} className="text-gray-500 group-hover:text-purple-600" />
+                </div>
+                Update Status
+              </button>
+            </PermissionGuard>
 
-            <button 
-              onClick={() => setServiceDetailModal({
-                isOpen: true,
-                service: { 
-                  name: serviceName, 
-                  description, 
-                  status, 
-                  category, 
-                  assignedTo: assignedTo || 'Unassigned', 
-                  startedOn: startedOn || 'N/A', 
-                  lastUpdate: lastUpdate || 'N/A', 
-                  initialData: getServiceInitialData(serviceName) 
-                },
-                onSave: (data) => handleServiceSave(serviceName, data)
-              })}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
-            >
-              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
-                <Edit size={14} className="text-gray-500 group-hover:text-purple-600" />
-              </div>
-              Edit Service Details
-            </button>
+            <PermissionGuard module="students" action="edit">
+              <button 
+                onClick={() => setServiceDetailModal({
+                  isOpen: true,
+                  service: { 
+                    name: serviceName, 
+                    description, 
+                    status, 
+                    category, 
+                    assignedTo: assignedTo || 'Unassigned', 
+                    startedOn: startedOn || 'N/A', 
+                    lastUpdate: lastUpdate || 'N/A', 
+                    initialData: getServiceInitialData(serviceName) 
+                  },
+                  onSave: (data) => handleServiceSave(serviceName, data)
+                })}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+              >
+                <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                  <Edit size={14} className="text-gray-500 group-hover:text-purple-600" />
+                </div>
+                Edit Service Details
+              </button>
+            </PermissionGuard>
 
-            <button 
-              onClick={() => setReassignCounselorDrawer({ 
-                isOpen: true, 
-                serviceName, 
-                currentCounselor: assignedTo ? { name: assignedTo, initials: assignedTo.substring(0, 2).toUpperCase(), assignedSince: startedOn || 'N/A' } : null 
-              })}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
-            >
-              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
-                <User size={14} className="text-gray-500 group-hover:text-purple-600" />
-              </div>
-              <div className="text-left leading-tight">
-                Assign / Change<br />Counselor
-              </div>
-            </button>
+            <PermissionGuard module="students" action="edit">
+              <button 
+                onClick={() => setReassignCounselorDrawer({ 
+                  isOpen: true, 
+                  serviceName, 
+                  currentCounselor: assignedTo ? { name: assignedTo, initials: assignedTo.substring(0, 2).toUpperCase(), assignedSince: startedOn || 'N/A' } : null 
+                })}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+              >
+                <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                  <User size={14} className="text-gray-500 group-hover:text-purple-600" />
+                </div>
+                <div className="text-left leading-tight">
+                  Assign / Change<br />Counselor
+                </div>
+              </button>
+            </PermissionGuard>
 
-            <button 
-              onClick={() => setAddNoteModal({ isOpen: true, serviceName })}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
-            >
-              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
-                <StickyNote size={14} className="text-gray-500 group-hover:text-purple-600" />
-              </div>
-              Add Note
-            </button>
+            <PermissionGuard module="students" action="edit">
+              <button 
+                onClick={() => setAddNoteModal({ isOpen: true, serviceName })}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+              >
+                <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                  <StickyNote size={14} className="text-gray-500 group-hover:text-purple-600" />
+                </div>
+                Add Note
+              </button>
+            </PermissionGuard>
 
-            <button 
-              onClick={() => setAttachDocumentsDrawer({ isOpen: true, serviceName })}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
-            >
-              <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
-                <Upload size={14} className="text-gray-500 group-hover:text-purple-600" />
-              </div>
-              Attach Documents
-            </button>
+            <PermissionGuard module="students" action="edit">
+              <button 
+                onClick={() => setAttachDocumentsDrawer({ isOpen: true, serviceName })}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 rounded-lg transition-all group"
+              >
+                <div className="p-1.5 rounded-md bg-gray-50 group-hover:bg-purple-100 transition-colors">
+                  <Upload size={14} className="text-gray-500 group-hover:text-purple-600" />
+                </div>
+                Attach Documents
+              </button>
+            </PermissionGuard>
 
             <button 
               onClick={() => setActivityLogDrawer({ isOpen: true, serviceName })}
@@ -1192,35 +1218,41 @@ ${newAppFormData.notes || 'None'}
             <div className="my-1.5 h-px bg-gray-100 mx-2" />
 
             {/* Secondary / Management Actions */}
-            <button 
-              onClick={() => setSetPriorityModal({ isOpen: true, serviceName, serviceId })}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-50 rounded-lg transition-all group"
-            >
-              <div className="p-1.5 rounded-md bg-amber-50 group-hover:bg-amber-100 transition-colors">
-                <Tag size={14} className="text-amber-600" />
-              </div>
-              Set Priority
-            </button>
+            <PermissionGuard module="students" action="edit">
+              <button 
+                onClick={() => setSetPriorityModal({ isOpen: true, serviceName, serviceId })}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-50 rounded-lg transition-all group"
+              >
+                <div className="p-1.5 rounded-md bg-amber-50 group-hover:bg-amber-100 transition-colors">
+                  <Tag size={14} className="text-amber-600" />
+                </div>
+                Set Priority
+              </button>
+            </PermissionGuard>
 
-            <button 
-              onClick={() => setPauseServiceModal({ isOpen: true, serviceName, serviceId })}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 rounded-lg transition-all group"
-            >
-              <div className="p-1.5 rounded-md bg-blue-50 group-hover:bg-blue-100 transition-colors">
-                <Clock size={14} className="text-blue-600" />
-              </div>
-              {pausedServices[serviceId]?.isPaused ? 'Resume Service' : 'Pause Service'}
-            </button>
+            <PermissionGuard module="students" action="edit">
+              <button 
+                onClick={() => setPauseServiceModal({ isOpen: true, serviceName, serviceId })}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50 rounded-lg transition-all group"
+              >
+                <div className="p-1.5 rounded-md bg-blue-50 group-hover:bg-blue-100 transition-colors">
+                  <Clock size={14} className="text-blue-600" />
+                </div>
+                {pausedServices[serviceId]?.isPaused ? 'Resume Service' : 'Pause Service'}
+              </button>
+            </PermissionGuard>
 
-            <button 
-              onClick={() => setArchiveServiceModal({ isOpen: true, serviceName, serviceId })}
-              className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-all group"
-            >
-              <div className="p-1.5 rounded-md bg-red-50 group-hover:bg-red-100 transition-colors">
-                <Archive size={14} className="text-red-500" />
-              </div>
-              Archive Service
-            </button>
+            <PermissionGuard module="students" action="delete">
+              <button 
+                onClick={() => setArchiveServiceModal({ isOpen: true, serviceName, serviceId })}
+                className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-all group"
+              >
+                <div className="p-1.5 rounded-md bg-red-50 group-hover:bg-red-100 transition-colors">
+                  <Archive size={14} className="text-red-500" />
+                </div>
+                Archive Service
+              </button>
+            </PermissionGuard>
           </div>
         </PopoverContent>
       </Popover>
@@ -1292,6 +1324,10 @@ ${newAppFormData.notes || 'None'}
     notes: string;
     effectiveDate: string;
   }) => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to change status.' });
+      return;
+    }
     if (!studentId) return;
     try {
       console.log('Status changed:', data);
@@ -1321,6 +1357,10 @@ ${newAppFormData.notes || 'None'}
     reason: string;
     notifyCounselor: boolean;
   }) => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to change counselor.' });
+      return;
+    }
     if (!studentId) return;
     try {
       console.log('Counselor changed:', data);
@@ -1360,6 +1400,10 @@ ${newAppFormData.notes || 'None'}
     reason: string;
     notes: string;
   }) => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to archive students.' });
+      return;
+    }
     if (!studentId) return;
     try {
       console.log('Student archived:', data);
@@ -1498,20 +1542,24 @@ ${newAppFormData.notes || 'None'}
 
           <div className="px-8 py-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <button
-                onClick={onEdit}
-                className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all text-sm font-bold shadow-sm flex items-center gap-2 text-gray-700"
-              >
-                <Edit size={16} />
-                Edit Metadata
-              </button>
-              <button
-                onClick={onReplace}
-                className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all text-sm font-bold shadow-sm flex items-center gap-2 text-gray-700"
-              >
-                <RefreshCw size={16} />
-                Replace File
-              </button>
+              <PermissionGuard module="students" action="edit">
+                <button
+                  onClick={onEdit}
+                  className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all text-sm font-bold shadow-sm flex items-center gap-2 text-gray-700"
+                >
+                  <Edit size={16} />
+                  Edit Metadata
+                </button>
+              </PermissionGuard>
+              <PermissionGuard module="students" action="edit">
+                <button
+                  onClick={onReplace}
+                  className="px-5 py-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all text-sm font-bold shadow-sm flex items-center gap-2 text-gray-700"
+                >
+                  <RefreshCw size={16} />
+                  Replace File
+                </button>
+              </PermissionGuard>
             </div>
             <button
               onClick={onClose}
@@ -1842,20 +1890,24 @@ ${newAppFormData.notes || 'None'}
 
               {/* Action Cluster */}
               <div className="flex items-center gap-2 p-1 bg-gray-50 rounded-xl border border-gray-200/50">
-                <button
-                  onClick={() => router.push(`/students/add?id=${studentId}`)}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-semibold flex items-center gap-2 text-gray-700"
-                >
-                  <Edit size={15} />
-                  Edit Student
-                </button>
-                <button
-                  onClick={handleAddNote}
-                  className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-semibold flex items-center gap-2 text-gray-700"
-                >
-                  <Plus size={15} />
-                  Add Note
-                </button>
+                <PermissionGuard module="students" action="edit">
+                  <button
+                    onClick={() => router.push(`/students/add?id=${studentId}`)}
+                    className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-semibold flex items-center gap-2 text-gray-700"
+                  >
+                    <Edit size={15} />
+                    Edit Student
+                  </button>
+                </PermissionGuard>
+                <PermissionGuard module="students" action="edit">
+                  <button
+                    onClick={handleAddNote}
+                    className="px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-semibold flex items-center gap-2 text-gray-700"
+                  >
+                    <Plus size={15} />
+                    Add Note
+                  </button>
+                </PermissionGuard>
                 <MoreActionsMenu
                   open={showMoreActionsMenu}
                   onOpenChange={setShowMoreActionsMenu}
@@ -2219,12 +2271,14 @@ ${newAppFormData.notes || 'None'}
                   className="w-[180px]"
                 />
               </div>
-              <button
-                onClick={() => setShowAddApplicationModal(true)}
-                className="px-5 py-2.5 bg-[#0e042f] text-white rounded-lg hover:bg-[#1a0a4a] transition-all shadow-lg shadow-purple-900/20 text-sm font-medium flex items-center gap-2">
-                <Plus size={16} />
-                Add Application
-              </button>
+              <PermissionGuard module="students" action="create">
+                <button
+                  onClick={() => setShowAddApplicationModal(true)}
+                  className="px-5 py-2.5 bg-[#0e042f] text-white rounded-lg hover:bg-[#1a0a4a] transition-all shadow-lg shadow-purple-900/20 text-sm font-medium flex items-center gap-2">
+                  <Plus size={16} />
+                  Add Application
+                </button>
+              </PermissionGuard>
             </div>
 
             {/* Applications Table */}

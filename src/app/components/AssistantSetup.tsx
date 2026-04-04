@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 /**
  * AI CONFIGURATION CONSOLE
@@ -9,6 +9,8 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { usePermission } from '@/hooks/usePermission';
+import { PermissionGuard } from './common/PermissionGuard';
 import {
     Save,
     Upload,
@@ -109,6 +111,7 @@ const SelectContent = ({ children }: any) => children;
 const SelectItem = ({ children, value }: any) => <div data-value={value}>{children}</div>;
 
 export const AssistantSetup: React.FC = () => {
+    const { hasPermission: canEdit } = usePermission('ai-visa-assistant', 'edit');
     const [activeSection, setActiveSection] = useState('identity');
     const [assistantStatus, setAssistantStatus] = useState('online');
     const [strictMode, setStrictMode] = useState(true);
@@ -502,19 +505,23 @@ export const AssistantSetup: React.FC = () => {
                             </div>
 
                             {/* Save Draft */}
-                            <Button variant="outline" className="h-10" onClick={() => handleSave(false)}>
-                                <Save size={16} className="mr-2" />
-                                Save Draft
-                            </Button>
+                            <PermissionGuard module="ai-visa-assistant" action="edit">
+                                <Button variant="outline" className="h-10" onClick={() => handleSave(false)}>
+                                    <Save size={16} className="mr-2" />
+                                    Save Draft
+                                </Button>
+                            </PermissionGuard>
 
                             {/* Publish */}
-                            <Button
-                                onClick={() => handleSave(true)}
-                                className="bg-[#253154] hover:bg-[#1a2340] text-white h-10 shadow-lg shadow-purple-900/20"
-                            >
-                                <CheckCircle2 size={16} className="mr-2" />
-                                Publish Changes
-                            </Button>
+                            <PermissionGuard module="ai-visa-assistant" action="edit">
+                                <Button
+                                    onClick={() => handleSave(true)}
+                                    className="bg-[#253154] hover:bg-[#1a2340] text-white h-10 shadow-lg shadow-purple-900/20"
+                                >
+                                    <CheckCircle2 size={16} className="mr-2" />
+                                    Publish Changes
+                                </Button>
+                            </PermissionGuard>
                         </div>
                     </div>
                 </div>
@@ -578,7 +585,8 @@ export const AssistantSetup: React.FC = () => {
                                                         value={formData.assistantName}
                                                         onChange={(e) => setFormData({ ...formData, assistantName: e.target.value })}
                                                         maxLength={50}
-                                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                                        disabled={!canEdit}
+                                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:opacity-50"
                                                     />
                                                     <p className="text-xs text-gray-500 mt-1">{formData.assistantName.length}/50 characters</p>
                                                 </div>
@@ -592,7 +600,8 @@ export const AssistantSetup: React.FC = () => {
                                                         value={formData.tagline}
                                                         onChange={(e) => setFormData({ ...formData, tagline: e.target.value })}
                                                         maxLength={80}
-                                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                                                        disabled={!canEdit}
+                                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm disabled:opacity-50"
                                                     />
                                                     <p className="text-xs text-gray-500 mt-1">{formData.tagline.length}/80 characters</p>
                                                 </div>
@@ -632,11 +641,13 @@ export const AssistantSetup: React.FC = () => {
                                                 </div>
                                                 <p className="text-sm font-semibold text-gray-700 mb-2">Profile Icon</p>
                                                 <div className="flex gap-2">
-                                                    <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
-                                                        <Upload size={14} className="mr-2" />
-                                                        Upload
-                                                    </Button>
-                                                    {formData.profileIcon && (
+                                                    <PermissionGuard module="ai-visa-assistant" action="edit">
+                                                        <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                                                            <Upload size={14} className="mr-2" />
+                                                            Upload
+                                                        </Button>
+                                                    </PermissionGuard>
+                                                    {formData.profileIcon && canEdit && (
                                                         <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setFormData({ ...formData, profileIcon: '' })}>
                                                             <RotateCcw size={14} className="mr-2" />
                                                             Reset
@@ -686,11 +697,11 @@ export const AssistantSetup: React.FC = () => {
                                                 <label className="block text-xs font-semibold text-gray-700 mb-3">Status Control</label>
                                                 <div className="grid grid-cols-3 gap-3">
                                                     <button
-                                                        onClick={() => setAssistantStatus('online')}
+                                                        onClick={() => canEdit && setAssistantStatus('online')}
                                                         className={`px-4 py-2.5 rounded-lg border-2 font-semibold text-sm transition-all ${assistantStatus === 'online'
                                                             ? 'border-green-600 bg-green-50 text-green-700 shadow-sm'
                                                             : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                                                            }`}
+                                                            } ${!canEdit ? 'cursor-not-allowed opacity-75' : ''}`}
                                                     >
                                                         <div className="flex items-center gap-2 justify-center">
                                                             <div className={`w-2 h-2 rounded-full ${assistantStatus === 'online' ? 'bg-green-600' : 'bg-gray-400'}`}></div>
@@ -714,13 +725,14 @@ export const AssistantSetup: React.FC = () => {
                                                     </button>
                                                     <button
                                                         onClick={() => {
+                                                            if (!canEdit) return;
                                                             setAssistantStatus('offline');
                                                             toast.error('Assistant will be unavailable to users');
                                                         }}
                                                         className={`px-4 py-2.5 rounded-lg border-2 font-semibold text-sm transition-all ${assistantStatus === 'offline'
                                                             ? 'border-red-600 bg-red-50 text-red-700 shadow-sm'
                                                             : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                                                            }`}
+                                                            } ${!canEdit ? 'cursor-not-allowed opacity-75' : ''}`}
                                                     >
                                                         <div className="flex items-center gap-2 justify-center">
                                                             <div className={`w-2 h-2 rounded-full ${assistantStatus === 'offline' ? 'bg-red-600' : 'bg-gray-400'}`}></div>
@@ -829,8 +841,9 @@ export const AssistantSetup: React.FC = () => {
                                                     max="1"
                                                     step="0.1"
                                                     value={formData.temperature}
+                                                    disabled={!canEdit}
                                                     onChange={(e) => setFormData({ ...formData, temperature: parseFloat(e.target.value) })}
-                                                    className="w-full"
+                                                    className="w-full disabled:opacity-50"
                                                 />
                                             </div>
                                             <div className="flex justify-between text-xs text-gray-600 mt-1">
@@ -951,9 +964,9 @@ export const AssistantSetup: React.FC = () => {
                                                     </div>
                                                 </div>
                                                 <button
-                                                    onClick={() => setStrictMode(!strictMode)}
+                                                    onClick={() => canEdit && setStrictMode(!strictMode)}
                                                     className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${strictMode ? 'bg-yellow-600' : 'bg-gray-300'
-                                                        }`}
+                                                        } ${!canEdit ? 'cursor-not-allowed opacity-50' : ''}`}
                                                 >
                                                     <span
                                                         className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${strictMode ? 'translate-x-6' : 'translate-x-1'
@@ -986,9 +999,9 @@ export const AssistantSetup: React.FC = () => {
                                                             <p className="text-xs text-gray-600 mt-0.5">{item.desc}</p>
                                                         </div>
                                                         <button
-                                                            onClick={() => setGuardrails({ ...guardrails, [item.key]: !guardrails[item.key as keyof typeof guardrails] })}
+                                                            onClick={() => canEdit && setGuardrails({ ...guardrails, [item.key]: !guardrails[item.key as keyof typeof guardrails] })}
                                                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${guardrails[item.key as keyof typeof guardrails] ? 'bg-[#253154]' : 'bg-gray-300'
-                                                                }`}
+                                                                } ${!canEdit ? 'cursor-not-allowed opacity-50' : ''}`}
                                                         >
                                                             <span
                                                                 className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${guardrails[item.key as keyof typeof guardrails] ? 'translate-x-6' : 'translate-x-1'
@@ -1037,9 +1050,9 @@ export const AssistantSetup: React.FC = () => {
                                                                 <span className="text-sm font-medium text-gray-700">{item.label}</span>
                                                             </div>
                                                             <button
-                                                                onClick={() => setEscalationTriggers({ ...escalationTriggers, [item.key]: !escalationTriggers[item.key as keyof typeof escalationTriggers] })}
+                                                                onClick={() => canEdit && setEscalationTriggers({ ...escalationTriggers, [item.key]: !escalationTriggers[item.key as keyof typeof escalationTriggers] })}
                                                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${escalationTriggers[item.key as keyof typeof escalationTriggers] ? 'bg-[#253154]' : 'bg-gray-300'
-                                                                    }`}
+                                                                    } ${!canEdit ? 'cursor-not-allowed opacity-50' : ''}`}
                                                             >
                                                                 <span
                                                                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${escalationTriggers[item.key as keyof typeof escalationTriggers] ? 'translate-x-6' : 'translate-x-1'
@@ -1065,8 +1078,9 @@ export const AssistantSetup: React.FC = () => {
                                                     max="100"
                                                     step="5"
                                                     value={formData.confidenceThreshold}
+                                                    disabled={!canEdit}
                                                     onChange={(e) => setFormData({ ...formData, confidenceThreshold: parseInt(e.target.value) })}
-                                                    className="w-full"
+                                                    className="w-full disabled:opacity-50"
                                                 />
                                             </div>
                                             <div className="flex justify-between text-xs text-gray-600 mt-1">
@@ -1084,7 +1098,8 @@ export const AssistantSetup: React.FC = () => {
                                                     value={formData.escalationMessage}
                                                     onChange={(e) => setFormData({ ...formData, escalationMessage: e.target.value })}
                                                     rows={3}
-                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#253154] focus:border-transparent text-sm resize-none"
+                                                    disabled={!canEdit}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#253154] focus:border-transparent text-sm resize-none disabled:opacity-50"
                                                     placeholder="Enter message to show before escalation button..."
                                                 />
                                             </div>
@@ -1135,7 +1150,8 @@ export const AssistantSetup: React.FC = () => {
                                                 onChange={(e) => setFormData({ ...formData, welcomeMessage: e.target.value })}
                                                 maxLength={200}
                                                 rows={4}
-                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"
+                                                disabled={!canEdit}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none disabled:opacity-50"
                                             />
                                             <p className="text-xs text-gray-500 mt-1">{formData.welcomeMessage.length}/200 characters</p>
                                         </div>
@@ -1191,9 +1207,9 @@ export const AssistantSetup: React.FC = () => {
                                                         <p className="text-xs text-gray-500">Category: {item.cat}</p>
                                                     </div>
                                                     <button
-                                                        onClick={() => setFormattingRules({ ...formattingRules, [item.key]: !formattingRules[item.key as keyof typeof formattingRules] })}
+                                                        onClick={() => canEdit && setFormattingRules({ ...formattingRules, [item.key]: !formattingRules[item.key as keyof typeof formattingRules] })}
                                                         className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${formattingRules[item.key as keyof typeof formattingRules] ? 'bg-[#253154]' : 'bg-gray-300'
-                                                            }`}
+                                                            } ${!canEdit ? 'cursor-not-allowed opacity-50' : ''}`}
                                                     >
                                                         <span
                                                             className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${formattingRules[item.key as keyof typeof formattingRules] ? 'translate-x-6' : 'translate-x-1'
@@ -1247,12 +1263,13 @@ export const AssistantSetup: React.FC = () => {
                                             return (
                                                 <div
                                                     key={option.value}
-                                                    onClick={() => setFormData({ ...formData, confidenceVisibility: option.value })}
+                                                    onClick={() => canEdit && setFormData({ ...formData, confidenceVisibility: option.value })}
                                                     className={`
                                                         flex items-start gap-3 p-4 border-2 rounded-lg transition-all cursor-pointer
                                                         ${formData.confidenceVisibility === option.value
                                                             ? 'border-purple-600 bg-purple-50/50'
                                                             : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50/30'}
+                                                        ${!canEdit ? 'cursor-not-allowed opacity-75' : ''}
                                                     `}
                                                 >
                                                     <div className={`
@@ -1325,15 +1342,17 @@ export const AssistantSetup: React.FC = () => {
                                                                     {idx === 0 ? (
                                                                         <span className="px-3 py-1 bg-green-100 text-green-700 text-[10px] font-bold rounded-full">CURRENT VERSION</span>
                                                                     ) : (
-                                                                        <Button
-                                                                            variant="outline"
-                                                                            size="sm"
-                                                                            onClick={() => handleRollback(item.id)}
-                                                                            className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 h-8"
-                                                                        >
-                                                                            <RotateCcw size={14} className="mr-2" />
-                                                                            Restore
-                                                                        </Button>
+                                                                        <PermissionGuard module="ai-visa-assistant" action="edit">
+                                                                            <Button
+                                                                                variant="outline"
+                                                                                size="sm"
+                                                                                onClick={() => handleRollback(item.id)}
+                                                                                className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 h-8"
+                                                                            >
+                                                                                <RotateCcw size={14} className="mr-2" />
+                                                                                Restore
+                                                                            </Button>
+                                                                        </PermissionGuard>
                                                                     )}
                                                                 </div>
                                                             </div>

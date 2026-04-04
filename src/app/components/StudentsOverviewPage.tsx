@@ -52,6 +52,9 @@ import { ConfirmDialog } from './ui/modals/ConfirmDialog';
 import { getAllStudents, Student, PaginationData, deleteStudent, getStudentMetrics, StudentMetrics, createStudent, updateStudent } from '../services/studentsService';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from './ui/skeleton';
+import { PermissionGuard } from './common/PermissionGuard';
+import { usePermission } from '../../hooks/usePermission';
+
 
 // --- CustomCheckbox Component ---
 interface CustomCheckboxProps {
@@ -261,10 +264,12 @@ const MetricCard: React.FC<MetricCardProps> = ({
                 <Eye size={13} />
                 View Students
               </button>
-              <button className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white text-[#253154] border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-[11px] font-medium">
-                <Download size={13} />
-                Export
-              </button>
+              <PermissionGuard module="students" action="export">
+                <button className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white text-[#253154] border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-[11px] font-medium">
+                  <Download size={13} />
+                  Export
+                </button>
+              </PermissionGuard>
             </div>
           </div>
         ) : (
@@ -428,18 +433,22 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect
 
       <div className="flex flex-col gap-2 pt-3 border-t border-gray-100">
         <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={(e) => { e.stopPropagation(); onEdit?.(student.id); }}
-            className="flex items-center justify-center gap-2 h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-xs whitespace-nowrap shadow-sm"
-          >
-            <Edit size={14} /> Edit
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); onArchive?.(student); }}
-            className="flex items-center justify-center gap-2 h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs whitespace-nowrap"
-          >
-            <Archive size={14} /> Archive
-          </button>
+          <PermissionGuard module="students" action="edit">
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit?.(student.id); }}
+              className="flex items-center justify-center gap-2 h-10 bg-white border border-gray-100 text-[#253154] rounded-xl hover:bg-gray-50 transition-colors font-medium text-xs whitespace-nowrap shadow-sm"
+            >
+              <Edit size={14} /> Edit
+            </button>
+          </PermissionGuard>
+          <PermissionGuard module="students" action="delete">
+            <button
+              onClick={(e) => { e.stopPropagation(); onArchive?.(student); }}
+              className="flex items-center justify-center gap-2 h-10 bg-red-50 text-red-600 border border-red-100 rounded-xl hover:bg-red-100 transition-colors font-medium text-xs whitespace-nowrap"
+            >
+              <Archive size={14} /> Archive
+            </button>
+          </PermissionGuard>
         </div>
       </div>
     </div>
@@ -449,6 +458,11 @@ const MobileStudentCard: React.FC<MobileStudentCardProps> = ({ student, onSelect
 // --- Main StudentsOverviewPage Component ---
 export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void; setStudentDetailTab?: (tab: string) => void }> = ({ onNavigate, setStudentDetailTab }) => {
   const router = useRouter();
+  const { hasPermission: canCreate } = usePermission('students', 'create');
+  const { hasPermission: canEdit } = usePermission('students', 'edit');
+  const { hasPermission: canDelete } = usePermission('students', 'delete');
+  const { hasPermission: canExport } = usePermission('students', 'export');
+
   /* State for API Data */
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -578,6 +592,10 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
   };
 
   const handleEditStudent = (studentId: string) => {
+    if (!canEdit) {
+      toast.error('Unauthorized', { description: 'You do not have permission to edit students.' });
+      return;
+    }
     setOpenActionMenuId(null);
     router.push(`/students/add?id=${studentId}`);
   };
@@ -619,6 +637,10 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
   };
 
   const confirmArchiveStudent = async () => {
+    if (!canDelete) {
+      toast.error('Unauthorized', { description: 'You do not have permission to archive students.' });
+      return;
+    }
     if (studentToArchive) {
       try {
         await deleteStudent(studentToArchive.id);
@@ -925,27 +947,33 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
 
           {/* Action Buttons */}
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExportDialog(true)}
-              className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              <Download size={18} className="text-[#253154]" />
-              <span className="text-sm text-[#253154] font-medium">Export</span>
-            </button>
-            <button
-              onClick={() => setShowImportDialog(true)}
-              className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              <Upload size={18} className="text-[#253154]" />
-              <span className="text-sm text-[#253154] font-medium">Import</span>
-            </button>
-            <button
-              onClick={() => onNavigate('add-student')}
-              className="flex items-center gap-2 px-5 py-3 bg-[#0e042f] rounded-xl hover:bg-[#1a0c4a] transition-colors shadow-lg"
-            >
-              <Plus size={18} className="text-white" />
-              <span className="text-sm text-white font-medium">Add Student</span>
-            </button>
+            <PermissionGuard module="students" action="export">
+              <button
+                onClick={() => setShowExportDialog(true)}
+                className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <Download size={18} className="text-[#253154]" />
+                <span className="text-sm text-[#253154] font-medium">Export</span>
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="students" action="create">
+              <button
+                onClick={() => setShowImportDialog(true)}
+                className="flex items-center gap-2 px-4 py-3 bg-white rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
+              >
+                <Upload size={18} className="text-[#253154]" />
+                <span className="text-sm text-[#253154] font-medium">Import</span>
+              </button>
+            </PermissionGuard>
+            <PermissionGuard module="students" action="create">
+              <button
+                onClick={() => onNavigate('add-student')}
+                className="flex items-center gap-2 px-5 py-3 bg-[#0e042f] rounded-xl hover:bg-[#1a0c4a] transition-colors shadow-lg"
+              >
+                <Plus size={18} className="text-white" />
+                <span className="text-sm text-white font-medium">Add Student</span>
+              </button>
+            </PermissionGuard>
           </div>
         </div>
 
@@ -1341,13 +1369,15 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                                       <Eye size={16} />
                                       <span>View Student</span>
                                     </button>
-                                    <button
-                                      onClick={() => handleEditStudent(student.id)}
-                                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
-                                    >
-                                      <Edit size={16} />
-                                      <span>Edit Student</span>
-                                    </button>
+                                    <PermissionGuard module="students" action="edit">
+                                      <button
+                                        onClick={() => handleEditStudent(student.id)}
+                                        className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
+                                      >
+                                        <Edit size={16} />
+                                        <span>Edit Student</span>
+                                      </button>
+                                    </PermissionGuard>
                                     <button
                                       onClick={() => handleAddNote(student.id)}
                                       className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-gray-50 flex items-center gap-2 text-[#253154]"
@@ -1370,13 +1400,15 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
                                       <span>View Applications</span>
                                     </button>
                                     <div className="h-px bg-gray-100 my-1" />
-                                    <button
-                                      onClick={() => handleArchiveStudent(student)}
-                                      className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-red-50 flex items-center gap-2 text-red-600"
-                                    >
-                                      <Archive size={16} />
-                                      <span>Archive Student</span>
-                                    </button>
+                                    <PermissionGuard module="students" action="delete">
+                                      <button
+                                        onClick={() => handleArchiveStudent(student)}
+                                        className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-red-50 flex items-center gap-2 text-red-600"
+                                      >
+                                        <Archive size={16} />
+                                        <span>Archive Student</span>
+                                      </button>
+                                    </PermissionGuard>
                                   </div>
                                 </PopoverContent>
                               </Popover>
@@ -1508,6 +1540,14 @@ export const StudentsOverviewPage: React.FC<{ onNavigate: (page: string) => void
         fields={importFields}
         templateUrl="/templates/students-import-template.xlsx"
         onImport={async (data, mode) => {
+          if (!canCreate && mode === 'create') {
+            toast.error('Unauthorized', { description: 'You do not have permission to create students.' });
+            return;
+          }
+          if (!canEdit && mode === 'update') {
+            toast.error('Unauthorized', { description: 'You do not have permission to update students.' });
+            return;
+          }
           console.log('Importing data:', data, 'mode:', mode);
           let successCount = 0;
           let failCount = 0;
